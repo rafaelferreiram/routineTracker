@@ -473,8 +473,8 @@ function getInitialState(username, defaultTheme = {}) {
           return { ...h, completions, numericValues };
         });
       }
-      // Migration v2: sync profile/achievements if stored data is stale bootstrap
-      if (!parsed.bootstrapVersion || parsed.bootstrapVersion < BOOTSTRAP_VERSION) {
+      // Migration v2: sync rafael's profile/achievements if stored data is stale bootstrap
+      if (username === 'rafael' && (!parsed.bootstrapVersion || parsed.bootstrapVersion < BOOTSTRAP_VERSION)) {
         if ((parsed.profile?.totalXP || 0) < BASELINE_PROFILE.totalXP) {
           parsed.profile = { ...BASELINE_PROFILE };
           parsed.achievements = [...BASELINE_ACHIEVEMENTS];
@@ -495,16 +495,22 @@ function getInitialState(username, defaultTheme = {}) {
     console.warn('Failed to load from localStorage:', e);
   }
 
+  // Rafael gets his full seeded history; all other users start fresh
+  const isRafael = username === 'rafael';
   return {
-    profile: { ...BASELINE_PROFILE, name: defaultTheme.displayName || BASELINE_PROFILE.name },
-    habits: DEFAULT_HABITS,
-    achievements: [...BASELINE_ACHIEVEMENTS],
+    profile: isRafael
+      ? { ...BASELINE_PROFILE }
+      : { name: defaultTheme.displayName || 'User', totalXP: 0, level: 1, joinDate: new Date().toISOString().split('T')[0], freezeShields: 0, focusHabitId: null, focusHabitDate: null },
+    habits: isRafael ? DEFAULT_HABITS : [],
+    achievements: isRafael ? [...BASELINE_ACHIEVEMENTS] : [],
     bootstrapVersion: BOOTSTRAP_VERSION,
     journalEntries: [],
-    events: [
-      { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
-      { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
-    ],
+    events: isRafael
+      ? [
+          { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
+          { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
+        ]
+      : [],
     settings: { theme: 'dark', accentColor: defaultTheme.accentColor || '#22c55e', bgColor: defaultTheme.bgColor || '#080808', appName: 'RoutineQuest', appIcon: '⚡' },
     moods: {},
     toasts: [],

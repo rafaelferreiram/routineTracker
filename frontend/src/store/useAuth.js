@@ -39,7 +39,13 @@ function persistKnownUser(user) {
   const known   = loadKnownUsers();
   // Filter by both id and username to avoid duplicates
   const updated = known.filter(u => u.id !== user.id && u.username !== user.username);
-  updated.push({ id: user.id, username: user.username, displayName: user.displayName, theme: user.theme });
+  updated.push({ 
+    id: user.id, 
+    username: user.username, 
+    displayName: user.displayName, 
+    theme: user.theme,
+    picture: user.picture || ''
+  });
   localStorage.setItem(KNOWN_USERS_KEY, JSON.stringify(updated.slice(-10)));
 }
 

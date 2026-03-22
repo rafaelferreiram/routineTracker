@@ -17,6 +17,37 @@ const ALL_NAV = [
 
 const BOTTOM_TABS = ALL_NAV.filter(n => n.section === 'main');
 
+// Avatar component - uses Google photo or initial as fallback
+function Avatar({ picture, initial, size = 36, levelColor, accentColor, className = '' }) {
+  const [imgError, setImgError] = useState(false);
+  const showImage = picture && !imgError;
+  
+  return (
+    <div 
+      className={`rounded-full flex items-center justify-center font-bold overflow-hidden flex-shrink-0 ${className}`}
+      style={{ 
+        width: size, 
+        height: size,
+        background: showImage ? 'transparent' : `${levelColor || accentColor}22`,
+        border: `1.5px solid ${levelColor || accentColor}55`,
+        color: levelColor || accentColor
+      }}
+    >
+      {showImage ? (
+        <img 
+          src={picture} 
+          alt="Profile" 
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <span style={{ fontSize: size * 0.4 }}>{initial}</span>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar({ activeTab, setActiveTab, onExport }) {
   const {
     profile, achievements, currentLevel,
@@ -27,6 +58,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
 
   const levelColor = getLevelColor(currentLevel);
   const initial    = (profile?.name || currentUser?.displayName || '?')[0].toUpperCase();
+  const picture    = currentUser?.picture || '';
   const appName    = settings?.appName || 'RoutineQuest';
   const appIcon    = settings?.appIcon || '⚡';
 
@@ -69,10 +101,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           onClick={() => setEditingName(true)}
         >
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-              style={{ background: `${levelColor}20`, border: `1.5px solid ${levelColor}60`, color: levelColor }}>
-              {initial}
-            </div>
+            <Avatar picture={picture} initial={initial} size={36} levelColor={levelColor} accentColor={accentColor} />
             <div className="flex-1 min-w-0">
               {editingName ? (
                 <input
@@ -174,10 +203,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           onClick={() => go('profile')}
           className="flex items-center gap-2.5 active:opacity-60 transition-opacity min-w-0"
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-            style={{ background: `${levelColor}22`, color: levelColor, border: `1.5px solid ${levelColor}55` }}>
-            {initial}
-          </div>
+          <Avatar picture={picture} initial={initial} size={36} levelColor={levelColor} accentColor={accentColor} />
           <div className="text-left min-w-0">
             <p className="text-white font-semibold text-sm leading-none truncate">{profile?.name || 'User'}</p>
             <p className="text-[10px] font-medium mt-0.5 leading-none" style={{ color: levelColor }}>
@@ -269,10 +295,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
             <div className="flex items-center justify-between px-5 border-b flex-shrink-0"
               style={{ height: 66, borderColor: 'var(--bg-border, #1f1f1f)', paddingTop: 'env(safe-area-inset-top)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                  style={{ background: `${accentColor}22`, color: accentColor, border: `1.5px solid ${accentColor}50` }}>
-                  {initial}
-                </div>
+                <Avatar picture={picture} initial={initial} size={40} levelColor={levelColor} accentColor={accentColor} />
                 <div>
                   <p className="text-white font-semibold text-sm leading-none">{profile?.name || 'User'}</p>
                   <p className="text-[11px] font-medium mt-0.5" style={{ color: levelColor }}>

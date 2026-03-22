@@ -93,6 +93,8 @@ def login(req: AuthReq):
             'id': str(user['_id']),
             'username': user['username'],
             'displayName': user['display_name'],
+            'email': user.get('email', ''),
+            'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
         }
     }

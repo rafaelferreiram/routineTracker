@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
+import { useAuth } from '../store/useAuth.js';
 
 const ACCENT_PRESETS = [
   { label: 'Green',   value: '#22c55e' },
@@ -39,6 +40,7 @@ function Field({ label, hint, children }) {
 
 export default function CustomizePanel({ onExport }) {
   const { profile, settings, accentColor, updateSettings, updateProfile, habits, addHabit, updateHabit, deleteHabit } = useHabits();
+  const { currentUser, logout } = useAuth();
 
   const appName = settings.appName || 'RoutineQuest';
   const appIcon = settings.appIcon || '⚡';
@@ -273,6 +275,29 @@ export default function CustomizePanel({ onExport }) {
               </p>
               <p className="text-[#4b5563] text-xs">Clear habits, completions, XP and achievements</p>
             </div>
+          </button>
+        </div>
+      </Section>
+
+      {/* Account */}
+      <Section title="Account">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
+              style={{ background: `rgba(var(--accent-rgb, 34 197 94) / 0.15)`, color: 'var(--accent, #22c55e)', border: '1.5px solid rgba(var(--accent-rgb, 34 197 94) / 0.35)' }}>
+              {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium capitalize">{currentUser?.displayName}</p>
+              <p className="text-[#4b5563] text-xs">@{currentUser?.username}</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+            style={{ background: '#111111', borderColor: '#1f1f1f', color: '#6b7280' }}
+          >
+            Sign Out
           </button>
         </div>
       </Section>

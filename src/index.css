@@ -17,7 +17,7 @@ html {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #080808;
+  background: var(--bg-main, #080808);
   color: #E2E8F0;
   min-height: 100vh;
   overflow-x: hidden;
@@ -63,8 +63,8 @@ body {
 }
 
 .card {
-  background: #111111;
-  border: 1px solid #1f1f1f;
+  background: var(--bg-card, #111111);
+  border: 1px solid var(--bg-border, #1f1f1f);
   border-radius: 1.25rem;
 }
 
@@ -91,7 +91,7 @@ body {
 }
 
 .bg-app {
-  background: #080808;
+  background: var(--bg-main, #080808);
 }
 
 /* ── Safe area padding for mobile notch ────────────────────────────── */

@@ -1,4 +1,5 @@
 import { useState, useEffect, Component } from 'react';
+import { useAuth } from './store/useAuth.js';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -36,17 +37,29 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
   const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
+  const { currentUser, logout } = useAuth();
 
   // Inject accent color as CSS variable whenever it changes
   useEffect(() => {
     const hex = accentColor || '#22c55e';
     document.documentElement.style.setProperty('--accent', hex);
-    // Compute RGB triplet for rgba() usage
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     document.documentElement.style.setProperty('--accent-rgb', `${r} ${g} ${b}`);
   }, [accentColor]);
+
+  // Inject background color CSS variables whenever settings.bgColor changes
+  useEffect(() => {
+    const bg = (settings && settings.bgColor) || (currentUser && currentUser.theme && currentUser.theme.bgColor) || '#080808';
+    document.documentElement.style.setProperty('--bg-main', bg);
+    document.body.style.background = bg;
+    // Derive card/border from bg by lightening slightly
+    const card = currentUser?.theme?.bgCard || '#111111';
+    const border = currentUser?.theme?.bgBorder || '#1f1f1f';
+    document.documentElement.style.setProperty('--bg-card', card);
+    document.documentElement.style.setProperty('--bg-border', border);
+  }, [settings, currentUser]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -68,8 +81,8 @@ function AppContent() {
 
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
           {/* Mobile header */}
-          <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-[#1f1f1f]"
-            style={{ background: 'rgba(8,8,8,0.97)', backdropFilter: 'blur(20px)' }}>
+          <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
+            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
               <span className="text-white font-bold text-base tracking-tight">RoutineQuest</span>
@@ -82,9 +95,19 @@ function AppContent() {
               >
                 ⊞
               </button>
-              <span className="text-xs text-[#4b5563] bg-[#111111] px-2 py-1 rounded-full border border-[#1f1f1f]">
+              <span className="text-xs text-[#4b5563] px-2 py-1 rounded-full border"
+                style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </span>
+              {/* User avatar + logout */}
+              <button
+                onClick={logout}
+                title={`Sign out (${currentUser?.displayName})`}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 active:scale-90"
+                style={{ background: `rgba(${hexToRgb(accentColor || '#22c55e')}, 0.2)`, color: accentColor || '#22c55e', border: `1.5px solid rgba(${hexToRgb(accentColor || '#22c55e')}, 0.4)` }}
+              >
+                {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
+              </button>
             </div>
           </div>
 
@@ -109,6 +132,13 @@ function AppContent() {
       {showExport && <ExportImport onClose={() => setShowExport(false)} />}
     </div>
   );
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `${r} ${g} ${b}`;
 }
 
 export default function App() {

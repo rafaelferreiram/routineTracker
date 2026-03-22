@@ -397,9 +397,20 @@ const DEFAULT_HABITS = [
   ...WATER_SLEEP_HABITS,
 ];
 
-function getInitialState() {
+function getStorageKey(username) {
+  return username ? `routineTracker_v3_${username}` : 'routineTracker_v3';
+}
+
+function getInitialState(username, defaultTheme = {}) {
+  // Rafael migration: copy legacy key → user-namespaced key on first load
+  if (username === 'rafael' && !localStorage.getItem('routineTracker_v3_rafael')) {
+    const legacy = localStorage.getItem('routineTracker_v3');
+    if (legacy) localStorage.setItem('routineTracker_v3_rafael', legacy);
+  }
+
+  const storageKey = getStorageKey(username);
   try {
-    const stored = localStorage.getItem('routineTracker_v3');
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed.habits) {
@@ -485,7 +496,7 @@ function getInitialState() {
   }
 
   return {
-    profile: { ...BASELINE_PROFILE },
+    profile: { ...BASELINE_PROFILE, name: defaultTheme.displayName || BASELINE_PROFILE.name },
     habits: DEFAULT_HABITS,
     achievements: [...BASELINE_ACHIEVEMENTS],
     bootstrapVersion: BOOTSTRAP_VERSION,
@@ -494,7 +505,7 @@ function getInitialState() {
       { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
       { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
     ],
-    settings: { theme: 'dark', accentColor: '#22c55e', appName: 'RoutineQuest', appIcon: '⚡' },
+    settings: { theme: 'dark', accentColor: defaultTheme.accentColor || '#22c55e', bgColor: defaultTheme.bgColor || '#080808', appName: 'RoutineQuest', appIcon: '⚡' },
     moods: {},
     toasts: [],
     confetti: false,
@@ -839,8 +850,9 @@ function reducer(state, action) {
 
 const StoreContext = createContext(null);
 
-export function StoreProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+export function StoreProvider({ children, username, defaultTheme }) {
+  const storageKey = getStorageKey(username);
+  const [state, dispatch] = useReducer(reducer, undefined, () => getInitialState(username, defaultTheme || {}));
   const prevHabitsRef = useRef(null); // null so first run always checks
   const prevAchievementsRef = useRef(state.achievements);
 
@@ -860,13 +872,13 @@ export function StoreProvider({ children }) {
           settings: state.settings,
           bootstrapVersion: BOOTSTRAP_VERSION,
         };
-        localStorage.setItem('routineTracker_v3', JSON.stringify(toSave));
+        localStorage.setItem(storageKey, JSON.stringify(toSave));
       } catch (e) {
         console.warn('Failed to save to localStorage:', e);
       }
     }, 300);
     return () => clearTimeout(saveTimerRef.current);
-  }, [state.profile, state.habits, state.achievements, state.journalEntries, state.moods, state.settings]);
+  }, [state.profile, state.habits, state.achievements, state.journalEntries, state.moods, state.settings, storageKey]);
 
   // Check achievements on mount + whenever habits change
   useEffect(() => {

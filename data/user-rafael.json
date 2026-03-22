@@ -1,11 +1,11 @@
 {
   "version": "routinequest_v1",
-  "exportedAt": "2026-03-22T00:00:00.000Z",
+  "exportedAt": "2026-03-22T02:04:57.327Z",
   "meta": {
     "username": "rafael",
     "displayName": "Rafael",
     "theme": { "themeId": "dark", "accentColor": "#22c55e" },
-    "note": "Seeded baseline data — reflects Rafael's first 21 days of tracking (March 2026)"
+    "note": "Live export — 24 habits tracked across March 2026 (21 days). 3685 XP, Level 10, 10 achievements, 2 upcoming events."
   },
   "profile": {
     "name": "Rafael",
@@ -16,17 +16,33 @@
     "focusHabitId": null,
     "focusHabitDate": null
   },
+  "settings": {
+    "theme": "dark",
+    "accentColor": "#22c55e",
+    "appName": "RoutineQuest",
+    "appIcon": "⚡",
+    "categories": [
+      { "name": "Religion", "emoji": "🙏" },
+      { "name": "Exercise", "emoji": "💪" },
+      { "name": "Meals",    "emoji": "🍽️" },
+      { "name": "Work",     "emoji": "💼" },
+      { "name": "Study",    "emoji": "📚" },
+      { "name": "Family",   "emoji": "❤️" },
+      { "name": "Health",   "emoji": "🌿" },
+      { "name": "Other",    "emoji": "⭐" }
+    ]
+  },
   "achievements": [
-    { "id": "first_step",     "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "on_fire",        "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "week_warrior",   "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "habit_builder",  "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "consistent",     "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "unstoppable",    "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "fifty_done",     "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "double_century", "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "bjj_white_1",    "unlockedAt": "2026-03-22T09:51:51.608Z" },
-    { "id": "meals_week",     "unlockedAt": "2026-03-22T09:51:51.608Z" }
+    { "id": "first_step",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "on_fire",        "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "week_warrior",   "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "habit_builder",  "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "consistent",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "unstoppable",    "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "fifty_done",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "double_century", "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "bjj_white_1",    "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "meals_week",     "unlockedAt": "2026-03-22T02:04:57.327Z" }
   ],
   "events": [
     {
@@ -36,7 +52,7 @@
       "emoji": "✈️",
       "color": "#22c55e",
       "note": "",
-      "createdAt": "2026-03-22T00:00:00.000Z"
+      "createdAt": "2026-03-22T02:04:57.046Z"
     },
     {
       "id": "event_ufc",
@@ -45,11 +61,12 @@
       "emoji": "🥊",
       "color": "#f87171",
       "note": "",
-      "createdAt": "2026-03-22T00:00:00.000Z"
+      "createdAt": "2026-03-22T02:04:57.046Z"
     }
   ],
   "journalEntries": [],
   "moods": {},
+  "bootstrapVersion": 3,
   "habits": [
     {
       "id": "habit_pray",

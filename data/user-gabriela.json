@@ -1,11 +1,11 @@
 {
   "version": "routinequest_v1",
-  "exportedAt": "2026-03-22T00:00:00.000Z",
+  "exportedAt": "2026-03-22T02:04:57.327Z",
   "meta": {
     "username": "gabriela",
     "displayName": "Gabriela",
     "theme": { "themeId": "rose", "accentColor": "#ec4899" },
-    "note": "Fresh account — no habits or achievements yet. Ready for Gabriela to set up her own routine."
+    "note": "Fresh account — localStorage key was null at export time. Gabriela has not yet logged in and set up any habits. Account exists in the user registry (password: gabriela, theme: rose/pink) but no habit data exists yet."
   },
   "profile": {
     "name": "Gabriela",
@@ -16,9 +16,26 @@
     "focusHabitId": null,
     "focusHabitDate": null
   },
+  "settings": {
+    "theme": "rose",
+    "accentColor": "#ec4899",
+    "appName": "RoutineQuest",
+    "appIcon": "⚡",
+    "categories": [
+      { "name": "Religion", "emoji": "🙏" },
+      { "name": "Exercise", "emoji": "💪" },
+      { "name": "Meals",    "emoji": "🍽️" },
+      { "name": "Work",     "emoji": "💼" },
+      { "name": "Study",    "emoji": "📚" },
+      { "name": "Family",   "emoji": "❤️" },
+      { "name": "Health",   "emoji": "🌿" },
+      { "name": "Other",    "emoji": "⭐" }
+    ]
+  },
   "achievements": [],
   "events": [],
   "journalEntries": [],
   "moods": {},
+  "bootstrapVersion": 3,
   "habits": []
 }

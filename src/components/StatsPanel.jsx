@@ -237,8 +237,32 @@ function HealthChart({ habits, achievements }) {
   const bjjHabit   = habits.find(h => h.id === 'habit_jiujitsu');
   const mealHabits = MEAL_IDS.map(id => habits.find(h => h.id === id)).filter(Boolean);
 
+  // Find the earliest date any health habit has data (to avoid showing flat 0 before tracking started)
+  const healthStartDate = useMemo(() => {
+    const allHabits = [waterHabit, sleepHabit, gymHabit, bjjHabit, ...mealHabits].filter(Boolean);
+    let earliest = null;
+    allHabits.forEach(h => {
+      // Check completions
+      if (h.completions && h.completions.length > 0) {
+        const d = [...h.completions].sort()[0];
+        if (!earliest || d < earliest) earliest = d;
+      }
+      // Check numericValues
+      const numDates = Object.keys(h.numericValues || {});
+      if (numDates.length > 0) {
+        const d = [...numDates].sort()[0];
+        if (!earliest || d < earliest) earliest = d;
+      }
+    });
+    return earliest;
+  }, [waterHabit, sleepHabit, gymHabit, bjjHabit, mealHabits]);
+
   const data = useMemo(() => {
     return getLastNDays(range.days).map(date => {
+      // Before tracking started → all null (like growth chart)
+      if (healthStartDate && date < healthStartDate) {
+        return { date, water: null, sleep: null, meals: null, exercise: null, waterRaw: null, sleepRaw: null, mealsRaw: 0, exerciseRaw: 0 };
+      }
       const wRaw = waterHabit ? ((waterHabit.numericValues || {})[date] ?? null) : null;
       const sRaw = sleepHabit ? ((sleepHabit.numericValues || {})[date] ?? null) : null;
       const mCount = mealHabits.reduce((n, h) => n + (h.completions.includes(date) ? 1 : 0), 0);
@@ -252,7 +276,7 @@ function HealthChart({ habits, achievements }) {
         waterRaw: wRaw, sleepRaw: sRaw, mealsRaw: mCount, exerciseRaw: eCount,
       };
     });
-  }, [habits, range.days, waterHabit, sleepHabit, gymHabit, bjjHabit, mealHabits]);
+  }, [habits, range.days, waterHabit, sleepHabit, gymHabit, bjjHabit, mealHabits, healthStartDate]);
 
   const toPoint = (d, i, key) => ({
     x: PAD.l + (i / Math.max(data.length - 1, 1)) * cW,
@@ -377,12 +401,16 @@ function HealthChart({ habits, achievements }) {
           </defs>
           <ChartGrid />
           {HEALTH_SERIES.filter(s => active[s.key]).map(s => {
-            const pts = data.map((d, i) => toPoint(d, i, s.key)).filter(p => p.y !== null);
-            if (pts.length < 2) return null;
+            const allPts = data.map((d, i) => toPoint(d, i, s.key));
+            // Split into segments at null gaps (same approach as CompletionChart)
+            const segs = []; let cur = [];
+            allPts.forEach(p => { if (p.y !== null) cur.push(p); else if (cur.length) { segs.push(cur); cur = []; } });
+            if (cur.length) segs.push(cur);
+            if (segs.length === 0) return null;
             return (
               <g key={s.key}>
-                <path d={buildSmoothPath(pts, true)} fill={`url(#hg-${s.key})`} />
-                <path d={buildSmoothPath(pts)} fill="none" stroke={s.color} strokeWidth="1.8" strokeLinecap="round" />
+                {segs.map((seg, i) => <path key={`f${i}`} d={buildSmoothPath(seg, true)} fill={`url(#hg-${s.key})`} />)}
+                {segs.map((seg, i) => <path key={`l${i}`} d={buildSmoothPath(seg)} fill="none" stroke={s.color} strokeWidth="1.8" strokeLinecap="round" />)}
               </g>
             );
           })}

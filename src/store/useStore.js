@@ -86,6 +86,55 @@ const MEALS_HABITS = [
   },
 ];
 
+const WATER_SLEEP_HABITS = [
+  {
+    id: 'habit_water',
+    name: 'Drink 2L Water',
+    emoji: '💧',
+    category: 'Health',
+    type: 'numeric',
+    unit: 'L',
+    goal: 2,
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    numericValues: {
+      '2026-03-01': 2.0, '2026-03-02': 2.5, '2026-03-03': 1.5, '2026-03-04': 2.0,
+      '2026-03-05': 2.2, '2026-03-06': 2.0, '2026-03-07': 1.8, '2026-03-08': 2.5,
+      '2026-03-09': 2.0, '2026-03-10': 2.0, '2026-03-11': 1.5, '2026-03-12': 2.3,
+      '2026-03-13': 2.0, '2026-03-14': 2.5, '2026-03-15': 2.0, '2026-03-16': 1.7,
+      '2026-03-17': 2.0, '2026-03-18': 2.5, '2026-03-19': 2.0, '2026-03-20': 2.0,
+      '2026-03-21': 2.3,
+    },
+    completions: days(1,2,4,5,6,8,9,10,12,13,14,15,17,18,19,20,21),
+    completionTimestamps: {},
+    streak: 5,
+    bestStreak: 5,
+  },
+  {
+    id: 'habit_sleep',
+    name: 'Sleep',
+    emoji: '😴',
+    category: 'Health',
+    type: 'numeric',
+    unit: 'hrs',
+    goal: 8,
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    numericValues: {
+      '2026-03-01': 7.5, '2026-03-02': 8.0, '2026-03-03': 8.5, '2026-03-04': 7.0,
+      '2026-03-05': 6.5, '2026-03-06': 8.0, '2026-03-07': 8.5, '2026-03-08': 8.0,
+      '2026-03-09': 7.0, '2026-03-10': 7.5, '2026-03-11': 6.0, '2026-03-12': 7.5,
+      '2026-03-13': 8.0, '2026-03-14': 8.5, '2026-03-15': 7.5, '2026-03-16': 8.0,
+      '2026-03-17': 6.5, '2026-03-18': 7.5, '2026-03-19': 8.0, '2026-03-20': 8.5,
+      '2026-03-21': 7.0,
+    },
+    completions: days(2,3,6,7,8,13,14,16,19,20),
+    completionTimestamps: {},
+    streak: 0,
+    bestStreak: 3,
+  },
+];
+
 const DEFAULT_HABITS = [
   // ── RELIGION ──────────────────────────────────────────────────────────────
   {
@@ -318,6 +367,7 @@ const DEFAULT_HABITS = [
     bestStreak: 12,
   },
   ...MEALS_HABITS,
+  ...WATER_SLEEP_HABITS,
 ];
 
 function getInitialState() {
@@ -362,6 +412,27 @@ function getInitialState() {
           if (!mealsIds.has(h.id)) return h;
           const completions = (h.completions || []).filter(d => d !== '2026-03-22');
           return { ...h, completions };
+        });
+      }
+      // Migration: inject Water/Sleep habits if not present
+      if (parsed.habits) {
+        const existingIds = new Set(parsed.habits.map(h => h.id));
+        const missing = WATER_SLEEP_HABITS.filter(h => !existingIds.has(h.id));
+        if (missing.length > 0) {
+          parsed.habits = [...parsed.habits, ...missing];
+        }
+        // Ensure all habits have numericValues field
+        parsed.habits = parsed.habits.map(h => ({
+          numericValues: {},
+          ...h,
+        }));
+        // Remove March 22 from water/sleep (not done yet tonight)
+        parsed.habits = parsed.habits.map(h => {
+          if (h.id !== 'habit_water' && h.id !== 'habit_sleep') return h;
+          const completions = (h.completions || []).filter(d => d !== '2026-03-22');
+          const numericValues = { ...(h.numericValues || {}) };
+          delete numericValues['2026-03-22'];
+          return { ...h, completions, numericValues };
         });
       }
       return {
@@ -445,6 +516,9 @@ export const ACTIONS = {
   // Level Up
   SET_LEVEL_UP: 'SET_LEVEL_UP',
   CLEAR_LEVEL_UP: 'CLEAR_LEVEL_UP',
+
+  // Numeric logging
+  LOG_NUMERIC_VALUE: 'LOG_NUMERIC_VALUE',
 };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -688,6 +762,29 @@ function reducer(state, action) {
 
     case ACTIONS.CLEAR_LEVEL_UP: {
       return { ...state, levelUpPending: null };
+    }
+
+    case ACTIONS.LOG_NUMERIC_VALUE: {
+      const { habitId, date, value } = action.payload;
+      return {
+        ...state,
+        habits: state.habits.map(h => {
+          if (h.id !== habitId) return h;
+          const goal = h.goal || 1;
+          const isCompleted = value >= goal;
+          const newNumericValues = { ...(h.numericValues || {}), [date]: value };
+          let newCompletions = (h.completions || []).filter(d => d !== date);
+          if (isCompleted) newCompletions = [...newCompletions, date];
+          const newStreak = calculateStreak(newCompletions, h.frequency);
+          return {
+            ...h,
+            numericValues: newNumericValues,
+            completions: newCompletions,
+            streak: newStreak,
+            bestStreak: Math.max(h.bestStreak || 0, newStreak),
+          };
+        }),
+      };
     }
 
     default:

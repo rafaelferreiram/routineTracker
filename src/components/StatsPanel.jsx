@@ -308,6 +308,212 @@ function StatCard({ label, value, sub, icon, color = '#7C3AED' }) {
   );
 }
 
+// ─── Health Graph ─────────────────────────────────────────────────────────────
+
+const HEALTH_SERIES = [
+  { key: 'water',    label: 'Water',    emoji: '💧', color: '#3b82f6', unit: 'L',   goal: 2 },
+  { key: 'sleep',    label: 'Sleep',    emoji: '😴', color: '#8b5cf6', unit: 'hrs', goal: 8 },
+  { key: 'meals',    label: 'Meals',    emoji: '🍽️', color: '#22c55e', unit: '/5',  goal: 5 },
+  { key: 'exercise', label: 'Exercise', emoji: '💪', color: '#f97316', unit: '/2',  goal: 2 },
+];
+
+const MEAL_IDS = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
+
+function HealthGraph({ habits }) {
+  const [rangeIdx, setRangeIdx] = useState(0); // default 1W
+  const [active, setActive] = useState({ water: true, sleep: true, meals: true, exercise: true });
+  const [hover, setHover] = useState(null);
+  const svgRef = useRef(null);
+
+  const range = RANGES[rangeIdx];
+
+  const waterHabit  = habits.find(h => h.id === 'habit_water');
+  const sleepHabit  = habits.find(h => h.id === 'habit_sleep');
+  const gymHabit    = habits.find(h => h.id === 'habit_gym');
+  const bjjHabit    = habits.find(h => h.id === 'habit_jiujitsu');
+  const mealHabits  = MEAL_IDS.map(id => habits.find(h => h.id === id)).filter(Boolean);
+
+  const data = useMemo(() => {
+    const days = getLastNDays(range.days);
+    return days.map(date => {
+      const waterVal   = waterHabit  ? ((waterHabit.numericValues  || {})[date] ?? null) : null;
+      const sleepVal   = sleepHabit  ? ((sleepHabit.numericValues  || {})[date] ?? null) : null;
+      const mealsCount = mealHabits.reduce((n, h) => n + (h.completions.includes(date) ? 1 : 0), 0);
+      const mealsPct   = mealHabits.length > 0 ? mealsCount : null;
+      const exerciseCount = (gymHabit?.completions.includes(date) ? 1 : 0) + (bjjHabit?.completions.includes(date) ? 1 : 0);
+      return {
+        date,
+        water:    waterVal   != null ? Math.min(waterVal   / 2   * 100, 120) : null,
+        sleep:    sleepVal   != null ? Math.min(sleepVal   / (sleepHabit?.goal || 8) * 100, 120) : null,
+        meals:    mealsPct   != null ? (mealsPct / 5  * 100) : null,
+        exercise: (gymHabit || bjjHabit) ? (exerciseCount / 2  * 100) : null,
+        waterRaw: waterVal, sleepRaw: sleepVal, mealsRaw: mealsCount, exerciseRaw: exerciseCount,
+      };
+    });
+  }, [habits, range.days, waterHabit, sleepHabit, gymHabit, bjjHabit, mealHabits]);
+
+  const toPoint = (d, i, key) => ({
+    x: PAD.l + (i / Math.max(data.length - 1, 1)) * cW,
+    y: d[key] != null ? PAD.t + (1 - Math.min(d[key], 100) / 100) * cH : null,
+    ...d,
+  });
+
+  const handleMouseMove = useCallback((e) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX  = ((e.clientX - rect.left) / rect.width) * W;
+    let closest = null, minDist = Infinity;
+    data.forEach((d, i) => {
+      const x = PAD.l + (i / Math.max(data.length - 1, 1)) * cW;
+      const dist = Math.abs(x - svgX);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    });
+    setHover(closest !== null ? { idx: closest, x: PAD.l + (closest / Math.max(data.length - 1, 1)) * cW, ...data[closest] } : null);
+  }, [data]);
+
+  return (
+    <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div>
+          <p className="text-white font-semibold text-sm">Health Dashboard</p>
+          <p className="text-[#4b5563] text-xs mt-0.5">Water · Sleep · Meals · Exercise</p>
+        </div>
+        <div className="flex items-center gap-1 bg-[#111111] rounded-xl p-1 border border-[#1a1a1a]">
+          {RANGES.map((r, i) => (
+            <button
+              key={r.label}
+              onClick={() => { setRangeIdx(i); setHover(null); }}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+              style={rangeIdx === i
+                ? { background: 'rgba(255,255,255,0.08)', color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.12)' }
+                : { color: '#4b5563', border: '1px solid transparent' }}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Series toggles */}
+      <div className="flex gap-2 px-5 pb-3 flex-wrap">
+        {HEALTH_SERIES.map(s => (
+          <button
+            key={s.key}
+            onClick={() => setActive(a => ({ ...a, [s.key]: !a[s.key] }))}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+            style={{
+              background: active[s.key] ? `${s.color}20` : '#111111',
+              border: `1px solid ${active[s.key] ? s.color + '50' : '#1f1f1f'}`,
+              color: active[s.key] ? s.color : '#4b5563',
+            }}
+          >
+            <span>{s.emoji}</span>
+            <span>{s.label}</span>
+          </button>
+        ))}
+        {hover && (
+          <div className="ml-auto flex gap-3">
+            {HEALTH_SERIES.filter(s => active[s.key]).map(s => {
+              const raw = hover[s.key + 'Raw'];
+              return raw != null ? (
+                <span key={s.key} className="text-xs font-semibold" style={{ color: s.color }}>
+                  {s.emoji} {typeof raw === 'number' && !Number.isInteger(raw) ? raw.toFixed(1) : raw}{s.unit}
+                </span>
+              ) : null;
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* SVG */}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height: 200, display: 'block', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          {HEALTH_SERIES.map(s => (
+            <linearGradient key={s.key} id={`hgrad-${s.key}`} x1="0" y1={PAD.t} x2="0" y2={PAD.t + cH} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0.01" />
+            </linearGradient>
+          ))}
+        </defs>
+
+        {/* Grid */}
+        {[0, 25, 50, 75, 100].map(pct => {
+          const y = PAD.t + (1 - pct / 100) * cH;
+          return (
+            <g key={pct}>
+              <line x1={PAD.l} y1={y} x2={PAD.l + cW} y2={y} stroke={pct === 0 || pct === 100 ? '#222' : '#161616'} strokeWidth="1" />
+              <text x={PAD.l - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">{pct}%</text>
+            </g>
+          );
+        })}
+
+        {/* Goal line at 100% (already at top) — add a dashed line for visual reference */}
+        <line x1={PAD.l} y1={PAD.t} x2={PAD.l + cW} y2={PAD.t} stroke="#2a2a2a" strokeWidth="1" strokeDasharray="4 3" />
+
+        {/* Series lines */}
+        {HEALTH_SERIES.filter(s => active[s.key]).map(s => {
+          const pts = data.map((d, i) => toPoint(d, i, s.key)).filter(p => p.y !== null);
+          if (pts.length < 2) return null;
+          const linePath = buildSmoothPath(pts, false);
+          const areaPath = buildSmoothPath(pts, true);
+          return (
+            <g key={s.key}>
+              <path d={areaPath} fill={`url(#hgrad-${s.key})`} />
+              <path d={linePath} fill="none" stroke={s.color} strokeWidth="1.8" strokeLinecap="round" />
+            </g>
+          );
+        })}
+
+        {/* X-axis labels */}
+        {(() => {
+          const step = xAxisLabels(range.days);
+          const idxs = [];
+          for (let i = 0; i < data.length; i += step) idxs.push(i);
+          if (idxs[idxs.length - 1] !== data.length - 1) idxs.push(data.length - 1);
+          return idxs.map(i => {
+            const x = PAD.l + (i / Math.max(data.length - 1, 1)) * cW;
+            return (
+              <text key={i} x={x} y={H - 6} textAnchor="middle" fontSize="8.5" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">
+                {formatXLabel(data[i].date, range.days)}
+              </text>
+            );
+          });
+        })()}
+
+        {/* Hover crosshair */}
+        {hover && (
+          <g>
+            <line x1={hover.x} y1={PAD.t} x2={hover.x} y2={PAD.t + cH} stroke="#444" strokeWidth="1" strokeDasharray="3 2" />
+            {HEALTH_SERIES.filter(s => active[s.key]).map(s => {
+              const pct = hover[s.key];
+              if (pct == null) return null;
+              const y = PAD.t + (1 - Math.min(pct, 100) / 100) * cH;
+              return (
+                <circle key={s.key} cx={hover.x} cy={y} r="3.5" fill={s.color} stroke="#0a0a0a" strokeWidth="1.5" />
+              );
+            })}
+          </g>
+        )}
+      </svg>
+
+      {/* Date label */}
+      {hover && (
+        <p className="text-center text-[#4b5563] text-[10px] pb-2">
+          {new Date(hover.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
 export default function StatsPanel() {
@@ -406,6 +612,11 @@ export default function StatsPanel() {
       {/* TradingView-style chart */}
       {habits.length > 0 && (
         <CompletionChart habits={habits} accentColor={accentColor} />
+      )}
+
+      {/* Health Dashboard */}
+      {habits.length > 0 && (
+        <HealthGraph habits={habits} />
       )}
 
       {/* Per-habit breakdown */}

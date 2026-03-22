@@ -1,5 +1,7 @@
 import { getTodayString, getLast7Days, calculateStreak, formatDateString } from './dateUtils.js';
 
+const MEAL_IDS_CHECK = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
+
 // ─── XP Configuration ───────────────────────────────────────────────────────
 
 export const XP_VALUES = {
@@ -370,6 +372,64 @@ export const ACHIEVEMENTS = [
     rarity: 'uncommon',
     xpReward: 100,
   },
+
+  // ── Health ──────────────────────────────────────────────────────────────────
+  {
+    id: 'hydration_week',
+    name: 'Hydration Habit',
+    description: 'Hit the 2L water goal 7 days in a row',
+    icon: '💧',
+    rarity: 'uncommon',
+    xpReward: 75,
+  },
+  {
+    id: 'hydration_master',
+    name: 'Aquaman',
+    description: 'Hit the 2L water goal 21 days in a row',
+    icon: '🌊',
+    rarity: 'rare',
+    xpReward: 200,
+  },
+  {
+    id: 'sleep_week',
+    name: 'Sleep Guardian',
+    description: 'Hit your sleep goal 7 nights in a row',
+    icon: '😴',
+    rarity: 'uncommon',
+    xpReward: 75,
+  },
+  {
+    id: 'sleep_master',
+    name: 'REM King',
+    description: 'Hit your sleep goal 21 nights in a row',
+    icon: '🌙',
+    rarity: 'rare',
+    xpReward: 200,
+  },
+  {
+    id: 'meals_week',
+    name: 'Meal Prep Pro',
+    description: 'Complete all 5 meals every day for 7 days',
+    icon: '🥗',
+    rarity: 'rare',
+    xpReward: 100,
+  },
+  {
+    id: 'double_training',
+    name: 'Double Threat',
+    description: 'Train Gym + Jiu Jitsu on the same day, 5 times',
+    icon: '⚔️',
+    rarity: 'rare',
+    xpReward: 150,
+  },
+  {
+    id: 'wellness_warrior',
+    name: 'Wellness Warrior',
+    description: 'All health habits met every day for 7 consecutive days',
+    icon: '🏥',
+    rarity: 'epic',
+    xpReward: 300,
+  },
 ];
 
 export const RARITY_COLORS = {
@@ -576,6 +636,54 @@ export function checkAchievements(habits, unlockedAchievements, profile) {
     const meetingHabits = habits.filter(h => h.id && h.id.startsWith('habit_meeting_'));
     const hasMeeting20 = meetingHabits.some(h => h.completions.length >= 20);
     if (hasMeeting20) newlyUnlocked.push('meeting_champ');
+  }
+
+  // Health: Water
+  const waterH = habits.find(h => h.id === 'habit_water');
+  if (waterH) {
+    const wStreak = calculateStreak(waterH.completions, waterH.frequency);
+    if (check('hydration_week') && (wStreak >= 7 || waterH.bestStreak >= 7)) newlyUnlocked.push('hydration_week');
+    if (check('hydration_master') && (wStreak >= 21 || waterH.bestStreak >= 21)) newlyUnlocked.push('hydration_master');
+  }
+
+  // Health: Sleep
+  const sleepH = habits.find(h => h.id === 'habit_sleep');
+  if (sleepH) {
+    const sStreak = calculateStreak(sleepH.completions, sleepH.frequency);
+    if (check('sleep_week') && (sStreak >= 7 || sleepH.bestStreak >= 7)) newlyUnlocked.push('sleep_week');
+    if (check('sleep_master') && (sStreak >= 21 || sleepH.bestStreak >= 21)) newlyUnlocked.push('sleep_master');
+  }
+
+  // Health: Meals — all 5 for 7 consecutive days
+  if (check('meals_week')) {
+    const mealHabits = MEAL_IDS_CHECK.map(id => habits.find(h => h.id === id)).filter(Boolean);
+    if (mealHabits.length === 5) {
+      const sortedDates = [...new Set(mealHabits.flatMap(h => h.completions))].sort();
+      let maxMealStreak = 0, curMealStreak = 0;
+      let prev = null;
+      for (const date of sortedDates) {
+        const allDone = mealHabits.every(h => h.completions.includes(date));
+        if (!allDone) { curMealStreak = 0; prev = null; continue; }
+        if (prev) {
+          const diff = Math.round((new Date(date + 'T00:00:00') - new Date(prev + 'T00:00:00')) / 86400000);
+          if (diff === 1) { curMealStreak++; } else { curMealStreak = 1; }
+        } else { curMealStreak = 1; }
+        maxMealStreak = Math.max(maxMealStreak, curMealStreak);
+        prev = date;
+      }
+      if (maxMealStreak >= 7) newlyUnlocked.push('meals_week');
+    }
+  }
+
+  // Health: Double Training (gym + bjj same day, 5 times)
+  if (check('double_training')) {
+    const gymH = habits.find(h => h.id === 'habit_gym');
+    const bjjH = habits.find(h => h.id === 'habit_jiujitsu');
+    if (gymH && bjjH) {
+      const gymSet = new Set(gymH.completions);
+      const sameDays = bjjH.completions.filter(d => gymSet.has(d)).length;
+      if (sameDays >= 5) newlyUnlocked.push('double_training');
+    }
   }
 
   return newlyUnlocked;

@@ -99,7 +99,7 @@ function FreqBadge({ habit, onUpdate }) {
 
 // ─── Single Habit Check-In Row ────────────────────────────────────────────────
 
-function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpdateFreq }) {
+function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpdateFreq, onLogNumeric, accentColor }) {
   const today = getTodayString();
   const isFuture = date > today;
   const dow = new Date(date + 'T00:00:00').getDay();
@@ -111,9 +111,23 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
   const done = habit.completions.includes(date);
   const canToggle = !isFuture && applicable;
 
+  const isNumeric = habit.type === 'numeric';
+  const numericValue = isNumeric ? (habit.numericValues || {})[date] : null;
+  const [showNumericInput, setShowNumericInput] = useState(false);
+  const [numericInputVal, setNumericInputVal] = useState('');
+
   const [justDone, setJustDone] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleLogNumeric = useCallback(() => {
+    const val = parseFloat(numericInputVal);
+    if (!isNaN(val) && val >= 0 && onLogNumeric) {
+      onLogNumeric(habit.id, date, val);
+      setShowNumericInput(false);
+      setNumericInputVal('');
+    }
+  }, [numericInputVal, habit.id, date, onLogNumeric]);
 
   const handleCheck = useCallback(() => {
     if (!canToggle) return;
@@ -145,29 +159,56 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
           borderColor: done ? `${habit.color}35` : '#1a1a1a',
         }}
       >
-        {/* Big clear check button */}
-        <button
-          onClick={handleCheck}
-          disabled={!canToggle}
-          className={`w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200 ${
-            justDone ? 'scale-110' : done ? 'scale-100' : 'scale-100 hover:scale-105'
-          } ${!canToggle ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
-          style={done ? {
-            background: habit.color,
-            borderColor: habit.color,
-            boxShadow: `0 0 16px ${habit.color}50`,
-          } : {
-            background: 'transparent',
-            borderColor: '#2a2a2a',
-            boxShadow: 'none',
-          }}
-          title={done ? 'Mark as not done' : 'Mark as done'}
-        >
-          {done
-            ? <span className="text-white text-lg font-bold leading-none">✓</span>
-            : <span className="text-[#2a2a2a] text-lg leading-none group-hover:text-[#3a3a3a] transition-colors">○</span>
-          }
-        </button>
+        {/* Check Button — numeric vs boolean */}
+        {isNumeric ? (
+          <button
+            onClick={() => { if (!isFuture && applicable) { setShowNumericInput(v => !v); setNumericInputVal(numericValue != null ? String(numericValue) : ''); } }}
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all"
+            style={{
+              background: numericValue != null && numericValue >= (habit.goal || 1)
+                ? (accentColor || '#22c55e')
+                : numericValue != null
+                  ? 'rgba(251,191,36,0.15)'
+                  : 'rgba(255,255,255,0.06)',
+              border: numericValue != null && numericValue >= (habit.goal || 1)
+                ? `2px solid ${accentColor || '#22c55e'}`
+                : numericValue != null
+                  ? '2px solid rgba(251,191,36,0.5)'
+                  : '2px solid rgba(255,255,255,0.08)',
+              color: numericValue != null && numericValue >= (habit.goal || 1)
+                ? '#080808'
+                : numericValue != null ? '#fbbf24' : '#4b5563',
+              opacity: !applicable ? 0.3 : 1,
+            }}
+            disabled={isFuture || !applicable}
+            title={applicable ? `Log ${habit.unit}` : 'Not applicable today'}
+          >
+            {numericValue != null ? `${numericValue}${habit.unit}` : `+${habit.unit}`}
+          </button>
+        ) : (
+          <button
+            onClick={handleCheck}
+            disabled={!canToggle}
+            className={`w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200 ${
+              justDone ? 'scale-110' : done ? 'scale-100' : 'scale-100 hover:scale-105'
+            } ${!canToggle ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
+            style={done ? {
+              background: habit.color,
+              borderColor: habit.color,
+              boxShadow: `0 0 16px ${habit.color}50`,
+            } : {
+              background: 'transparent',
+              borderColor: '#2a2a2a',
+              boxShadow: 'none',
+            }}
+            title={done ? 'Mark as not done' : 'Mark as done'}
+          >
+            {done
+              ? <span className="text-white text-lg font-bold leading-none">✓</span>
+              : <span className="text-[#2a2a2a] text-lg leading-none group-hover:text-[#3a3a3a] transition-colors">○</span>
+            }
+          </button>
+        )}
 
         {/* Emoji */}
         <span className={`text-xl flex-shrink-0 transition-all ${done ? 'opacity-50' : ''}`}>
@@ -215,6 +256,35 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
         </div>
       </div>
 
+      {/* Numeric input inline */}
+      {isNumeric && showNumericInput && (
+        <div className="flex items-center gap-2 mt-2 pl-14" onClick={e => e.stopPropagation()}>
+          <input
+            type="number"
+            step={habit.unit === 'L' ? '0.1' : '0.5'}
+            min="0"
+            value={numericInputVal}
+            onChange={e => setNumericInputVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleLogNumeric(); if (e.key === 'Escape') setShowNumericInput(false); }}
+            placeholder={`e.g. ${habit.goal}`}
+            className="w-24 bg-[#1a1a1a] text-white rounded-xl px-3 py-1.5 text-sm outline-none border border-[#2a2a2a] focus:border-[#22c55e]/50"
+            style={{ colorScheme: 'dark' }}
+            autoFocus
+          />
+          <span className="text-[#6b7280] text-xs font-medium">{habit.unit}</span>
+          <span className="text-[#4b5563] text-xs">/ {habit.goal}{habit.unit}</span>
+          <button
+            onClick={handleLogNumeric}
+            className="text-xs font-bold px-2 py-1 rounded-lg transition-all"
+            style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}
+          >✓</button>
+          <button
+            onClick={() => setShowNumericInput(false)}
+            className="text-[#4b5563] text-xs px-1.5 py-1 rounded-lg hover:text-white transition-colors"
+          >✕</button>
+        </div>
+      )}
+
       {/* Delete confirm */}
       {showDeleteConfirm && (
         <div
@@ -255,7 +325,7 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
 
 // ─── Category Group ───────────────────────────────────────────────────────────
 
-function CategoryGroup({ category, habits, date, onToggle, onEdit, onDelete, onUpdateFreq }) {
+function CategoryGroup({ category, habits, date, onToggle, onEdit, onDelete, onUpdateFreq, onLogNumeric, accentColor }) {
   const today = getTodayString();
   const applicable = habits.filter(h => {
     const dow = new Date(date + 'T00:00:00').getDay();
@@ -313,6 +383,8 @@ function CategoryGroup({ category, habits, date, onToggle, onEdit, onDelete, onU
             onEdit={onEdit}
             onDelete={onDelete}
             onUpdateFreq={onUpdateFreq}
+            onLogNumeric={onLogNumeric}
+            accentColor={accentColor}
           />
         ))}
       </div>
@@ -323,7 +395,7 @@ function CategoryGroup({ category, habits, date, onToggle, onEdit, onDelete, onU
 // ─── HabitList ────────────────────────────────────────────────────────────────
 
 export default function HabitList() {
-  const { habits, toggleCompletion, deleteHabit, updateHabit } = useHabits();
+  const { habits, toggleCompletion, deleteHabit, updateHabit, logNumericValue, accentColor } = useHabits();
   const [showAddModal, setShowAddModal]   = useState(false);
   const [editHabit, setEditHabit]         = useState(null);
   const [view, setView]                   = useState('today');   // 'today' | 'manage'
@@ -587,6 +659,8 @@ export default function HabitList() {
                   onEdit={setEditHabit}
                   onDelete={deleteHabit}
                   onUpdateFreq={updateHabit}
+                  onLogNumeric={logNumericValue}
+                  accentColor={accentColor}
                 />
               ))}
             </div>

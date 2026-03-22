@@ -101,6 +101,10 @@ export function useHabits() {
     dispatch({ type: ACTIONS.UPDATE_SETTINGS, payload: settingsData });
   }, [dispatch]);
 
+  const logNumericValue = useCallback((habitId, date, value) => {
+    dispatch({ type: ACTIONS.LOG_NUMERIC_VALUE, payload: { habitId, date, value } });
+  }, [dispatch]);
+
   const removeToast = useCallback((toastId) => {
     dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { id: toastId } });
   }, [dispatch]);
@@ -219,5 +223,6 @@ export function useHabits() {
     addEvent,
     updateEvent,
     deleteEvent,
+    logNumericValue,
   };
 }

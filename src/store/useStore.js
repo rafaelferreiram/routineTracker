@@ -12,6 +12,33 @@ import {
 const d = (n) => `2026-03-${String(n).padStart(2, '0')}`;
 const days = (...nums) => nums.map(d);
 
+// ─── Real Baseline Profile & Achievements (v2 bootstrap) ──────────────────────
+
+const BOOTSTRAP_VERSION = 2;
+
+const BASELINE_PROFILE = {
+  name: 'Rafael',
+  totalXP: 3685,
+  level: 10,
+  joinDate: '2026-03-01',
+  freezeShields: 0,
+  focusHabitId: null,
+  focusHabitDate: null,
+};
+
+const BASELINE_ACHIEVEMENTS = [
+  { id: 'first_step',      unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'on_fire',         unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'week_warrior',    unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'habit_builder',   unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'consistent',      unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'unstoppable',     unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'fifty_done',      unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'double_century',  unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'bjj_white_1',     unlockedAt: '2026-03-22T09:51:51.608Z' },
+  { id: 'meals_week',      unlockedAt: '2026-03-22T09:51:51.608Z' },
+];
+
 // ─── Initial State ────────────────────────────────────────────────────────────
 
 // ─── Meals Habits (added via migration) ───────────────────────────────────────
@@ -435,6 +462,15 @@ function getInitialState() {
           return { ...h, completions, numericValues };
         });
       }
+      // Migration v2: sync profile/achievements if stored data is stale bootstrap
+      if (!parsed.bootstrapVersion || parsed.bootstrapVersion < BOOTSTRAP_VERSION) {
+        if ((parsed.profile?.totalXP || 0) < BASELINE_PROFILE.totalXP) {
+          parsed.profile = { ...BASELINE_PROFILE };
+          parsed.achievements = [...BASELINE_ACHIEVEMENTS];
+        }
+        parsed.bootstrapVersion = BOOTSTRAP_VERSION;
+      }
+
       return {
         toasts: [],
         confetti: false,
@@ -449,17 +485,10 @@ function getInitialState() {
   }
 
   return {
-    profile: {
-      name: 'Rafael',
-      totalXP: 2800,
-      level: 8,
-      joinDate: '2026-03-01',
-      freezeShields: 0,
-      focusHabitId: null,
-      focusHabitDate: null,
-    },
+    profile: { ...BASELINE_PROFILE },
     habits: DEFAULT_HABITS,
-    achievements: [],
+    achievements: [...BASELINE_ACHIEVEMENTS],
+    bootstrapVersion: BOOTSTRAP_VERSION,
     journalEntries: [],
     events: [
       { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
@@ -829,6 +858,7 @@ export function StoreProvider({ children }) {
           events: state.events || [],
           moods: state.moods || {},
           settings: state.settings,
+          bootstrapVersion: BOOTSTRAP_VERSION,
         };
         localStorage.setItem('routineTracker_v3', JSON.stringify(toSave));
       } catch (e) {

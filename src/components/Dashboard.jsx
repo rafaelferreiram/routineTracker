@@ -35,6 +35,18 @@ function getDayCompletion(habits, dateStr, today) {
   return completed / applicable.length;
 }
 
+// ─── Shared bezier path builder ───────────────────────────────────────────────
+
+function cardinalSmooth(pts, t = 0.35) {
+  if (!pts.length) return '';
+  let d = `M ${pts[0].x},${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i-1)], p1 = pts[i], p2 = pts[i+1], p3 = pts[Math.min(pts.length-1, i+2)];
+    d += ` C ${p1.x+(p2.x-p0.x)*t},${p1.y+(p2.y-p0.y)*t} ${p2.x-(p3.x-p1.x)*t},${p2.y-(p3.y-p1.y)*t} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
 // ─── Category Summary Card ────────────────────────────────────────────────────
 
 function CategoryCard({ category, dateHabits, selectedDate }) {
@@ -84,88 +96,121 @@ function CategoryCard({ category, dateHabits, selectedDate }) {
 // ─── Growth Chart ─────────────────────────────────────────────────────────────
 
 function LineChart({ data, color = '#26a69a' }) {
-  const valid = data.filter(d => d.pct !== null);
-  if (valid.length < 2) {
-    return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
-  }
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const svgRef = useRef(null);
 
-  const W = 400, H = 96;
-  const pad = { l: 4, r: 4, t: 8, b: 4 };
-  const innerW = W - pad.l - pad.r;
-  const innerH = H - pad.t - pad.b;
+  const W = 560, H = 120;
+  const PAD = { l: 26, r: 8, t: 10, b: 22 };
+  const iW = W - PAD.l - PAD.r;
+  const iH = H - PAD.t - PAD.b;
+  const base = PAD.t + iH;
   const n = data.length;
+  const areaId = `tv-area-${color.replace('#', '')}`;
 
-  // Build points only for valid entries so gaps are respected
-  const points = data.map((d, i) => ({
-    x: pad.l + (i / (n - 1)) * innerW,
-    y: d.pct !== null ? pad.t + (1 - d.pct) * innerH : null,
+  const pts = data.map((d, i) => ({
+    x: PAD.l + (i / (n - 1)) * iW,
+    y: d.pct !== null ? PAD.t + (1 - Math.min(d.pct, 1)) * iH : null,
     pct: d.pct,
     label: d.dateStr || d.label,
   }));
 
-  // Build SVG path segments (break on null gaps)
-  let linePath = '';
-  let areaPath = '';
-  let currentSegment = [];
-
-  const flushSegment = () => {
-    if (currentSegment.length >= 2) {
-      const move = `M ${currentSegment[0].x} ${currentSegment[0].y}`;
-      const curve = currentSegment.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
-      linePath += ` ${move} ${curve}`;
-
-      const first = currentSegment[0];
-      const last = currentSegment[currentSegment.length - 1];
-      const baseline = pad.t + innerH;
-      areaPath += ` M ${first.x} ${baseline} L ${first.x} ${first.y} ${currentSegment.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} L ${last.x} ${baseline} Z`;
+  let linePath = '', areaPath = '';
+  let seg = [];
+  const flush = () => {
+    if (seg.length >= 2) {
+      const lp = cardinalSmooth(seg);
+      linePath += lp + ' ';
+      let ap = `M ${seg[0].x},${base} L ${seg[0].x},${seg[0].y}`;
+      for (let i = 0; i < seg.length - 1; i++) {
+        const p0 = seg[Math.max(0, i-1)], p1 = seg[i], p2 = seg[i+1], p3 = seg[Math.min(seg.length-1, i+2)];
+        ap += ` C ${p1.x+(p2.x-p0.x)*0.35},${p1.y+(p2.y-p0.y)*0.35} ${p2.x-(p3.x-p1.x)*0.35},${p2.y-(p3.y-p1.y)*0.35} ${p2.x},${p2.y}`;
+      }
+      areaPath += ap + ` L ${seg[seg.length-1].x},${base} Z `;
     }
-    currentSegment = [];
+    seg = [];
   };
+  for (const p of pts) { p.y !== null ? seg.push(p) : flush(); }
+  flush();
 
-  for (const p of points) {
-    if (p.y !== null) {
-      currentSegment.push(p);
-    } else {
-      flushSegment();
-    }
+  if (pts.filter(p => p.y !== null).length < 2) {
+    return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
   }
-  flushSegment();
 
-  const areaId = `area-grad-${color.replace('#', '')}`;
+  const hoverPt = hoverIdx !== null ? pts[hoverIdx] : null;
+  const hoverX = hoverPt?.x ?? null;
+
+  const xLabels = (() => {
+    const idxs = [];
+    const step = Math.ceil(n / 5);
+    for (let i = 0; i < n; i += step) idxs.push(i);
+    if (idxs[idxs.length - 1] !== n - 1) idxs.push(n - 1);
+    return idxs;
+  })();
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
-      <defs>
-        <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
+    <div className="relative select-none">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
+        onMouseMove={e => {
+          const rect = svgRef.current.getBoundingClientRect();
+          const idx = Math.round(((e.clientX - rect.left) / rect.width * W - PAD.l) / iW * (n - 1));
+          setHoverIdx(Math.max(0, Math.min(n - 1, idx)));
+        }}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        <defs>
+          <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
 
-      {/* Horizontal gridlines */}
-      {[0, 0.25, 0.5, 0.75, 1].map(v => {
-        const y = pad.t + (1 - v) * innerH;
-        return (
-          <g key={v}>
-            <line x1={pad.l} y1={y} x2={pad.l + innerW} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-            <text x={pad.l - 2} y={y + 3} fill="rgba(255,255,255,0.2)" fontSize="7" textAnchor="end">{Math.round(v * 100)}%</text>
-          </g>
-        );
-      })}
+        {[0, 0.25, 0.5, 0.75, 1].map(v => {
+          const y = PAD.t + (1 - v) * iH;
+          return (
+            <g key={v}>
+              <line x1={PAD.l} y1={y} x2={PAD.l + iW} y2={y}
+                stroke={v === 0 || v === 1 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
+              <text x={PAD.l - 4} y={y + 3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
+                {Math.round(v * 100)}%
+              </text>
+            </g>
+          );
+        })}
 
-      {/* Area fill */}
-      {areaPath && <path d={areaPath} fill={`url(#${areaId})`} />}
+        {areaPath && <path d={areaPath} fill={`url(#${areaId})`} />}
+        {linePath && <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
 
-      {/* Line */}
-      {linePath && <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+        {hoverX !== null && hoverPt?.y !== null && (
+          <>
+            <line x1={hoverX} y1={PAD.t} x2={hoverX} y2={base}
+              stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3,3" />
+            <circle cx={hoverX} cy={hoverPt.y} r="3.5" fill="#0f0f1a" stroke={color} strokeWidth="2" />
+            <circle cx={hoverX} cy={hoverPt.y} r="6" fill={color} opacity="0.15" />
+          </>
+        )}
 
-      {/* Dots for valid points */}
-      {points.filter(p => p.y !== null).map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={color} stroke="#0F0F1A" strokeWidth="1.5">
-          <title>{p.label}: {Math.round((p.pct || 0) * 100)}%</title>
-        </circle>
-      ))}
-    </svg>
+        {xLabels.map(i => {
+          const p = pts[i];
+          if (!p) return null;
+          const lbl = p.label?.length <= 3 ? p.label : new Date(p.label + 'T00:00:00').getDate();
+          return (
+            <text key={i} x={p.x} y={H - 3} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">{lbl}</text>
+          );
+        })}
+      </svg>
+
+      {hoverPt?.pct !== null && hoverX !== null && (
+        <div className="absolute top-0 pointer-events-none z-20"
+          style={{ left: `${Math.min(Math.max((hoverX / W) * 100, 10), 70)}%`, transform: 'translateX(-50%)' }}>
+          <div className="rounded-xl border border-white/12 px-3 py-2 shadow-xl"
+            style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(10px)' }}>
+            <p className="text-slate-400 text-[10px]">{hoverPt.label}</p>
+            <p className="font-bold text-sm" style={{ color }}>{Math.round((hoverPt.pct || 0) * 100)}%</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -348,10 +393,10 @@ function GrowthChart({ habits }) {
 // ─── Health Growth Chart ──────────────────────────────────────────────────────
 
 const H_METRICS = [
-  { key: 'water',    emoji: '💧', label: 'Water',    color: '#38bdf8', goal: 2, unit: 'L',        fmt: v => `${v}L`             },
-  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#a78bfa', goal: 8, unit: 'h',        fmt: v => `${v}h`             },
-  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#fb923c', goal: 5, unit: 'meals',    fmt: v => `${v}/5 meals`      },
-  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#34d399', goal: 2, unit: 'sessions', fmt: v => `${v} session${v !== 1 ? 's' : ''}` },
+  { key: 'water',    emoji: '💧', label: 'Water',    color: '#38bdf8', goal: 2, fmt: v => `${v}L`                               },
+  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#a78bfa', goal: 8, fmt: v => `${v}h`                               },
+  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#fb923c', goal: 5, fmt: v => `${v}/5 meals`                       },
+  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#34d399', goal: 2, fmt: v => `${v} session${v !== 1 ? 's' : ''}` },
 ];
 
 const MEAL_IDS_H = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
@@ -407,191 +452,136 @@ function getHealthRaw(habits, key, dateStr) {
   return '—';
 }
 
-// Smooth cardinal-spline path builder (TradingView-style curves)
-function buildCardinalPath(pts, tension = 0.4) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[Math.min(pts.length - 1, i + 2)];
-    const cp1x = p1.x + (p2.x - p0.x) * tension;
-    const cp1y = p1.y + (p2.y - p0.y) * tension;
-    const cp2x = p2.x - (p3.x - p1.x) * tension;
-    const cp2y = p2.y - (p3.y - p1.y) * tension;
-    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-  }
-  return d;
-}
+// (cardinalSmooth is defined above, near CategoryCard)
 
-function buildSeriesPaths(days, key, innerW, innerH, pad) {
-  const n = days.length;
-  const baseline = pad.t + innerH;
-  let linePath = '';
-  let areaPath = '';
-  let seg = [];
-
-  const flushSeg = () => {
-    if (seg.length >= 2) {
-      const lp = buildCardinalPath(seg);
-      linePath += lp + ' ';
-      // area: drop to baseline and back
-      areaPath += `M ${seg[0].x},${baseline} L ${seg[0].x},${seg[0].y} ` +
-        buildCardinalPath(seg).replace(/^M [^ ]+ [^ ]+ /, '') +
-        ` L ${seg[seg.length - 1].x},${baseline} Z `;
-    }
-    seg = [];
-  };
-
-  days.forEach((d, i) => {
-    const v = d[key];
-    if (v !== null) {
-      seg.push({ x: pad.l + (i / (n - 1)) * innerW, y: pad.t + (1 - Math.min(v, 1)) * innerH });
-    } else {
-      flushSeg();
-    }
-  });
-  flushSeg();
-  return { linePath, areaPath };
-}
-
-function HealthMultiLineChart({ days, today }) {
+function HealthMultiLineChart({ points, isSemester }) {
   const [hoverIdx, setHoverIdx] = useState(null);
   const svgRef = useRef(null);
 
-  const W = 560, H = 160;
-  const pad = { l: 26, r: 8, t: 10, b: 22 };
-  const innerW = W - pad.l - pad.r;
-  const innerH = H - pad.t - pad.b;
-  const n = days.length;
-
-  const handleMouseMove = useCallback((e) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * W;
-    const idx = Math.round(((relX - pad.l) / innerW) * (n - 1));
-    setHoverIdx(Math.max(0, Math.min(n - 1, idx)));
-  }, [n, innerW, pad.l]);
+  const W = 560, H = 140;
+  const PAD = { l: 26, r: 8, t: 10, b: 22 };
+  const iW = W - PAD.l - PAD.r;
+  const iH = H - PAD.t - PAD.b;
+  const base = PAD.t + iH;
+  const n = points.length;
 
   if (n < 2) return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
 
-  const hoverX = hoverIdx !== null ? pad.l + (hoverIdx / (n - 1)) * innerW : null;
-  const hoverDay = hoverIdx !== null ? days[hoverIdx] : null;
+  // Build bezier paths for each metric series
+  const series = H_METRICS.map(m => {
+    let linePath = '', areaPath = '';
+    let seg = [];
+    const flush = () => {
+      if (seg.length >= 2) {
+        const lp = cardinalSmooth(seg);
+        linePath += lp + ' ';
+        let ap = `M ${seg[0].x},${base} L ${seg[0].x},${seg[0].y}`;
+        for (let i = 0; i < seg.length - 1; i++) {
+          const p0 = seg[Math.max(0,i-1)], p1 = seg[i], p2 = seg[i+1], p3 = seg[Math.min(seg.length-1,i+2)];
+          ap += ` C ${p1.x+(p2.x-p0.x)*0.35},${p1.y+(p2.y-p0.y)*0.35} ${p2.x-(p3.x-p1.x)*0.35},${p2.y-(p3.y-p1.y)*0.35} ${p2.x},${p2.y}`;
+        }
+        areaPath += ap + ` L ${seg[seg.length-1].x},${base} Z `;
+      }
+      seg = [];
+    };
+    points.forEach((pt, i) => {
+      const v = pt[m.key];
+      if (v !== null) seg.push({ x: PAD.l + (i/(n-1))*iW, y: PAD.t + (1-Math.min(v,1))*iH });
+      else flush();
+    });
+    flush();
+    return { ...m, linePath, areaPath };
+  });
 
-  // Pre-build all series paths
-  const series = H_METRICS.map(m => ({
-    ...m,
-    ...buildSeriesPaths(days, m.key, innerW, innerH, pad),
-  }));
+  const hoverX = hoverIdx !== null ? PAD.l + (hoverIdx / (n-1)) * iW : null;
+  const hoverPt = hoverIdx !== null ? points[hoverIdx] : null;
 
-  // X-axis label positions
-  const xLabels = [];
-  const step = Math.ceil(n / 5);
-  for (let i = 0; i < n; i += step) xLabels.push(i);
-  if (xLabels[xLabels.length - 1] !== n - 1) xLabels.push(n - 1);
+  const xLabels = isSemester
+    ? points.map((pt, i) => ({ i, label: pt.label }))
+    : (() => {
+        const idxs = [];
+        const step = Math.ceil(n / 5);
+        for (let i = 0; i < n; i += step) idxs.push(i);
+        if (idxs[idxs.length-1] !== n-1) idxs.push(n-1);
+        return idxs.map(i => ({ i, label: new Date(points[i]?.dateStr + 'T00:00:00').getDate() }));
+      })();
 
   return (
     <div className="relative select-none">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
         style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
-        onMouseMove={handleMouseMove}
+        onMouseMove={e => {
+          const rect = svgRef.current.getBoundingClientRect();
+          const idx = Math.round(((e.clientX - rect.left) / rect.width * W - PAD.l) / iW * (n-1));
+          setHoverIdx(Math.max(0, Math.min(n-1, idx)));
+        }}
         onMouseLeave={() => setHoverIdx(null)}
       >
         <defs>
-          {series.map(m => (
-            <linearGradient key={m.key} id={`hg-${m.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={m.color} stopOpacity="0.18" />
-              <stop offset="85%" stopColor={m.color} stopOpacity="0" />
+          {series.map(s => (
+            <linearGradient key={s.key} id={`hml-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.16" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
             </linearGradient>
           ))}
         </defs>
 
-        {/* Horizontal grid */}
         {[0, 0.25, 0.5, 0.75, 1].map(v => {
-          const y = pad.t + (1 - v) * innerH;
-          const isMajor = v === 0 || v === 1;
+          const y = PAD.t + (1-v) * iH;
           return (
             <g key={v}>
-              <line x1={pad.l} y1={y} x2={pad.l + innerW} y2={y}
-                stroke={isMajor ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'}
-                strokeWidth="1"
-              />
-              <text x={pad.l - 4} y={y + 3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
-                {Math.round(v * 100)}%
+              <line x1={PAD.l} y1={y} x2={PAD.l+iW} y2={y}
+                stroke={v === 0 || v === 1 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
+              <text x={PAD.l-4} y={y+3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
+                {Math.round(v*100)}%
               </text>
             </g>
           );
         })}
 
-        {/* Area fills */}
-        {series.map(m => m.areaPath && (
-          <path key={`a-${m.key}`} d={m.areaPath} fill={`url(#hg-${m.key})`} />
+        {series.map(s => s.areaPath && <path key={`a-${s.key}`} d={s.areaPath} fill={`url(#hml-${s.key})`} />)}
+        {series.map(s => s.linePath && (
+          <path key={`l-${s.key}`} d={s.linePath} fill="none" stroke={s.color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
         ))}
 
-        {/* Lines */}
-        {series.map(m => m.linePath && (
-          <path key={`l-${m.key}`} d={m.linePath} fill="none"
-            stroke={m.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          />
-        ))}
-
-        {/* Crosshair */}
-        {hoverX !== null && hoverDay && (
+        {hoverX !== null && hoverPt && (
           <>
-            <line x1={hoverX} y1={pad.t} x2={hoverX} y2={pad.t + innerH}
-              stroke="rgba(255,255,255,0.25)" strokeWidth="1" strokeDasharray="3,3"
-            />
-            {series.map(m => {
-              const v = hoverDay[m.key];
+            <line x1={hoverX} y1={PAD.t} x2={hoverX} y2={base}
+              stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3,3" />
+            {series.map(s => {
+              const v = hoverPt[s.key];
               if (v === null) return null;
-              const cy = pad.t + (1 - Math.min(v, 1)) * innerH;
+              const cy = PAD.t + (1-Math.min(v,1)) * iH;
               return (
-                <g key={`dot-${m.key}`}>
-                  <circle cx={hoverX} cy={cy} r="3.5" fill="#0f0f1a" stroke={m.color} strokeWidth="2" />
-                  <circle cx={hoverX} cy={cy} r="6" fill={m.color} opacity="0.15" />
+                <g key={`d-${s.key}`}>
+                  <circle cx={hoverX} cy={cy} r="3.5" fill="#0f0f1a" stroke={s.color} strokeWidth="2" />
+                  <circle cx={hoverX} cy={cy} r="6" fill={s.color} opacity="0.12" />
                 </g>
               );
             })}
           </>
         )}
 
-        {/* X-axis labels */}
-        {xLabels.map(i => {
-          const x = pad.l + (i / (n - 1)) * innerW;
-          const d = days[i];
-          if (!d) return null;
-          const dayNum = new Date(d.dateStr + 'T00:00:00').getDate();
-          return (
-            <text key={i} x={x} y={H - 3} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">
-              {dayNum}
-            </text>
-          );
-        })}
+        {xLabels.map(({ i, label }) => (
+          <text key={i} x={PAD.l + (i/(n-1))*iW} y={H-3}
+            fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">{label}</text>
+        ))}
       </svg>
 
-      {/* Hover tooltip */}
-      {hoverDay && hoverX !== null && (
-        <div
-          className="absolute top-0 pointer-events-none z-20"
-          style={{
-            left: `${Math.min(Math.max((hoverX / W) * 100, 10), 72)}%`,
-            transform: 'translateX(-50%)',
-          }}
-        >
-          <div className="rounded-2xl border border-white/12 shadow-2xl px-3.5 py-3 text-xs"
-            style={{ background: 'rgba(10,10,20,0.96)', backdropFilter: 'blur(12px)', minWidth: '130px' }}>
-            <p className="text-slate-400 mb-2 font-semibold text-[10px] uppercase tracking-wider">
-              {new Date(hoverDay.dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      {hoverPt && hoverX !== null && (
+        <div className="absolute top-0 pointer-events-none z-20"
+          style={{ left: `${Math.min(Math.max((hoverX/W)*100, 10), 68)}%`, transform: 'translateX(-50%)' }}>
+          <div className="rounded-2xl border border-white/12 shadow-2xl px-3.5 py-2.5"
+            style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(12px)', minWidth: '130px' }}>
+            <p className="text-slate-400 mb-1.5 font-semibold text-[10px] uppercase tracking-wider">
+              {isSemester ? hoverPt.label : new Date(hoverPt.dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </p>
             {H_METRICS.map(m => {
-              const v = hoverDay[m.key];
+              const v = hoverPt[m.key];
               const rawVal = v !== null ? Math.round(v * m.goal * 10) / 10 : null;
               return (
                 <div key={m.key} className="flex items-center gap-2 py-0.5">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
                   <span className="text-slate-400 text-[10px]">{m.label}</span>
                   <span className="ml-auto font-bold text-[10px]" style={{ color: v !== null ? m.color : 'rgb(75,85,99)' }}>
                     {rawVal !== null ? m.fmt(rawVal) : '—'}
@@ -608,174 +598,191 @@ function HealthMultiLineChart({ days, today }) {
 
 function HealthGrowthChart({ habits, achievements }) {
   const [view, setView] = useState('month');
+  const [chartType, setChartType] = useState('line');
   const today = getTodayString();
   const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
+  const Y = now.getFullYear(), M = now.getMonth();
 
-  const monthDays = useMemo(() => {
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => {
+  const monthPoints = useMemo(() => {
+    const days = new Date(Y, M+1, 0).getDate();
+    return Array.from({ length: days }, (_, i) => {
       const day = i + 1;
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateStr = `${Y}-${String(M+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       const past = dateStr <= today;
-      return {
-        day, dateStr,
-        water:    past ? getHealthPct(habits, 'water', dateStr)    : null,
-        sleep:    past ? getHealthPct(habits, 'sleep', dateStr)    : null,
-        meals:    past ? getHealthPct(habits, 'meals', dateStr)    : null,
-        exercise: past ? getHealthPct(habits, 'exercise', dateStr) : null,
-      };
+      const vals = {};
+      H_METRICS.forEach(m => { vals[m.key] = past ? getHealthPct(habits, m.key, dateStr) : null; });
+      const arr = Object.values(vals).filter(v => v !== null);
+      return { day, dateStr, pct: arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : (past ? 0 : null), ...vals };
     });
-  }, [habits, today, currentYear, currentMonth]);
+  }, [habits, today, Y, M]);
 
-  const semesterMonths = useMemo(() => {
+  const semesterPoints = useMemo(() => {
     return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(currentYear, currentMonth - (5 - i), 1);
-      const y = d.getFullYear();
-      const m = d.getMonth();
+      const d = new Date(Y, M-(5-i), 1);
+      const y = d.getFullYear(), m = d.getMonth();
+      const days = new Date(y, m+1, 0).getDate();
       const label = d.toLocaleDateString('en-US', { month: 'short' });
-      const daysInMonth = new Date(y, m + 1, 0).getDate();
       const avgs = {};
       H_METRICS.forEach(met => {
         let sum = 0, cnt = 0;
-        for (let day = 1; day <= daysInMonth; day++) {
-          const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        for (let day = 1; day <= days; day++) {
+          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
           if (ds > today) continue;
           const v = getHealthPct(habits, met.key, ds);
           if (v !== null) { sum += v; cnt++; }
         }
-        avgs[met.key] = cnt > 0 ? sum / cnt : null;
+        avgs[met.key] = cnt > 0 ? sum/cnt : null;
       });
-      return { label, isCurrent: i === 5, ...avgs };
+      const arr = Object.values(avgs).filter(v => v !== null);
+      return { label, isCurrent: i === 5, pct: arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null, ...avgs };
     });
-  }, [habits, today, currentYear, currentMonth]);
+  }, [habits, today, Y, M]);
+
+  // Legend: most recent available value per metric (look back up to 14 days)
+  const latestValues = useMemo(() => H_METRICS.map(m => {
+    for (let d = 0; d <= 14; d++) {
+      const dt = new Date(); dt.setDate(dt.getDate() - d);
+      const ds = dt.toISOString().split('T')[0];
+      const v = getHealthPct(habits, m.key, ds);
+      if (v !== null) return { ...m, pct: v, rawVal: Math.round(v * m.goal * 10) / 10, daysAgo: d };
+    }
+    return { ...m, pct: null, rawVal: null, daysAgo: null };
+  }), [habits]);
 
   const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const unlockedSet = new Set((achievements || []).map(a => a.id));
-
-  // Today's snapshot for the stat cards
-  const todaySnap = H_METRICS.map(m => {
-    const pct = getHealthPct(habits, m.key, today);
-    const rawVal = pct !== null ? Math.round(pct * m.goal * 10) / 10 : null;
-    return { ...m, pct, rawVal };
-  });
+  const activePoints = view === 'month' ? monthPoints : semesterPoints;
+  const validPoints = activePoints.filter(d => d.pct !== null && d.pct > 0);
 
   return (
-    <div className="rounded-3xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-wrap gap-2">
-        <div>
-          <h3 className="text-white font-bold text-base flex items-center gap-2">🏥 Health Overview</h3>
-          <p className="text-slate-500 text-[11px] mt-0.5">All metrics as % of daily goal</p>
-        </div>
-        <div className="flex rounded-xl overflow-hidden border border-white/10">
-          {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
-            <button key={v} onClick={() => setView(v)}
-              className="px-3 py-1.5 text-xs font-medium transition-all"
-              style={{ background: view === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: view === v ? 'white' : 'rgb(148,163,184)' }}>
-              {label}
-            </button>
-          ))}
+    <div className="rounded-3xl p-5 border border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      {/* Header — identical structure to GrowthChart */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h3 className="text-white font-semibold text-base flex items-center gap-2">🏥 Health</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl overflow-hidden border border-white/10">
+            {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)}
+                className="px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: view === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: view === v ? 'white' : 'rgb(148,163,184)' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-xl overflow-hidden border border-white/10">
+            {[['bar', '▐▌'], ['line', '∿']].map(([v, icon]) => (
+              <button key={v} onClick={() => setChartType(v)}
+                className="px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: chartType === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: chartType === v ? 'white' : 'rgb(148,163,184)' }}>
+                {icon}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Today's stat cards */}
-      <div className="grid grid-cols-4 gap-0 border-y border-white/6">
-        {todaySnap.map((m, idx) => (
-          <div key={m.key}
-            className={`px-4 py-3 ${idx < 3 ? 'border-r border-white/6' : ''}`}
-            style={{ background: m.pct !== null ? `${m.color}08` : 'transparent' }}
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-              <span className="text-[10px] text-slate-500 font-medium">{m.emoji} {m.label}</span>
-            </div>
-            <p className="font-black text-sm leading-none" style={{ color: m.pct !== null ? m.color : 'rgb(75,85,99)' }}>
+      {/* Legend — most recent logged value per metric */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {latestValues.map(m => (
+          <div key={m.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border"
+            style={{ background: `${m.color}0d`, borderColor: `${m.color}30` }}>
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
+            <span className="text-[10px] text-slate-400">{m.emoji} {m.label}</span>
+            <span className="text-[10px] font-bold" style={{ color: m.pct !== null ? m.color : 'rgb(71,85,105)' }}>
               {m.rawVal !== null ? m.fmt(m.rawVal) : '—'}
-            </p>
-            {m.pct !== null && (
-              <div className="mt-1.5 h-1 rounded-full bg-white/8 overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(m.pct * 100, 100)}%`, background: m.color }} />
-              </div>
-            )}
+            </span>
+            {m.daysAgo > 0 && <span className="text-[9px] text-slate-600">{m.daysAgo}d ago</span>}
           </div>
         ))}
       </div>
 
-      {/* Chart area */}
-      <div className="px-5 pt-4 pb-2">
-        {view === 'month' && (
-          <>
-            <HealthMultiLineChart days={monthDays} today={today} />
-            <p className="text-[10px] text-slate-600 mt-1">{currentMonthLabel}</p>
-          </>
-        )}
+      {/* Month view */}
+      {view === 'month' && (
+        <div>
+          <p className="text-slate-500 text-xs mb-3">{currentMonthLabel} — daily % of goal</p>
+          {chartType === 'line' ? (
+            <HealthMultiLineChart points={monthPoints} isSemester={false} />
+          ) : (
+            <>
+              <div className="flex items-end gap-[2px]" style={{ height: '100px' }}>
+                {monthPoints.map(({ day, dateStr, pct }) => {
+                  const isToday = dateStr === today;
+                  const barH = pct > 0 ? Math.max(4, Math.round(pct * 96)) : 3;
+                  const barColor = pct === null || pct === 0 ? 'rgba(255,255,255,0.05)'
+                    : pct >= 1 ? '#10B981' : pct >= 0.5 ? '#34d399' : '#065f46';
+                  return (
+                    <div key={day} className="flex-1 rounded-t-sm transition-all"
+                      style={{ height: `${barH}px`, background: barColor, minHeight: '3px',
+                        outline: isToday ? '1px solid #34d399' : '', boxShadow: isToday ? '0 0 6px #34d39980' : '' }}
+                      title={`${dateStr}: ${pct !== null ? Math.round(pct*100)+'% health score' : 'no data'}`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex justify-between mt-1.5 px-0.5">
+                {[1, 7, 14, 21, 28].filter(d => d <= monthPoints.length).map(d => (
+                  <span key={d} className="text-[9px] text-slate-600">{d}</span>
+                ))}
+                {monthPoints.length > 28 && <span className="text-[9px] text-slate-600">{monthPoints.length}</span>}
+              </div>
+            </>
+          )}
+          {validPoints.length > 0 && (
+            <p className="text-[11px] text-slate-500 mt-2 text-right">
+              Avg {Math.round(validPoints.reduce((s,d)=>s+d.pct,0)/validPoints.length*100)}% ·{' '}
+              Best {Math.round(Math.max(...validPoints.map(d=>d.pct))*100)}%
+            </p>
+          )}
+        </div>
+      )}
 
-        {view === 'semester' && (
-          <div>
-            <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily % of goal</p>
-            <div className="flex items-end gap-2" style={{ height: '110px' }}>
-              {semesterMonths.map(({ label, isCurrent, ...vals }) => (
-                <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="flex-1 w-full flex items-end gap-[2px]">
-                    {H_METRICS.map(m => {
-                      const pct = vals[m.key];
-                      const barH = pct !== null ? Math.max(4, Math.round(pct * 90)) : 3;
-                      return (
-                        <div key={m.key}
-                          className="flex-1 rounded-t-sm transition-all duration-700"
-                          style={{
-                            height: `${barH}px`,
-                            background: pct !== null ? m.color : 'rgba(255,255,255,0.06)',
-                            minHeight: '3px',
-                            opacity: pct !== null ? 0.85 : 1,
-                            boxShadow: isCurrent && pct !== null ? `0 0 8px ${m.color}60` : '',
-                          }}
-                          title={`${label} ${m.label}: ${pct !== null ? Math.round(pct * 100) + '%' : 'no data'}`}
-                        />
-                      );
-                    })}
+      {/* Semester view */}
+      {view === 'semester' && (
+        <div>
+          <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily % of goal</p>
+          {chartType === 'line' ? (
+            <HealthMultiLineChart points={semesterPoints} isSemester={true} />
+          ) : (
+            <div className="flex items-end gap-3" style={{ height: '110px' }}>
+              {semesterPoints.map(({ label, pct, isCurrent }) => {
+                const barH = pct > 0 ? Math.max(6, Math.round(pct * 90)) : 3;
+                const barColor = !pct ? 'rgba(255,255,255,0.05)' : pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#34d399' : '#065f46';
+                return (
+                  <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="flex-1 w-full flex flex-col justify-end items-center gap-0.5">
+                      {pct !== null && <span className="text-[9px] text-slate-400">{Math.round(pct*100)}%</span>}
+                      <div className="w-full rounded-t-lg transition-all duration-700"
+                        style={{ height: `${barH}px`, background: barColor, minHeight: '3px',
+                          boxShadow: isCurrent && pct ? `0 0 8px ${barColor}60` : '' }} />
+                    </div>
+                    <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
                   </div>
-                  <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            {/* Legend */}
-            <div className="flex flex-wrap gap-3 mt-3 justify-center">
-              {H_METRICS.map(m => (
-                <div key={m.key} className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: m.color }} />
-                  <span className="text-[10px] text-slate-400">{m.emoji} {m.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Health medals */}
-      <div className="mx-5 mb-5 mt-1 pt-4 border-t border-white/6">
-        <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mb-2.5">Health Medals</p>
+      <div className="mt-4 pt-4 border-t border-white/5">
+        <p className="text-slate-500 text[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
         <div className="flex flex-wrap gap-2">
           {HEALTH_MEDALS.map(ach => {
             const unlocked = unlockedSet.has(ach.id);
             return (
               <div key={ach.id}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
                 style={{
-                  background: unlocked ? 'rgba(250,204,21,0.1)' : 'rgba(255,255,255,0.03)',
-                  borderColor: unlocked ? 'rgba(250,204,21,0.4)' : 'rgba(255,255,255,0.07)',
-                  color: unlocked ? '#fde68a' : 'rgb(71,85,105)',
-                  boxShadow: unlocked ? '0 0 12px rgba(250,204,21,0.15)' : '',
+                  background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
+                  borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.07)',
+                  color: unlocked ? '#fcd34d' : 'rgb(100,116,139)',
+                  boxShadow: unlocked ? '0 0 8px rgba(250,204,21,0.2)' : '',
                 }}
                 title={ach.desc}
               >
-                <span className="text-sm">{unlocked ? '🏅' : '🔒'}</span>
-                <div>
-                  <span className="font-semibold">{ach.emoji} {ach.label}</span>
-                  {unlocked && <span className="text-[9px] ml-1 opacity-60">earned</span>}
-                </div>
+                <span>{unlocked ? '🏅' : '🔒'}</span>
+                <span className="font-medium">{ach.emoji} {ach.label}</span>
               </div>
             );
           })}

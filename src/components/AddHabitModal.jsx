@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 
-const CATEGORIES = ['Health', 'Fitness', 'Mind', 'Social', 'Work', 'Other'];
+const CATEGORIES = ['Religion', 'Exercise', 'Work', 'Study', 'Family', 'Health', 'Other'];
 
 const CATEGORY_EMOJIS = {
-  Health: '❤️',
-  Fitness: '💪',
-  Mind: '🧠',
-  Social: '👥',
+  Religion: '🙏',
+  Exercise: '💪',
   Work: '💼',
+  Study: '📚',
+  Family: '❤️',
+  Health: '🌿',
   Other: '⭐',
 };
 
@@ -38,9 +39,10 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
 
   const [name, setName] = useState(editHabit?.name || '');
   const [emoji, setEmoji] = useState(editHabit?.emoji || '⭐');
-  const [category, setCategory] = useState(editHabit?.category || 'Health');
+  const [category, setCategory] = useState(editHabit?.category || 'Religion');
   const [color, setColor] = useState(editHabit?.color || '#7C3AED');
   const [frequency, setFrequency] = useState(editHabit?.frequency || 'daily');
+  const [difficulty, setDifficulty] = useState(editHabit?.difficulty || 'medium');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [customEmoji, setCustomEmoji] = useState('');
   const [error, setError] = useState('');
@@ -81,6 +83,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
       category,
       color,
       frequency,
+      difficulty,
     };
 
     if (isEdit) {
@@ -100,7 +103,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
     >
       <div
         className="w-full max-w-lg rounded-3xl border border-white/10 shadow-2xl animate-slide-up overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 100%)' }}
+        style={{ background: '#111111' }}
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
@@ -130,7 +133,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
               </button>
 
               {showEmojiPicker && (
-                <div className="absolute top-16 left-0 z-10 p-3 rounded-2xl border border-white/10 shadow-2xl w-64" style={{ background: '#1A1A2E' }}>
+                <div className="absolute top-16 left-0 z-10 p-3 rounded-2xl border border-white/10 shadow-2xl w-64" style={{ background: '#111111' }}>
                   <p className="text-slate-400 text-xs mb-2 font-medium">Choose an emoji</p>
                   <div className="grid grid-cols-8 gap-1 mb-2">
                     {SUGGESTED_EMOJIS.map(e => (
@@ -185,7 +188,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
           {/* Category */}
           <div>
             <label className="block text-slate-400 text-xs font-medium mb-2">Category</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
@@ -198,7 +201,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
                   }`}
                 >
                   <span>{CATEGORY_EMOJIS[cat]}</span>
-                  <span>{cat}</span>
+                  <span className="truncate text-xs">{cat}</span>
                 </button>
               ))}
             </div>
@@ -246,6 +249,38 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
             </div>
           </div>
 
+          {/* Difficulty */}
+          <div>
+            <label className="block text-slate-400 text-xs font-medium mb-2">Difficulty <span className="text-slate-600">(affects XP)</span></label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: 'easy', label: 'Easy', icon: '🟢', xp: '7-8 XP', color: '#4ade80' },
+                { value: 'medium', label: 'Medium', icon: '🟡', xp: '10 XP', color: '#fbbf24' },
+                { value: 'hard', label: 'Hard', icon: '🔴', xp: '15 XP', color: '#f87171' },
+              ].map(d => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDifficulty(d.value)}
+                  className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${
+                    difficulty === d.value
+                      ? 'text-white'
+                      : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                  }`}
+                  style={difficulty === d.value ? {
+                    background: `${d.color}15`,
+                    borderColor: `${d.color}50`,
+                    color: d.color,
+                  } : {}}
+                >
+                  <span className="text-base">{d.icon}</span>
+                  <span className="text-xs font-semibold">{d.label}</span>
+                  <span className="text-[10px] opacity-70">{d.xp}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Preview */}
           <div className="p-4 rounded-2xl border border-white/10 bg-white/5">
             <p className="text-slate-500 text-xs mb-2 font-medium uppercase tracking-wider">Preview</p>
@@ -258,7 +293,16 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
               </div>
               <div>
                 <p className="text-white font-semibold text-sm">{name || 'Your habit name'}</p>
-                <p className="text-slate-400 text-xs">{CATEGORY_EMOJIS[category]} {category} · {FREQUENCIES.find(f => f.value === frequency)?.label}</p>
+                <p className="text-slate-400 text-xs flex items-center gap-1 flex-wrap">
+                  {CATEGORY_EMOJIS[category]} {category} · {FREQUENCIES.find(f => f.value === frequency)?.label}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full capitalize"
+                    style={{
+                      color: difficulty === 'easy' ? '#4ade80' : difficulty === 'hard' ? '#f87171' : '#fbbf24',
+                      background: difficulty === 'easy' ? 'rgba(74,222,128,0.12)' : difficulty === 'hard' ? 'rgba(248,113,113,0.12)' : 'rgba(251,191,36,0.12)',
+                    }}>
+                    {difficulty}
+                  </span>
+                </p>
               </div>
               <div
                 className="ml-auto px-3 py-1 rounded-full text-xs font-semibold"

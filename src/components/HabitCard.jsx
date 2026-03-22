@@ -5,10 +5,11 @@ import { StreakPill } from './StreakBadge.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 
 export default function HabitCard({ habit, showWeeklyGrid = true, compact = false, selectedDate = null, weekDays = null }) {
-  const { toggleCompletion, deleteHabit, getHabitStats } = useHabits();
+  const { toggleCompletion, deleteHabit, getHabitStats, freezeShields, useFreezeShield } = useHabits();
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const stats = getHabitStats(habit);
   const today = getTodayString();
@@ -97,6 +98,13 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
 
           {/* Streak */}
           {stats.streak > 0 && <StreakPill streak={stats.streak} />}
+
+          {/* Difficulty badge */}
+          {habit.difficulty && habit.difficulty !== 'medium' && (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium difficulty-${habit.difficulty}`}>
+              {habit.difficulty === 'easy' ? '🟢' : '🔴'}
+            </span>
+          )}
         </div>
 
         {showEdit && <AddHabitModal editHabit={habit} onClose={() => setShowEdit(false)} />}
@@ -222,9 +230,37 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
             </button>
           </div>
 
-          {/* Weekly grid */}
-          {showWeeklyGrid && weekDays && (
-            <div className="mt-3 pt-3 border-t border-white/5">
+          {/* Freeze Shield button — shown when habit has streak but not done today and shields available */}
+          {isToday && !stats.isCompletedToday && stats.streak >= 3 && freezeShields > 0 && (
+            <button
+              onClick={() => useFreezeShield(habit.id, today)}
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: '#A78BFA' }}
+              title={`Use a Freeze Shield to protect your ${stats.streak}-day streak`}
+            >
+              🛡️ Use Freeze Shield ({freezeShields} left) — protect {stats.streak}d streak
+            </button>
+          )}
+
+          {/* Expand toggle */}
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="mt-3 pt-3 border-t border-white/5 w-full flex items-center justify-between text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs">{expanded ? 'Hide' : 'Show'} history</span>
+              {!expanded && habit.difficulty && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize difficulty-${habit.difficulty || 'medium'}`}>
+                  {habit.difficulty || 'medium'}
+                </span>
+              )}
+            </div>
+            <span className="text-xs">{expanded ? '▲' : '▼'}</span>
+          </button>
+
+          {/* Weekly grid - only when expanded */}
+          {expanded && showWeeklyGrid && weekDays && (
+            <div className="mt-3">
               <div className="grid grid-cols-7 gap-1">
                 {weekDays.map((date) => {
                   const dayObj = new Date(date + 'T00:00:00');
@@ -292,7 +328,7 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
         >
           <div
             className="w-full max-w-sm rounded-3xl border border-white/10 p-6 animate-bounce-in"
-            style={{ background: '#1A1A2E' }}
+            style={{ background: '#111111' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="text-center mb-4">

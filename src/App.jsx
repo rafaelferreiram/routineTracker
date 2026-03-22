@@ -6,7 +6,7 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 24, color: '#f87171', fontFamily: 'monospace', background: '#1a1a2e', minHeight: '100vh' }}>
+        <div style={{ padding: 24, color: '#f87171', fontFamily: 'monospace', background: '#080808', minHeight: '100vh' }}>
           <h2 style={{ color: '#ef4444' }}>⚠️ Runtime Error</h2>
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: 13 }}>
             {this.state.error.toString()}{'\n\n'}{this.state.error.stack}
@@ -17,6 +17,7 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
 import { useHabits } from './hooks/useHabits.js';
 import Navbar from './components/Navbar.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -26,54 +27,53 @@ import AchievementsPanel from './components/AchievementsPanel.jsx';
 import JournalPanel from './components/JournalPanel.jsx';
 import ToastContainer from './components/ToastNotification.jsx';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
+import LevelUpCeremony from './components/LevelUpCeremony.jsx';
+import ExportImport from './components/ExportImport.jsx';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
-  const { confetti } = useHabits();
+  const [showExport, setShowExport] = useState(false);
+  const { confetti, levelUpPending, clearLevelUp } = useHabits();
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'today':
-        return <Dashboard setActiveTab={setActiveTab} />;
-      case 'habits':
-        return <HabitList />;
-      case 'stats':
-        return <StatsPanel />;
-      case 'achievements':
-        return <AchievementsPanel />;
-      case 'journal':
-        return <JournalPanel />;
-      default:
-        return <Dashboard setActiveTab={setActiveTab} />;
+      case 'today':         return <Dashboard setActiveTab={setActiveTab} />;
+      case 'habits':        return <HabitList />;
+      case 'stats':         return <StatsPanel />;
+      case 'achievements':  return <AchievementsPanel />;
+      case 'journal':       return <JournalPanel />;
+      default:              return <Dashboard setActiveTab={setActiveTab} />;
     }
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: 'linear-gradient(135deg, #0C0C0C 0%, #141414 50%, #111111 100%)' }}
-    >
-      {/* Desktop: sidebar + main content */}
+    <div className="min-h-screen bg-app">
       <div className="lg:flex">
-        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />
 
-        {/* Main content area */}
-        <main className="flex-1 lg:ml-64 xl:ml-72 min-h-screen">
+        <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
           {/* Mobile header */}
-          <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-white/5" style={{ background: 'rgba(12,12,12,0.95)', backdropFilter: 'blur(20px)' }}>
+          <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-[#1f1f1f]"
+            style={{ background: 'rgba(8,8,8,0.97)', backdropFilter: 'blur(20px)' }}>
             <div className="flex items-center gap-2">
-              <span className="text-xl">🔥</span>
-              <span className="text-white font-bold text-lg">RoutineQuest</span>
+              <span className="text-base">⚡</span>
+              <span className="text-white font-bold text-base tracking-tight">RoutineQuest</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 bg-white/5 px-2 py-1 rounded-full">
+              <button
+                onClick={() => setShowExport(true)}
+                className="text-[#4b5563] hover:text-white text-xs transition-colors p-1.5"
+                title="Backup & Restore"
+              >
+                ⊞
+              </button>
+              <span className="text-xs text-[#4b5563] bg-[#111111] px-2 py-1 rounded-full border border-[#1f1f1f]">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </span>
             </div>
           </div>
 
-          {/* Page content */}
-          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl pb-24 lg:pb-8">
+          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl pb-28 lg:pb-8">
             <div key={activeTab} className="animate-fade-in">
               {renderContent()}
             </div>
@@ -84,6 +84,14 @@ function AppContent() {
       {/* Global overlays */}
       <ToastContainer />
       <ConfettiEffect active={confetti} />
+      {levelUpPending && (
+        <LevelUpCeremony
+          oldLevel={levelUpPending.oldLevel}
+          newLevel={levelUpPending.newLevel}
+          onClose={clearLevelUp}
+        />
+      )}
+      {showExport && <ExportImport onClose={() => setShowExport(false)} />}
     </div>
   );
 }

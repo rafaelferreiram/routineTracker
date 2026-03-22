@@ -5,7 +5,7 @@ import { calculateXPGain, computeStats, getLevelFromXP, getLevelProgress, getLev
 
 export function useHabits() {
   const { state, dispatch } = useStore();
-  const { habits, profile, achievements, settings, toasts, confetti } = state;
+  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending } = state;
 
   // ─── Computed Values ───────────────────────────────────────────────────────
 
@@ -21,6 +21,11 @@ export function useHabits() {
   const levelProgress = getLevelProgress(profile.totalXP || 0);
   const levelTitle = getLevelTitle(currentLevel);
   const levelIcon = getLevelIcon(currentLevel);
+
+  // New profile fields
+  const freezeShields = profile.freezeShields || 0;
+  const focusHabitId = profile.focusHabitId;
+  const focusHabitDate = profile.focusHabitDate;
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -51,7 +56,16 @@ export function useHabits() {
 
     // Only grant XP for completing (not uncompleting) and only for today
     if (!wasCompleted && isToday) {
-      const { xp, reasons } = calculateXPGain(habits, habitId, targetDate);
+      let { xp, reasons } = calculateXPGain(habits, habitId, targetDate);
+
+      // Focus habit 2× XP bonus
+      const isFocusHabit = profile.focusHabitId === habitId && profile.focusHabitDate === targetDate;
+      if (isFocusHabit) {
+        const focusBonus = xp; // double total XP
+        xp += focusBonus;
+        reasons = [...reasons, { label: 'Focus Habit 2× bonus!', xp: focusBonus }];
+      }
+
       dispatch({ type: ACTIONS.ADD_XP, payload: { amount: xp } });
 
       // Show XP toast
@@ -66,7 +80,6 @@ export function useHabits() {
       });
 
       // Check if all done today (after this toggle)
-      const updatedCompletions = [...habit.completions, targetDate];
       const otherTodayHabits = todayHabits.filter(h => h.id !== habitId);
       const allOthersDone = otherTodayHabits.every(h => h.completions.includes(today));
 
@@ -78,7 +91,7 @@ export function useHabits() {
         }, 4000);
       }
     }
-  }, [habits, todayHabits, today, dispatch]);
+  }, [habits, todayHabits, today, profile.focusHabitId, profile.focusHabitDate, dispatch]);
 
   const updateProfile = useCallback((profileData) => {
     dispatch({ type: ACTIONS.UPDATE_PROFILE, payload: profileData });
@@ -90,6 +103,33 @@ export function useHabits() {
 
   const addToast = useCallback((toast) => {
     dispatch({ type: ACTIONS.ADD_TOAST, payload: toast });
+  }, [dispatch]);
+
+  // ─── New Action Dispatchers ────────────────────────────────────────────────
+
+  const useFreezeShield = useCallback((habitId, date) => {
+    dispatch({ type: ACTIONS.USE_FREEZE_SHIELD, payload: { habitId, date } });
+    dispatch({
+      type: ACTIONS.ADD_TOAST,
+      payload: {
+        type: 'info',
+        title: '🛡️ Freeze Shield Used!',
+        message: 'Streak protected!',
+        description: 'Your streak lives to fight another day.',
+      },
+    });
+  }, [dispatch]);
+
+  const setFocusHabit = useCallback((habitId, date) => {
+    dispatch({ type: ACTIONS.SET_FOCUS_HABIT, payload: { habitId, date } });
+  }, [dispatch]);
+
+  const clearFocusHabit = useCallback(() => {
+    dispatch({ type: ACTIONS.CLEAR_FOCUS_HABIT });
+  }, [dispatch]);
+
+  const clearLevelUp = useCallback(() => {
+    dispatch({ type: ACTIONS.CLEAR_LEVEL_UP });
   }, [dispatch]);
 
   // ─── Selectors ────────────────────────────────────────────────────────────
@@ -122,6 +162,12 @@ export function useHabits() {
     toasts,
     confetti,
 
+    // New state
+    freezeShields,
+    focusHabitId,
+    focusHabitDate,
+    levelUpPending,
+
     // Computed
     today,
     todayHabits,
@@ -143,5 +189,11 @@ export function useHabits() {
     addToast,
     getHabitById,
     getHabitStats,
+
+    // New actions
+    useFreezeShield,
+    setFocusHabit,
+    clearFocusHabit,
+    clearLevelUp,
   };
 }

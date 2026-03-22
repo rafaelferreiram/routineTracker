@@ -421,9 +421,9 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
           let bg = 'rgba(255,255,255,0.04)';
           if (!isFuture && pct !== null) {
             if (pct === 0) bg = 'rgba(255,255,255,0.06)';
-            else if (pct < 0.5) bg = 'rgba(139,92,246,0.3)';
-            else if (pct < 1) bg = 'rgba(139,92,246,0.6)';
-            else bg = '#8B5CF6';
+            else if (pct < 0.5) bg = 'rgba(34,197,94,0.25)';
+            else if (pct < 1) bg = 'rgba(34,197,94,0.55)';
+            else bg = '#22c55e';
           }
 
           return (
@@ -433,16 +433,16 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
               disabled={isFuture}
               className="aspect-square rounded-lg flex items-center justify-center text-xs font-semibold transition-all duration-150"
               style={{
-                background: isSelected ? '#7C3AED' : bg,
+                background: isSelected ? '#16a34a' : bg,
                 border: isSelected
-                  ? '1px solid #A78BFA'
+                  ? '1px solid #4ade80'
                   : isToday && !isSelected
-                  ? '1px solid rgba(139,92,246,0.6)'
+                  ? '1px solid rgba(34,197,94,0.5)'
                   : '1px solid transparent',
                 color: isFuture
                   ? 'rgba(255,255,255,0.15)'
                   : isSelected ? 'white' : 'rgba(255,255,255,0.75)',
-                boxShadow: isSelected ? '0 0 10px rgba(124,58,237,0.5)' : '',
+                boxShadow: isSelected ? '0 0 10px rgba(34,197,94,0.5)' : '',
                 cursor: isFuture ? 'default' : 'pointer',
               }}
             >
@@ -455,7 +455,7 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
       {/* Legend */}
       <div className="flex items-center gap-1.5 mt-3 justify-end">
         <span className="text-slate-600 text-[10px]">0%</span>
-        {['rgba(255,255,255,0.06)', 'rgba(139,92,246,0.3)', 'rgba(139,92,246,0.6)', '#8B5CF6'].map((c, i) => (
+        {['rgba(255,255,255,0.04)', 'rgba(34,197,94,0.25)', 'rgba(34,197,94,0.55)', '#22c55e'].map((c, i) => (
           <div key={i} className="w-3 h-3 rounded-sm" style={{ background: c }} />
         ))}
         <span className="text-slate-600 text-[10px]">100%</span>
@@ -476,6 +476,10 @@ export default function Dashboard({ setActiveTab }) {
     currentLevel,
     levelProgress,
     levelTitle,
+    focusHabitId,
+    focusHabitDate,
+    setFocusHabit,
+    clearFocusHabit,
   } = useHabits();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -517,37 +521,29 @@ export default function Dashboard({ setActiveTab }) {
     <div className="space-y-6">
       {/* ── Greeting Banner ─────────────────────────────────────────────── */}
       <div
-        className="rounded-3xl p-6 border relative overflow-hidden"
+        className="rounded-3xl p-6 border"
         style={{
-          background: 'linear-gradient(135deg, rgba(124,58,237,0.25) 0%, rgba(139,92,246,0.15) 50%, rgba(167,139,250,0.08) 100%)',
-          borderColor: 'rgba(124,58,237,0.3)',
-          boxShadow: '0 0 40px rgba(124,58,237,0.15)',
+          background: '#111111',
+          borderColor: '#1f1f1f',
         }}
       >
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #A78BFA, transparent)' }} />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #7C3AED, transparent)' }} />
-
-        <div className="relative z-10">
-          <p className="text-primary-lighter text-sm font-medium mb-1">{formattedDate}</p>
-          <h1 className="text-white font-black text-3xl leading-tight mb-1">
-            {greeting},
-          </h1>
-          <h1
-            className="font-black text-3xl leading-tight"
-            style={{ color: levelColor, textShadow: `0 0 20px ${levelColor}60` }}
-          >
-            {profile.name || 'Rafael'}! {allDoneToday ? '🎉' : '💪'}
-          </h1>
-          <p className="text-slate-400 text-sm mt-2">
-            {allDoneToday
-              ? "You've crushed all your habits today — legendary!"
-              : todayHabits.length === 0
-              ? "Add your first habit to start your journey!"
-              : `${completedToday.length} of ${todayHabits.length} habits done. Keep going!`}
-          </p>
-        </div>
+        <p className="text-[#4b5563] text-xs font-medium mb-1 uppercase tracking-wider">{formattedDate}</p>
+        <h1 className="text-white font-black text-2xl leading-tight mb-1">
+          {greeting},
+        </h1>
+        <h1
+          className="font-black text-2xl leading-tight"
+          style={{ color: levelColor }}
+        >
+          {profile.name || 'Rafael'}! {allDoneToday ? '🎉' : '💪'}
+        </h1>
+        <p className="text-slate-400 text-sm mt-2">
+          {allDoneToday
+            ? "You've crushed all your habits today — legendary!"
+            : todayHabits.length === 0
+            ? "Add your first habit to start your journey!"
+            : `${completedToday.length} of ${todayHabits.length} habits done. Keep going!`}
+        </p>
       </div>
 
       {/* ── Category Summary Strip (for selected date) ───────────────────── */}
@@ -562,6 +558,67 @@ export default function Dashboard({ setActiveTab }) {
         ))}
       </div>
 
+      {/* ── Focus Habit Widget ────────────────────────────────────────── */}
+      {isViewingToday && (
+        <div
+          className="rounded-2xl p-4 border"
+          style={{ background: '#111111', borderColor: '#1f1f1f' }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🎯</span>
+              <span className="text-white text-sm font-semibold">Focus Habit</span>
+              <span className="text-[10px] text-[#4b5563] bg-white/5 px-2 py-0.5 rounded-full">2× XP</span>
+            </div>
+            {focusHabitId && focusHabitDate === today && (
+              <button
+                onClick={clearFocusHabit}
+                className="text-[#4b5563] hover:text-white text-xs transition-colors"
+              >
+                clear
+              </button>
+            )}
+          </div>
+          {focusHabitId && focusHabitDate === today ? (() => {
+            const fh = todayHabits.find(h => h.id === focusHabitId);
+            if (!fh) return (
+              <p className="text-[#4b5563] text-xs">Habit not found — pick a new one.</p>
+            );
+            const isDone = fh.completions.includes(today);
+            return (
+              <div className="flex items-center gap-3 p-3 rounded-xl border" style={{ background: '#0f0f0f', borderColor: isDone ? 'rgba(34,197,94,0.3)' : '#1f1f1f' }}>
+                <span className="text-xl">{fh.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-white'}`}>{fh.name}</p>
+                  <p className="text-[10px] text-[#4b5563] mt-0.5">{isDone ? '✓ Done — 2× XP earned!' : 'Complete this first for bonus XP'}</p>
+                </div>
+                {isDone && <span className="text-[#22c55e] text-lg">✓</span>}
+              </div>
+            );
+          })() : (
+            <div>
+              <p className="text-[#4b5563] text-xs mb-2">Pick one habit to focus on today for 2× XP:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {todayHabits.filter(h => !h.completions.includes(today)).slice(0, 6).map(h => (
+                  <button
+                    key={h.id}
+                    onClick={() => setFocusHabit(h.id, today)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all hover:border-[#22c55e]/40 hover:text-white text-[#9ca3af]"
+                    style={{ background: '#0f0f0f', borderColor: '#1f1f1f' }}
+                  >
+                    <span>{h.emoji}</span>
+                    <span className="truncate max-w-[80px]">{h.name}</span>
+                  </button>
+                ))}
+                {todayHabits.filter(h => !h.completions.includes(today)).length === 0 && (
+                  <p className="text-[#22c55e] text-xs">All done — great work! 🎉</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Progress Ring + XP row ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Progress Ring for selected date */}
@@ -573,9 +630,9 @@ export default function Dashboard({ setActiveTab }) {
             percentage={completionPercentSelected}
             size={110}
             strokeWidth={11}
-            color={allDoneOnSelected ? '#10B981' : '#7C3AED'}
-            bgColor={allDoneOnSelected ? 'rgba(16,185,129,0.15)' : 'rgba(124,58,237,0.15)'}
-            glowColor={allDoneOnSelected ? 'rgba(16,185,129,0.5)' : 'rgba(124,58,237,0.5)'}
+            color={allDoneOnSelected ? '#22c55e' : completionPercentSelected >= 50 ? '#22c55e' : '#3f3f3f'}
+            bgColor={allDoneOnSelected ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.04)'}
+            glowColor={allDoneOnSelected ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.2)'}
             animate={true}
           >
             <div className="flex flex-col items-center">
@@ -598,7 +655,7 @@ export default function Dashboard({ setActiveTab }) {
               <div className="flex items-center gap-2">
                 <div
                   className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: allDoneOnSelected ? '#10B981' : '#7C3AED' }}
+                  style={{ background: '#22c55e' }}
                 />
                 <span className="text-slate-300 text-sm">{completedOnSelected.length} completed</span>
               </div>
@@ -670,6 +727,44 @@ export default function Dashboard({ setActiveTab }) {
 
       {/* ── Growth Chart ──────────────────────────────────────────────────── */}
       {habits.length > 0 && <GrowthChart habits={habits} />}
+
+      {/* ── On This Day ─────────────────────────────────────────────────── */}
+      {(() => {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const weekAgoStr = oneWeekAgo.toISOString().split('T')[0];
+        const weekAgoHabits = habits.filter(h => isHabitApplicableOnDate(h, weekAgoStr));
+        const weekAgoDone = weekAgoHabits.filter(h => h.completions.includes(weekAgoStr));
+        const weekAgoPct = weekAgoHabits.length > 0 ? Math.round((weekAgoDone.length / weekAgoHabits.length) * 100) : null;
+
+        if (weekAgoPct === null) return null;
+        return (
+          <div
+            className="rounded-2xl p-4 border"
+            style={{ background: '#111111', borderColor: '#1f1f1f' }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">🕐</span>
+              <span className="text-white text-sm font-semibold">On This Day</span>
+              <span className="text-[#4b5563] text-xs">· 1 week ago</span>
+            </div>
+            <p className="text-[#9ca3af] text-sm">
+              You completed{' '}
+              <span className="text-white font-semibold">{weekAgoDone.length}/{weekAgoHabits.length} habits</span>
+              {' '}({weekAgoPct}%)
+              {weekAgoPct === 100 ? ' — a perfect day! ⭐' : weekAgoPct >= 75 ? ' — solid effort! 💪' : '.'}
+            </p>
+            {weekAgoDone.length > 0 && (
+              <div className="flex gap-1 mt-2">
+                {weekAgoDone.slice(0, 6).map(h => (
+                  <span key={h.id} className="text-base" title={h.name}>{h.emoji}</span>
+                ))}
+                {weekAgoDone.length > 6 && <span className="text-[#4b5563] text-xs self-center">+{weekAgoDone.length - 6}</span>}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Mini Calendar ─────────────────────────────────────────────────── */}
       <MiniCalendar

@@ -13,24 +13,32 @@ export default {
           lighter: '#A78BFA',
           dark: '#6D28D9',
         },
+        accent: {
+          DEFAULT: '#22c55e',
+          light: '#4ade80',
+          lighter: '#86efac',
+          dark: '#16a34a',
+          darker: '#14532d',
+        },
         dark: {
-          bg: '#0F0F1A',
-          card: '#1A1A2E',
-          surface: '#16213E',
-          border: '#2A2A4A',
+          bg: '#080808',
+          card: '#111111',
+          surface: '#0f0f0f',
+          border: '#1f1f1f',
           text: '#E2E8F0',
-          muted: '#94A3B8',
+          muted: '#6b7280',
         }
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-app': 'linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #16213E 100%)',
+        'gradient-app': 'linear-gradient(135deg, #080808 0%, #0a0a0a 50%, #0f0f0f 100%)',
       },
       animation: {
         'bounce-in': 'bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
         'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.4s ease-out',
         'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'pulse-glow-green': 'pulseGlowGreen 2s ease-in-out infinite',
         'spin-slow': 'spin 3s linear infinite',
         'confetti-fall': 'confettiFall 1s ease-in forwards',
         'pop': 'pop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -41,6 +49,7 @@ export default {
         'xp-fill': 'xpFill 1s ease-out forwards',
         'star-burst': 'starBurst 0.6s ease-out forwards',
         'wobble': 'wobble 0.5s ease-in-out',
+        'level-up': 'levelUp 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
       },
       keyframes: {
         bounceIn: {
@@ -59,6 +68,10 @@ export default {
         pulseGlow: {
           '0%, 100%': { boxShadow: '0 0 5px rgba(124, 58, 237, 0.5)' },
           '50%': { boxShadow: '0 0 20px rgba(124, 58, 237, 0.8), 0 0 40px rgba(124, 58, 237, 0.4)' },
+        },
+        pulseGlowGreen: {
+          '0%, 100%': { boxShadow: '0 0 5px rgba(34, 197, 94, 0.4)' },
+          '50%': { boxShadow: '0 0 20px rgba(34, 197, 94, 0.7), 0 0 40px rgba(34, 197, 94, 0.3)' },
         },
         confettiFall: {
           '0%': { transform: 'translateY(-20px) rotate(0deg)', opacity: '1' },
@@ -98,6 +111,11 @@ export default {
           '0%, 100%': { transform: 'translateX(0)' },
           '25%': { transform: 'translateX(-5px) rotate(-3deg)' },
           '75%': { transform: 'translateX(5px) rotate(3deg)' },
+        },
+        levelUp: {
+          '0%': { transform: 'scale(0) rotate(-10deg)', opacity: '0' },
+          '60%': { transform: 'scale(1.15) rotate(3deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
         },
       },
       backdropBlur: {

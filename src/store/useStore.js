@@ -259,9 +259,18 @@ function getInitialState() {
           ...h,
         }));
       }
+      if (parsed.profile) {
+        parsed.profile = {
+          freezeShields: 0,
+          focusHabitId: null,
+          focusHabitDate: null,
+          ...parsed.profile,
+        };
+      }
       return {
         toasts: [],
         confetti: false,
+        levelUpPending: null,
         ...parsed,
       };
     }
@@ -275,6 +284,9 @@ function getInitialState() {
       totalXP: 2800,
       level: 8,
       joinDate: '2026-03-01',
+      freezeShields: 0,
+      focusHabitId: null,
+      focusHabitDate: null,
     },
     habits: DEFAULT_HABITS,
     achievements: [],
@@ -282,6 +294,7 @@ function getInitialState() {
     settings: { theme: 'dark' },
     toasts: [],
     confetti: false,
+    levelUpPending: null,
   };
 }
 
@@ -313,6 +326,18 @@ export const ACTIONS = {
   // Journal
   ADD_JOURNAL_ENTRY: 'ADD_JOURNAL_ENTRY',
   DELETE_JOURNAL_ENTRY: 'DELETE_JOURNAL_ENTRY',
+
+  // Freeze Shield
+  TOGGLE_FREEZE_SHIELD: 'TOGGLE_FREEZE_SHIELD',
+  USE_FREEZE_SHIELD: 'USE_FREEZE_SHIELD',
+
+  // Focus Habit
+  SET_FOCUS_HABIT: 'SET_FOCUS_HABIT',
+  CLEAR_FOCUS_HABIT: 'CLEAR_FOCUS_HABIT',
+
+  // Level Up
+  SET_LEVEL_UP: 'SET_LEVEL_UP',
+  CLEAR_LEVEL_UP: 'CLEAR_LEVEL_UP',
 };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -384,8 +409,10 @@ function reducer(state, action) {
     }
 
     case ACTIONS.ADD_XP: {
+      const oldLevel = getLevelFromXP(state.profile.totalXP || 0);
       const newTotalXP = (state.profile.totalXP || 0) + action.payload.amount;
       const newLevel = getLevelFromXP(newTotalXP);
+      const leveledUp = newLevel > oldLevel;
       return {
         ...state,
         profile: {
@@ -393,6 +420,7 @@ function reducer(state, action) {
           totalXP: newTotalXP,
           level: newLevel,
         },
+        levelUpPending: leveledUp ? { oldLevel, newLevel } : state.levelUpPending,
       };
     }
 
@@ -459,6 +487,71 @@ function reducer(state, action) {
       };
     }
 
+    case ACTIONS.TOGGLE_FREEZE_SHIELD: {
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          freezeShields: (state.profile.freezeShields || 0) + 1,
+        },
+      };
+    }
+
+    case ACTIONS.USE_FREEZE_SHIELD: {
+      const { habitId, date } = action.payload;
+      const shields = state.profile.freezeShields || 0;
+      if (shields <= 0) return state;
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          freezeShields: shields - 1,
+        },
+        habits: state.habits.map(h => {
+          if (h.id !== habitId) return h;
+          if (h.completions.includes(date)) return h;
+          const newCompletions = [...h.completions, date];
+          const newStreak = calculateStreak(newCompletions, h.frequency);
+          return {
+            ...h,
+            completions: newCompletions,
+            streak: newStreak,
+            bestStreak: Math.max(h.bestStreak || 0, newStreak),
+          };
+        }),
+      };
+    }
+
+    case ACTIONS.SET_FOCUS_HABIT: {
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          focusHabitId: action.payload.habitId,
+          focusHabitDate: action.payload.date,
+        },
+      };
+    }
+
+    case ACTIONS.CLEAR_FOCUS_HABIT: {
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          focusHabitId: null,
+          focusHabitDate: null,
+        },
+      };
+    }
+
+    case ACTIONS.SET_LEVEL_UP: {
+      return { ...state, levelUpPending: action.payload };
+    }
+
+    case ACTIONS.CLEAR_LEVEL_UP: {
+      return { ...state, levelUpPending: null };
+    }
+
     default:
       return state;
   }
@@ -473,7 +566,7 @@ export function StoreProvider({ children }) {
   const prevHabitsRef = useRef(state.habits);
   const prevAchievementsRef = useRef(state.achievements);
 
-  // Persist to localStorage (debounced)
+  // Persist to localStorage (debounced) — do NOT persist levelUpPending
   const saveTimerRef = useRef(null);
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -497,6 +590,7 @@ export function StoreProvider({ children }) {
   // Check achievements whenever habits change
   useEffect(() => {
     if (prevHabitsRef.current === state.habits) return;
+    const prevHabits = prevHabitsRef.current;
     prevHabitsRef.current = state.habits;
 
     const newlyUnlocked = checkAchievements(
@@ -524,6 +618,24 @@ export function StoreProvider({ children }) {
         }
       }
     });
+
+    // Award freeze shield if any habit just hit 7-day streak milestone
+    const justHit7 = state.habits.some(h => {
+      const oldH = prevHabits.find(p => p.id === h.id);
+      return oldH && (oldH.streak || 0) < 7 && (h.streak || 0) >= 7;
+    });
+    if (justHit7) {
+      dispatch({ type: ACTIONS.TOGGLE_FREEZE_SHIELD });
+      dispatch({
+        type: ACTIONS.ADD_TOAST,
+        payload: {
+          type: 'info',
+          title: '🛡️ Freeze Shield Earned!',
+          message: 'You hit a 7-day streak!',
+          description: 'Use it to protect a streak if you miss a day.',
+        },
+      });
+    }
   }, [state.habits, state.achievements, state.profile]);
 
   const value = { state, dispatch };

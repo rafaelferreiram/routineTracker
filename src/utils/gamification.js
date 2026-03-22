@@ -11,6 +11,18 @@ export const XP_VALUES = {
   STREAK_30_BONUS: 50,
 };
 
+export const DIFFICULTY_MULTIPLIERS = {
+  easy: 0.75,
+  medium: 1.0,
+  hard: 1.5,
+};
+
+export const DIFFICULTY_LABELS = {
+  easy: { label: 'Easy', color: '#4ade80', icon: '🟢' },
+  medium: { label: 'Medium', color: '#fbbf24', icon: '🟡' },
+  hard: { label: 'Hard', color: '#f87171', icon: '🔴' },
+};
+
 // ─── Level Thresholds ────────────────────────────────────────────────────────
 
 export function getLevelThreshold(level) {
@@ -332,6 +344,32 @@ export const ACHIEVEMENTS = [
     rarity: 'uncommon',
     xpReward: 80,
   },
+
+  // ── New Features ──────────────────────────────────────────────────────────
+  {
+    id: 'freeze_shield',
+    name: 'Prepared',
+    description: 'Use your first Freeze Shield to protect a streak',
+    icon: '🛡️',
+    rarity: 'uncommon',
+    xpReward: 80,
+  },
+  {
+    id: 'hard_mode',
+    name: 'Hard Mode',
+    description: 'Complete a Hard difficulty habit 10 times',
+    icon: '💀',
+    rarity: 'rare',
+    xpReward: 200,
+  },
+  {
+    id: 'focus_master',
+    name: 'Focus Master',
+    description: 'Complete your Focus Habit 7 times',
+    icon: '🎯',
+    rarity: 'uncommon',
+    xpReward: 100,
+  },
 ];
 
 export const RARITY_COLORS = {
@@ -550,8 +588,12 @@ export function calculateXPGain(habits, habitId, date = null) {
   const habit = habits.find(h => h.id === habitId);
   if (!habit) return { xp: 0, reasons: [] };
 
-  const reasons = [{ label: 'Habit completed', xp: XP_VALUES.HABIT_COMPLETION }];
-  let totalXP = XP_VALUES.HABIT_COMPLETION;
+  const difficulty = habit.difficulty || 'medium';
+  const multiplier = DIFFICULTY_MULTIPLIERS[difficulty] || 1.0;
+  const baseXP = Math.round(XP_VALUES.HABIT_COMPLETION * multiplier);
+
+  const reasons = [{ label: multiplier !== 1.0 ? `Habit completed (${difficulty})` : 'Habit completed', xp: baseXP }];
+  let totalXP = baseXP;
 
   // Check streak bonuses
   const streak = calculateStreak([...habit.completions, targetDate], habit.frequency);

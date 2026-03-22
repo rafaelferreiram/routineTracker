@@ -1,17 +1,18 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { getLast7Days, getShortWeekday, getTodayString } from '../utils/dateUtils.js';
 import { getLevelColor, getLevelTitle, getLevelIcon, getLevelFromXP, getLevelProgress, getXPForCurrentLevel, getXPNeededForNextLevel } from '../utils/gamification.js';
 import XPBar from './XPBar.jsx';
 import ProgressRing from './ProgressRing.jsx';
+import WeeklyReview from './WeeklyReview.jsx';
 
 function StatCard({ label, value, sub, icon, color = '#7C3AED', large = false }) {
   return (
     <div
       className="rounded-3xl p-5 border border-white/8 flex flex-col gap-2"
       style={{
-        background: `linear-gradient(135deg, ${color}15, ${color}08)`,
-        borderColor: `${color}25`,
+        background: `${color}0d`,
+        borderColor: `${color}20`,
       }}
     >
       <div className="flex items-center justify-between">
@@ -32,7 +33,8 @@ function StatCard({ label, value, sub, icon, color = '#7C3AED', large = false })
 }
 
 export default function StatsPanel() {
-  const { habits, profile, stats, currentLevel, levelProgress } = useHabits();
+  const { habits, profile, stats, currentLevel, levelProgress, freezeShields } = useHabits();
+  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
   const today = getTodayString();
   const last7 = getLast7Days();
 
@@ -74,10 +76,35 @@ export default function StatsPanel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-white font-bold text-2xl">Statistics</h2>
-        <p className="text-slate-400 text-sm mt-1">Your performance at a glance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-white font-bold text-2xl">Statistics</h2>
+          <p className="text-[#6b7280] text-sm mt-1">Your performance at a glance</p>
+        </div>
+        <button
+          onClick={() => setShowWeeklyReview(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+          style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22c55e' }}
+        >
+          <span>📋</span>
+          <span className="hidden sm:inline">Weekly Review</span>
+        </button>
       </div>
+
+      {/* Freeze Shields */}
+      {freezeShields > 0 && (
+        <div
+          className="flex items-center gap-3 p-3.5 rounded-2xl border"
+          style={{ background: 'rgba(124,58,237,0.08)', borderColor: 'rgba(124,58,237,0.2)' }}
+        >
+          <span className="text-2xl">🛡️</span>
+          <div className="flex-1">
+            <p className="text-white text-sm font-semibold">{freezeShields} Freeze Shield{freezeShields > 1 ? 's' : ''}</p>
+            <p className="text-[#6b7280] text-xs">Use in Habits tab when a streak is at risk</p>
+          </div>
+          <span className="text-[#A78BFA] font-bold text-lg">{freezeShields}×</span>
+        </div>
+      )}
 
       {/* Level / XP card */}
       <div
@@ -158,9 +185,9 @@ export default function StatsPanel() {
                 <div
                   className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
                   style={{
-                    background: `rgba(124,58,237,${opacity})`,
-                    border: isToday ? '2px solid rgba(124,58,237,0.7)' : '1px solid rgba(255,255,255,0.05)',
-                    boxShadow: pct === 1 ? '0 0 10px rgba(124,58,237,0.5)' : '',
+                    background: total === 0 ? 'rgba(255,255,255,0.04)' : pct === 1 ? '#22c55e' : pct >= 0.5 ? `rgba(34,197,94,${0.15 + pct * 0.6})` : `rgba(34,197,94,${0.08 + pct * 0.4})`,
+                    border: isToday ? '1.5px solid rgba(34,197,94,0.6)' : '1px solid rgba(255,255,255,0.04)',
+                    boxShadow: pct === 1 ? '0 0 8px rgba(34,197,94,0.4)' : '',
                   }}
                 >
                   {pct === 1 && total > 0 && (
@@ -175,11 +202,11 @@ export default function StatsPanel() {
         </div>
         <div className="flex items-center gap-2 mt-3 justify-end">
           <span className="text-slate-500 text-xs">Less</span>
-          {[0.15, 0.35, 0.55, 0.75, 1].map((o, i) => (
+          {['rgba(255,255,255,0.04)', 'rgba(34,197,94,0.15)', 'rgba(34,197,94,0.4)', 'rgba(34,197,94,0.7)', '#22c55e'].map((c, i) => (
             <div
               key={i}
               className="w-3 h-3 rounded-sm"
-              style={{ background: `rgba(124,58,237,${o})` }}
+              style={{ background: c }}
             />
           ))}
           <span className="text-slate-500 text-xs">More</span>
@@ -232,9 +259,11 @@ export default function StatsPanel() {
         <div className="text-center py-12">
           <div className="text-5xl mb-3">📊</div>
           <h3 className="text-white font-semibold">No data yet</h3>
-          <p className="text-slate-400 text-sm mt-1">Add some habits to see your stats here!</p>
+          <p className="text-[#6b7280] text-sm mt-1">Add some habits to see your stats here!</p>
         </div>
       )}
+
+      {showWeeklyReview && <WeeklyReview onClose={() => setShowWeeklyReview(false)} />}
     </div>
   );
 }

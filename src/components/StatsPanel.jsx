@@ -500,8 +500,108 @@ function StatCard({ label, value, sub, icon, color = '#7C3AED' }) {
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
+const MOODS_META = [
+  { key: 'crushing', emoji: '🚀', label: 'Crushing it', score: 5, color: '#22c55e' },
+  { key: 'great',    emoji: '😄', label: 'Great',       score: 4, color: '#3b82f6' },
+  { key: 'good',     emoji: '🙂', label: 'Good',        score: 3, color: '#8b5cf6' },
+  { key: 'meh',      emoji: '😐', label: 'Meh',         score: 2, color: '#f59e0b' },
+  { key: 'rough',    emoji: '😩', label: 'Rough',       score: 1, color: '#ef4444' },
+];
+
+function MoodHistory({ moods }) {
+  const days = useMemo(() => {
+    const arr = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      arr.push({ date: ds, mood: moods[ds] || null });
+    }
+    return arr;
+  }, [moods]);
+
+  const logged = days.filter(d => d.mood);
+  const avgScore = logged.length
+    ? (logged.reduce((s, d) => s + (MOODS_META.find(m => m.key === d.mood?.key)?.score || 0), 0) / logged.length).toFixed(1)
+    : null;
+  const dominantMood = logged.length
+    ? MOODS_META.reduce((best, m) => {
+        const cnt = logged.filter(d => d.mood?.key === m.key).length;
+        return cnt > (best.cnt || 0) ? { ...m, cnt } : best;
+      }, {})
+    : null;
+
+  return (
+    <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
+      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: '#1a1a1a' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white font-semibold text-sm">Mood History</p>
+            <p className="text-[#4b5563] text-xs mt-0.5">Last 30 days · {logged.length} entries</p>
+          </div>
+          {dominantMood?.emoji && (
+            <div className="text-right">
+              <p className="text-2xl leading-none">{dominantMood.emoji}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: dominantMood.color }}>{dominantMood.label}</p>
+            </div>
+          )}
+        </div>
+        {avgScore && (
+          <div className="flex items-center gap-4 mt-3">
+            <div>
+              <p className="text-white font-bold text-lg leading-none">{avgScore}<span className="text-xs font-normal text-[#4b5563]">/5</span></p>
+              <p className="text-[#4b5563] text-[10px] mt-0.5">Avg mood</p>
+            </div>
+            <div className="flex-1 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${(avgScore / 5) * 100}%`,
+                  background: avgScore >= 4 ? '#22c55e' : avgScore >= 3 ? '#8b5cf6' : avgScore >= 2 ? '#f59e0b' : '#ef4444',
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 30-day grid */}
+      <div className="p-4">
+        <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(15, 1fr)' }}>
+          {days.map(({ date, mood }) => {
+            const m = mood ? MOODS_META.find(x => x.key === mood.key) : null;
+            return (
+              <div
+                key={date}
+                title={`${date}${mood ? ` · ${mood.emoji} ${mood.label}` : ' · no entry'}`}
+                className="aspect-square rounded-md flex items-center justify-center text-[10px]"
+                style={{
+                  background: m ? `${m.color}20` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${m ? m.color + '40' : 'transparent'}`,
+                }}
+              >
+                {mood ? mood.emoji : ''}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          {MOODS_META.map(m => (
+            <div key={m.key} className="flex items-center gap-1">
+              <span className="text-xs">{m.emoji}</span>
+              <span className="text-[10px]" style={{ color: m.color }}>{m.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StatsPanel() {
-  const { habits, profile, stats, currentLevel, freezeShields, accentColor, achievements } = useHabits();
+  const { habits, profile, stats, currentLevel, freezeShields, accentColor, achievements, moods } = useHabits();
   const [showWeeklyReview, setShowWeeklyReview] = useState(false);
   const last7 = getLastNDays(7);
 
@@ -581,6 +681,9 @@ export default function StatsPanel() {
 
       {/* Health chart + medals */}
       {habits.length > 0 && <HealthChart habits={habits} achievements={achievements} />}
+
+      {/* Mood history */}
+      <MoodHistory moods={moods} />
 
       {/* Habit breakdown */}
       {habitStats.length > 0 && (

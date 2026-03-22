@@ -440,6 +440,7 @@ function getInitialState() {
         confetti: false,
         levelUpPending: null,
         events: [],
+        moods: {},
         ...parsed,
       };
     }
@@ -465,6 +466,7 @@ function getInitialState() {
       { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
     ],
     settings: { theme: 'dark', accentColor: '#22c55e', appName: 'RoutineQuest', appIcon: '⚡' },
+    moods: {},
     toasts: [],
     confetti: false,
     levelUpPending: null,
@@ -519,6 +521,9 @@ export const ACTIONS = {
 
   // Numeric logging
   LOG_NUMERIC_VALUE: 'LOG_NUMERIC_VALUE',
+
+  // Mood
+  LOG_MOOD: 'LOG_MOOD',
 };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -788,6 +793,14 @@ function reducer(state, action) {
       };
     }
 
+    case ACTIONS.LOG_MOOD: {
+      const { date, mood } = action.payload;
+      return {
+        ...state,
+        moods: { ...(state.moods || {}), [date]: mood },
+      };
+    }
+
     default:
       return state;
   }
@@ -814,6 +827,7 @@ export function StoreProvider({ children }) {
           achievements: state.achievements,
           journalEntries: state.journalEntries || [],
           events: state.events || [],
+          moods: state.moods || {},
           settings: state.settings,
         };
         localStorage.setItem('routineTracker_v3', JSON.stringify(toSave));
@@ -822,7 +836,7 @@ export function StoreProvider({ children }) {
       }
     }, 300);
     return () => clearTimeout(saveTimerRef.current);
-  }, [state.profile, state.habits, state.achievements, state.journalEntries, state.settings]);
+  }, [state.profile, state.habits, state.achievements, state.journalEntries, state.moods, state.settings]);
 
   // Check achievements on mount + whenever habits change
   useEffect(() => {

@@ -5,7 +5,7 @@ import { calculateXPGain, computeStats, getLevelFromXP, getLevelProgress, getLev
 
 export function useHabits() {
   const { state, dispatch } = useStore();
-  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events } = state;
+  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events, moods } = state;
 
   // ─── Computed Values ───────────────────────────────────────────────────────
 
@@ -140,6 +140,10 @@ export function useHabits() {
     dispatch({ type: ACTIONS.CLEAR_LEVEL_UP });
   }, [dispatch]);
 
+  const logMood = useCallback((date, mood) => {
+    dispatch({ type: ACTIONS.LOG_MOOD, payload: { date, mood } });
+  }, [dispatch]);
+
   const addEvent = useCallback((eventData) => {
     dispatch({ type: ACTIONS.ADD_EVENT, payload: eventData });
   }, [dispatch]);
@@ -185,6 +189,7 @@ export function useHabits() {
     toasts,
     confetti,
     events: events || [],
+    moods: moods || {},
 
     // New state
     freezeShields,
@@ -224,5 +229,6 @@ export function useHabits() {
     updateEvent,
     deleteEvent,
     logNumericValue,
+    logMood,
   };
 }

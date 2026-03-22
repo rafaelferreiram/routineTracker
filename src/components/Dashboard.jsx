@@ -741,19 +741,23 @@ function HealthGrowthChart({ habits, achievements }) {
         <div>
           <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily % of goal</p>
           {chartType === 'line' ? (
-            <HealthMultiLineChart points={semesterPoints} isSemester={true} />
+            <LineChart data={semesterPoints} color="#26a69a" />
           ) : (
             <div className="flex items-end gap-3" style={{ height: '110px' }}>
               {semesterPoints.map(({ label, pct, isCurrent }) => {
-                const barH = pct > 0 ? Math.max(6, Math.round(pct * 90)) : 3;
-                const barColor = !pct ? 'rgba(255,255,255,0.05)' : pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#34d399' : '#065f46';
+                const barH = pct !== null ? Math.max(6, Math.round(pct * 90)) : 3;
+                const barColor = pct === null
+                  ? 'rgba(255,255,255,0.05)'
+                  : pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#26a69a' : '#065f46';
                 return (
                   <div key={label} className="flex-1 flex flex-col items-center gap-1">
                     <div className="flex-1 w-full flex flex-col justify-end items-center gap-0.5">
-                      {pct !== null && <span className="text-[9px] text-slate-400">{Math.round(pct*100)}%</span>}
+                      {pct !== null && (
+                        <span className="text-[9px] text-slate-400">{Math.round(pct * 100)}%</span>
+                      )}
                       <div className="w-full rounded-t-lg transition-all duration-700"
                         style={{ height: `${barH}px`, background: barColor, minHeight: '3px',
-                          boxShadow: isCurrent && pct ? `0 0 8px ${barColor}60` : '' }} />
+                          boxShadow: isCurrent && pct !== null ? `0 0 8px ${barColor}60` : '' }} />
                     </div>
                     <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
                   </div>
@@ -914,6 +918,136 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
   );
 }
 
+// ─── Mood Tracker ─────────────────────────────────────────────────────────────
+
+const MOODS = [
+  { key: 'crushing', emoji: '🚀', label: 'Crushing it', score: 5, color: '#22c55e', glow: 'rgba(34,197,94,0.4)' },
+  { key: 'great',    emoji: '😄', label: 'Great',       score: 4, color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
+  { key: 'good',     emoji: '🙂', label: 'Good',        score: 3, color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
+  { key: 'meh',      emoji: '😐', label: 'Meh',         score: 2, color: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
+  { key: 'rough',    emoji: '😩', label: 'Rough',       score: 1, color: '#ef4444', glow: 'rgba(239,68,68,0.4)' },
+];
+
+function MoodTracker({ moods, logMood, addToast }) {
+  const today = getTodayString();
+  const todayMood = moods[today];
+  const [hoveredKey, setHoveredKey] = useState(null);
+  const [justLogged, setJustLogged] = useState(false);
+
+  // Last 14 days for the strip (oldest → newest)
+  const strip = useMemo(() => {
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      days.push({ date: ds, mood: moods[ds] || null, isToday: ds === today });
+    }
+    return days;
+  }, [moods, today]);
+
+  const handleSelect = (mood) => {
+    logMood(today, mood);
+    setJustLogged(true);
+    setTimeout(() => setJustLogged(false), 1200);
+    addToast({ type: 'xp', title: `Mood logged!`, message: `${mood.emoji} ${mood.label}`, reasons: [] });
+  };
+
+  return (
+    <div
+      className="rounded-3xl border overflow-hidden"
+      style={{ background: '#0d0d0d', borderColor: '#1a1a1a' }}
+    >
+      <div className="px-5 pt-5 pb-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-white font-semibold text-sm">How are you feeling?</p>
+            <p className="text-[#4b5563] text-xs mt-0.5">
+              {todayMood ? `Today: ${todayMood.emoji} ${todayMood.label}` : 'Log your mood for today'}
+            </p>
+          </div>
+          {todayMood && (
+            <span
+              className="text-3xl transition-all duration-300"
+              style={{ filter: `drop-shadow(0 0 8px ${todayMood.color})` }}
+            >
+              {todayMood.emoji}
+            </span>
+          )}
+        </div>
+
+        {/* Mood picker */}
+        <div className="flex gap-2 justify-between">
+          {MOODS.map(m => {
+            const isSelected = todayMood?.key === m.key;
+            const isHovered = hoveredKey === m.key;
+            return (
+              <button
+                key={m.key}
+                onClick={() => handleSelect(m)}
+                onMouseEnter={() => setHoveredKey(m.key)}
+                onMouseLeave={() => setHoveredKey(null)}
+                className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all duration-200"
+                style={{
+                  background: isSelected ? `${m.color}18` : isHovered ? `${m.color}0d` : 'rgba(255,255,255,0.02)',
+                  borderColor: isSelected ? `${m.color}60` : isHovered ? `${m.color}35` : '#1f1f1f',
+                  boxShadow: isSelected ? `0 0 16px ${m.glow}` : 'none',
+                  transform: isSelected ? 'scale(1.06)' : isHovered ? 'scale(1.03)' : 'scale(1)',
+                }}
+              >
+                <span
+                  className="text-2xl leading-none transition-all duration-200"
+                  style={{ filter: isSelected ? `drop-shadow(0 0 6px ${m.color})` : 'none' }}
+                >
+                  {m.emoji}
+                </span>
+                <span
+                  className="text-[10px] font-semibold leading-none text-center"
+                  style={{ color: isSelected ? m.color : '#4b5563' }}
+                >
+                  {m.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 14-day strip */}
+      <div className="px-5 pb-4">
+        <p className="text-[#3b3b3b] text-[10px] font-medium mb-2 uppercase tracking-wider">Last 14 days</p>
+        <div className="flex gap-1">
+          {strip.map(({ date, mood, isToday }) => {
+            const m = mood ? MOODS.find(x => x.key === mood.key) : null;
+            return (
+              <div
+                key={date}
+                className="flex-1 flex flex-col items-center gap-1"
+                title={`${date}${mood ? ` · ${mood.emoji} ${mood.label}` : ''}`}
+              >
+                <div
+                  className="w-full aspect-square rounded-lg flex items-center justify-center text-[11px] transition-all"
+                  style={{
+                    background: m ? `${m.color}20` : 'rgba(255,255,255,0.03)',
+                    border: isToday ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                    boxShadow: m && isToday ? `0 0 8px ${m.glow}` : 'none',
+                  }}
+                >
+                  {mood ? mood.emoji : <span style={{ color: '#2a2a2a' }}>·</span>}
+                </div>
+                {isToday && (
+                  <div className="w-1 h-1 rounded-full bg-white/30" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard({ setActiveTab }) {
@@ -932,6 +1066,9 @@ export default function Dashboard({ setActiveTab }) {
     setFocusHabit,
     clearFocusHabit,
     events,
+    moods,
+    logMood,
+    addToast,
   } = useHabits();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1114,6 +1251,11 @@ export default function Dashboard({ setActiveTab }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Mood Tracker ─────────────────────────────────────────────────── */}
+      {isViewingToday && (
+        <MoodTracker moods={moods} logMood={logMood} addToast={addToast} />
       )}
 
       {/* ── Progress Ring + XP row ───────────────────────────────────────── */}

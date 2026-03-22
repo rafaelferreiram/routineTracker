@@ -1,6 +1,7 @@
 import { useState, useEffect, Component } from 'react';
 import { useAuth } from './store/useAuth.js';
 import { getTheme, applyTheme } from './utils/themes.js';
+import { getLevelColor } from './utils/gamification.js';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -39,8 +40,9 @@ import FriendsPanel from './components/FriendsPanel.jsx';
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
-  const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
-  const { currentUser, logout } = useAuth();
+  const { confetti, levelUpPending, clearLevelUp, accentColor, settings, profile, currentLevel } = useHabits();
+  const { currentUser } = useAuth();
+  const levelColor = getLevelColor(currentLevel);
 
   // Apply full theme (colors + accent) whenever either changes
   useEffect(() => {
@@ -70,33 +72,58 @@ function AppContent() {
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />
 
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
-          {/* Mobile header */}
-          <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
-            style={{ background: 'var(--bg-nav, rgba(8,8,8,0.95))', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-base">⚡</span>
-              <span className="text-white font-bold text-base tracking-tight">RoutineQuest</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowExport(true)}
-                className="text-[#4b5563] hover:text-white text-xs transition-colors p-1.5"
-                title="Backup & Restore"
+          {/* ── Mobile header ─────────────────────────────────────────── */}
+          <div
+            className="lg:hidden sticky top-0 z-30 px-4 flex items-center justify-between border-b"
+            style={{
+              height: 56,
+              background: 'var(--bg-nav, rgba(8,8,8,0.97))',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderColor: 'var(--bg-border, #1f1f1f)',
+            }}
+          >
+            {/* Left: avatar + name + level */}
+            <button
+              data-testid="mobile-header-profile-btn"
+              onClick={() => setActiveTab('profile')}
+              className="flex items-center gap-2.5 active:opacity-70 transition-opacity"
+            >
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                style={{
+                  background: `rgba(${hexToRgb(levelColor)}, 0.2)`,
+                  color: levelColor,
+                  border: `1.5px solid rgba(${hexToRgb(levelColor)}, 0.45)`,
+                }}
               >
-                ⊞
-              </button>
-              <span className="text-xs text-[#4b5563] px-2 py-1 rounded-full border"
-                style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
-                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                {(profile?.name || currentUser?.displayName || '?')[0].toUpperCase()}
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold text-sm leading-none">
+                  {profile?.name || currentUser?.displayName}
+                </p>
+                <p className="text-[10px] font-medium mt-0.5 leading-none" style={{ color: levelColor }}>
+                  Lv.{currentLevel} · {(profile?.totalXP || 0).toLocaleString()} XP
+                </p>
+              </div>
+            </button>
+
+            {/* Right: section badge + backup */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs text-[#6b7280] capitalize font-medium px-2.5 py-1 rounded-full"
+                style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)' }}
+              >
+                {activeTab === 'achievements' ? 'Medals' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </span>
-              {/* User avatar + logout */}
               <button
-                onClick={logout}
-                title={`Sign out (${currentUser?.displayName})`}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 active:scale-90"
-                style={{ background: `rgba(${hexToRgb(accentColor || '#22c55e')}, 0.2)`, color: accentColor || '#22c55e', border: `1.5px solid rgba(${hexToRgb(accentColor || '#22c55e')}, 0.4)` }}
+                data-testid="mobile-backup-btn"
+                onClick={() => setShowExport(true)}
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90"
+                style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)', color: '#6b7280' }}
               >
-                {currentUser?.displayName?.charAt(0).toUpperCase() || '?'}
+                <span className="text-sm">⊞</span>
               </button>
             </div>
           </div>

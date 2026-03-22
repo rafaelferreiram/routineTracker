@@ -12,22 +12,41 @@ const NAV_ITEMS = [
   { id: 'events',       label: 'Events',    icon: '✈️' },
   { id: 'friends',      label: 'Friends',   icon: '👥' },
   { id: 'customize',    label: 'Customize', icon: '🎨' },
-  { id: 'profile',      label: 'Profile',   icon: null }, // icon rendered dynamically
+  { id: 'profile',      label: 'Profile',   icon: null },
 ];
 
+// 4 primary tabs shown in the bottom bar
+const MOBILE_PRIMARY = ['today', 'habits', 'stats', 'journal'];
+// Secondary tabs shown in the "More" sheet
+const MOBILE_MORE    = ['achievements', 'events', 'friends', 'customize', 'profile'];
+
 export default function Navbar({ activeTab, setActiveTab, onExport }) {
-  const { profile, achievements, currentLevel, completionPercent, todayHabits, completedToday, updateProfile, accentColor, settings } = useHabits();
-  const { currentUser } = useAuth();
-  const appName = (settings && settings.appName) || 'RoutineQuest';
-  const appIcon = (settings && settings.appIcon) || '⚡';
+  const {
+    profile, achievements, currentLevel, completionPercent,
+    todayHabits, completedToday, updateProfile, accentColor, settings,
+  } = useHabits();
+  const { currentUser, logout } = useAuth();
+
+  const appName    = (settings && settings.appName) || 'RoutineQuest';
+  const appIcon    = (settings && settings.appIcon) || '⚡';
   const levelColor = getLevelColor(currentLevel);
+  const initial    = (currentUser?.displayName || '?')[0].toUpperCase();
+
   const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState(profile.name || 'Rafael');
+  const [nameInput,   setNameInput]   = useState(profile.name || 'Rafael');
+  const [showMore,    setShowMore]    = useState(false);
+
+  const isMoreActive = MOBILE_MORE.includes(activeTab);
 
   const handleNameSave = () => {
     if (nameInput.trim()) updateProfile({ name: nameInput.trim() });
     setEditingName(false);
   };
+
+  function navigateTo(id) {
+    setActiveTab(id);
+    setShowMore(false);
+  }
 
   return (
     <>
@@ -82,8 +101,6 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
               </p>
             </div>
           </div>
-
-          {/* Today progress bar */}
           <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-progress, #1f1f1f)' }}>
             <div
               className="h-full rounded-full transition-all duration-700"
@@ -98,17 +115,15 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
         {/* Nav Items */}
         <nav className="flex flex-col gap-0.5 flex-1">
           {NAV_ITEMS.map(item => {
-            const isActive = activeTab === item.id;
+            const isActive  = activeTab === item.id;
             const isProfile = item.id === 'profile';
-            const initial = (currentUser?.displayName || '?')[0].toUpperCase();
             return (
               <button
                 key={item.id}
+                data-testid={`desktop-nav-${item.id}`}
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 text-left w-full ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-[#6b7280] hover:text-[#9ca3af] hover:bg-white/3'
+                  isActive ? 'text-white' : 'text-[#6b7280] hover:text-[#9ca3af] hover:bg-white/3'
                 }`}
                 style={isActive ? { background: 'rgba(255,255,255,0.06)', color: 'white' } : {}}
               >
@@ -135,7 +150,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           })}
         </nav>
 
-        {/* Bottom: Achievements + Export */}
+        {/* Bottom bar */}
         <div className="mt-4 pt-4 border-t border-[#1f1f1f]">
           <div className="flex items-center justify-between px-1">
             <span className="text-[#4b5563] text-xs">Medals</span>
@@ -144,10 +159,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-progress, #1f1f1f)' }}>
             <div
               className="h-full rounded-full"
-              style={{
-                width: `${Math.round((achievements.length / 30) * 100)}%`,
-                background: 'linear-gradient(90deg, #7C3AED, #A78BFA)',
-              }}
+              style={{ width: `${Math.round((achievements.length / 30) * 100)}%`, background: 'linear-gradient(90deg, #7C3AED, #A78BFA)' }}
             />
           </div>
           {onExport && (
@@ -163,51 +175,170 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
       </aside>
 
       {/* ── Mobile Bottom Nav ────────────────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t safe-area-pb"
-        style={{ background: 'var(--bg-nav, rgba(8,8,8,0.95))', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
-        <div className="flex items-center justify-around px-1 py-2">
-          {NAV_ITEMS.map(item => {
-            const isActive = activeTab === item.id;
-            const isProfile = item.id === 'profile';
-            const initial = (currentUser?.displayName || '?')[0].toUpperCase();
+      <nav
+        data-testid="mobile-bottom-nav"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t"
+        style={{
+          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderColor: 'var(--bg-border, #1f1f1f)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <div className="flex items-stretch px-1" style={{ height: 60 }}>
+          {/* Primary tabs */}
+          {MOBILE_PRIMARY.map(id => {
+            const item     = NAV_ITEMS.find(n => n.id === id);
+            const isActive = activeTab === id;
             return (
               <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl transition-all duration-150 ${
-                  isActive ? 'text-white' : 'text-[#4b5563]'
-                }`}
-                style={{ minWidth: 36 }}
+                key={id}
+                data-testid={`mobile-nav-${id}`}
+                onClick={() => navigateTo(id)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl mx-0.5 transition-all duration-150 active:scale-90"
+                style={isActive ? { background: `${accentColor}18` } : {}}
               >
-                {isProfile ? (
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ${isActive ? 'scale-110' : ''}`}
-                    style={{
-                      background: isActive
-                        ? `rgba(var(--accent-rgb, 34 197 94) / 0.25)`
-                        : 'rgba(255,255,255,0.07)',
-                      border: isActive
-                        ? `1.5px solid rgba(var(--accent-rgb, 34 197 94) / 0.6)`
-                        : '1.5px solid rgba(255,255,255,0.1)',
-                      color: isActive ? 'var(--accent, #22c55e)' : '#6b7280',
-                    }}
-                  >
-                    {initial}
-                  </div>
-                ) : (
-                  <span className={`text-[18px] leading-none transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}>
-                    {item.icon}
-                  </span>
-                )}
-                <span className={`text-[8px] font-semibold leading-none mt-0.5 ${isActive ? '' : 'text-[#4b5563]'}`}
-                  style={isActive ? { color: 'var(--accent, #22c55e)' } : {}}>
+                <span className={`text-[21px] leading-none transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
+                  {item.icon}
+                </span>
+                <span
+                  className="text-[10px] font-semibold leading-none"
+                  style={{ color: isActive ? accentColor : '#4b5563' }}
+                >
                   {item.label}
                 </span>
               </button>
             );
           })}
+
+          {/* More button */}
+          <button
+            data-testid="mobile-nav-more"
+            onClick={() => setShowMore(s => !s)}
+            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl mx-0.5 transition-all duration-150 active:scale-90"
+            style={isMoreActive || showMore ? { background: `${accentColor}18` } : {}}
+          >
+            {isMoreActive ? (
+              /* Show current "more-section" icon */
+              <span className="text-[21px] leading-none transition-transform duration-200 scale-110">
+                {NAV_ITEMS.find(n => n.id === activeTab)?.icon || '⊕'}
+              </span>
+            ) : (
+              <div className="flex gap-[5px] items-center" style={{ height: 21 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="w-[5px] h-[5px] rounded-full transition-all duration-150"
+                    style={{ background: showMore ? accentColor : '#4b5563' }} />
+                ))}
+              </div>
+            )}
+            <span
+              className="text-[10px] font-semibold leading-none"
+              style={{ color: isMoreActive || showMore ? accentColor : '#4b5563' }}
+            >
+              More
+            </span>
+          </button>
         </div>
       </nav>
+
+      {/* ── More Sheet ───────────────────────────────────────────────────── */}
+      {showMore && (
+        <div
+          className="lg:hidden fixed inset-0 z-[55]"
+          onClick={() => setShowMore(false)}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 animate-backdrop-in"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+          />
+
+          {/* Sheet */}
+          <div
+            className="absolute bottom-0 left-0 right-0 rounded-t-3xl animate-slide-up"
+            style={{
+              background: 'var(--bg-card, #111111)',
+              borderTop: '1px solid var(--bg-border, #1f1f1f)',
+              paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Pull handle */}
+            <div className="flex justify-center pt-3 pb-4">
+              <div className="w-10 h-1 rounded-full bg-[#374151]" />
+            </div>
+
+            {/* User info strip */}
+            <div className="px-5 mb-4 flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                style={{ background: `${accentColor}25`, color: accentColor, border: `1.5px solid ${accentColor}50` }}
+              >
+                {initial}
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">{profile.name || currentUser?.displayName}</p>
+                <p className="text-[11px] font-medium" style={{ color: levelColor }}>
+                  Lv.{currentLevel} · {(profile.totalXP || 0).toLocaleString()} XP
+                </p>
+              </div>
+            </div>
+
+            {/* Grid of tabs */}
+            <div className="px-4 grid grid-cols-2 gap-2.5 mb-3">
+              {MOBILE_MORE.map(id => {
+                const item      = NAV_ITEMS.find(n => n.id === id);
+                const isActive  = activeTab === id;
+                const isProfile = id === 'profile';
+                return (
+                  <button
+                    key={id}
+                    data-testid={`more-nav-${id}`}
+                    onClick={() => navigateTo(id)}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-150 active:scale-95"
+                    style={{
+                      background:   isActive ? `${accentColor}18` : 'var(--bg-main, #0a0a0a)',
+                      border:       `1px solid ${isActive ? `${accentColor}45` : 'var(--bg-border, #1f1f1f)'}`,
+                    }}
+                  >
+                    <span className="text-xl leading-none">
+                      {isProfile ? (
+                        <span style={{ color: accentColor }} className="font-bold text-sm">{initial}</span>
+                      ) : item.icon}
+                    </span>
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: isActive ? accentColor : '#e5e7eb' }}
+                    >
+                      {item.label}
+                    </span>
+                    {isActive && (
+                      <div className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accentColor }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sign out */}
+            <div className="px-4">
+              <button
+                data-testid="more-signout-btn"
+                onClick={() => { setShowMore(false); logout(); }}
+                className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-all active:scale-98"
+                style={{
+                  background: 'rgba(239,68,68,0.08)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239,68,68,0.18)',
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

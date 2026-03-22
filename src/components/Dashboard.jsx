@@ -209,9 +209,9 @@ function HealthGrowthChart({ habits, achievements }) {
       {/* Stats row */}
       <div className="flex items-center gap-4 px-4 pb-2">
         <div><p className="text-white font-bold text-base leading-none">{avg}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Avg</p></div>
-        <div className="w-px h-5 bg-[#1a1a1a]" />
+        <div className="w-px h-5" style={{ background: 'var(--bg-inner-border)' }} />
         <div><p className="text-white font-bold text-base leading-none">{peak}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Peak</p></div>
-        <div className="w-px h-5 bg-[#1a1a1a]" />
+        <div className="w-px h-5" style={{ background: 'var(--bg-inner-border)' }} />
         <div><p className="font-bold text-base leading-none" style={{ color: '#34d399' }}>{perfect}</p><p className="text-[#4b5563] text-[10px] mt-0.5">Perfect</p></div>
         {hoverData && (
           <>
@@ -264,7 +264,7 @@ function HealthGrowthChart({ habits, achievements }) {
         )))}
         {labelIdxs.map(i => (
           <text key={i} x={PAD.l + (i / Math.max(n - 1, 1)) * cW} y={H - 6}
-            textAnchor="middle" fontSize="8.5" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">
+            textAnchor="middle" fontSize="8.5" fill="var(--text-dim)" fontFamily="Inter, system-ui, sans-serif">
             {formatXLabel(data[i].date, range.days)}
           </text>
         ))}
@@ -292,8 +292,8 @@ function HealthGrowthChart({ habits, achievements }) {
             return (
               <div key={ach.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
                 style={{
-                  background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
-                  borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.07)',
+                  background: unlocked ? 'rgba(250,204,21,0.08)' : 'var(--bg-subtle)',
+                  borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'var(--border-subtle)',
                   color: unlocked ? '#fcd34d' : 'rgb(100,116,139)',
                   boxShadow: unlocked ? '0 0 8px rgba(250,204,21,0.2)' : '',
                 }}
@@ -343,8 +343,8 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
 
   return (
     <div
-      className="rounded-3xl p-5 border border-white/8"
-      style={{ background: 'rgba(255,255,255,0.02)' }}
+      className="rounded-3xl p-5 border"
+      style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
     >
       <div className="mb-1">
         <h3 className="text-white font-semibold text-base">📅 Pick a Date</h3>
@@ -385,9 +385,9 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
           const isToday = dateStr === today;
           const pct = getDayCompletion(habits, dateStr, today);
 
-          let bg = 'rgba(255,255,255,0.04)';
+          let bg = 'var(--bg-subtle)';
           if (!isFuture && pct !== null) {
-            if (pct === 0) bg = 'rgba(255,255,255,0.06)';
+            if (pct === 0) bg = 'var(--bg-subtle)';
             else if (pct < 0.5) bg = 'rgba(34,197,94,0.25)';
             else if (pct < 1) bg = 'rgba(34,197,94,0.55)';
             else bg = '#22c55e';
@@ -407,8 +407,8 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
                   ? '1px solid rgba(34,197,94,0.5)'
                   : '1px solid transparent',
                 color: isFuture
-                  ? 'rgba(255,255,255,0.15)'
-                  : isSelected ? 'white' : 'rgba(255,255,255,0.75)',
+                  ? 'var(--text-faded)'
+                  : isSelected ? 'white' : 'var(--text-primary)',
                 boxShadow: isSelected ? '0 0 10px rgba(34,197,94,0.5)' : '',
                 cursor: isFuture ? 'default' : 'pointer',
               }}
@@ -422,7 +422,7 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
       {/* Legend */}
       <div className="flex items-center gap-1.5 mt-3 justify-end">
         <span className="text-slate-600 text-[10px]">0%</span>
-        {['rgba(255,255,255,0.04)', 'rgba(34,197,94,0.25)', 'rgba(34,197,94,0.55)', '#22c55e'].map((c, i) => (
+        {['var(--bg-subtle)', 'rgba(34,197,94,0.25)', 'rgba(34,197,94,0.55)', '#22c55e'].map((c, i) => (
           <div key={i} className="w-3 h-3 rounded-sm" style={{ background: c }} />
         ))}
         <span className="text-slate-600 text-[10px]">100%</span>
@@ -469,7 +469,7 @@ function MoodTracker({ moods, logMood, addToast }) {
   return (
     <div
       className="rounded-3xl border overflow-hidden"
-      style={{ background: '#0d0d0d', borderColor: '#1a1a1a' }}
+      style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-inner-border)' }}
     >
       <div className="px-5 pt-5 pb-4">
         {/* Header */}
@@ -503,8 +503,8 @@ function MoodTracker({ moods, logMood, addToast }) {
                 onMouseLeave={() => setHoveredKey(null)}
                 className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all duration-200"
                 style={{
-                  background: isSelected ? `${m.color}18` : isHovered ? `${m.color}0d` : 'rgba(255,255,255,0.02)',
-                  borderColor: isSelected ? `${m.color}60` : isHovered ? `${m.color}35` : '#1f1f1f',
+                  background: isSelected ? `${m.color}18` : isHovered ? `${m.color}0d` : 'var(--bg-subtle)',
+                  borderColor: isSelected ? `${m.color}60` : isHovered ? `${m.color}35` : 'var(--bg-border)',
                   boxShadow: isSelected ? `0 0 16px ${m.glow}` : 'none',
                   transform: isSelected ? 'scale(1.06)' : isHovered ? 'scale(1.03)' : 'scale(1)',
                 }}
@@ -529,7 +529,7 @@ function MoodTracker({ moods, logMood, addToast }) {
 
       {/* 14-day strip */}
       <div className="px-5 pb-4">
-        <p className="text-[#3b3b3b] text-[10px] font-medium mb-2 uppercase tracking-wider">Last 14 days</p>
+        <p className="text-[10px] font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Last 14 days</p>
         <div className="flex gap-1">
           {strip.map(({ date, mood, isToday }) => {
             const m = mood ? MOODS.find(x => x.key === mood.key) : null;
@@ -542,12 +542,12 @@ function MoodTracker({ moods, logMood, addToast }) {
                 <div
                   className="w-full aspect-square rounded-lg flex items-center justify-center text-[11px] transition-all"
                   style={{
-                    background: m ? `${m.color}20` : 'rgba(255,255,255,0.03)',
-                    border: isToday ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                    background: m ? `${m.color}20` : 'var(--bg-subtle)',
+                    border: isToday ? '1px solid var(--border-subtle)' : '1px solid transparent',
                     boxShadow: m && isToday ? `0 0 8px ${m.glow}` : 'none',
                   }}
                 >
-                  {mood ? mood.emoji : <span style={{ color: '#2a2a2a' }}>·</span>}
+                  {mood ? mood.emoji : <span style={{ color: 'var(--text-dim)' }}>·</span>}
                 </div>
                 {isToday && (
                   <div className="w-1 h-1 rounded-full bg-white/30" />
@@ -626,8 +626,8 @@ export default function Dashboard({ setActiveTab }) {
       <div
         className="rounded-3xl p-6 border"
         style={{
-          background: '#111111',
-          borderColor: '#1f1f1f',
+          background: 'var(--bg-card)',
+          borderColor: 'var(--bg-border)',
         }}
       >
         <p className="text-[#4b5563] text-xs font-medium mb-1 uppercase tracking-wider">{formattedDate}</p>
@@ -659,7 +659,7 @@ export default function Dashboard({ setActiveTab }) {
         return (
           <div
             className="rounded-2xl p-3.5 border"
-            style={{ background: '#111111', borderColor: '#1f1f1f' }}
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
           >
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-[#4b5563] text-xs font-semibold uppercase tracking-wider">Upcoming</span>
@@ -710,7 +710,7 @@ export default function Dashboard({ setActiveTab }) {
       {isViewingToday && (
         <div
           className="rounded-2xl p-4 border"
-          style={{ background: '#111111', borderColor: '#1f1f1f' }}
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -734,7 +734,7 @@ export default function Dashboard({ setActiveTab }) {
             );
             const isDone = fh.completions.includes(today);
             return (
-              <div className="flex items-center gap-3 p-3 rounded-xl border" style={{ background: '#0f0f0f', borderColor: isDone ? 'rgba(34,197,94,0.3)' : '#1f1f1f' }}>
+              <div className="flex items-center gap-3 p-3 rounded-xl border" style={{ background: 'var(--bg-inner)', borderColor: isDone ? 'rgba(34,197,94,0.3)' : 'var(--bg-border)' }}>
                 <span className="text-xl">{fh.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-white'}`}>{fh.name}</p>
@@ -752,7 +752,7 @@ export default function Dashboard({ setActiveTab }) {
                     key={h.id}
                     onClick={() => setFocusHabit(h.id, today)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all hover:border-[#22c55e]/40 hover:text-white text-[#9ca3af]"
-                    style={{ background: '#0f0f0f', borderColor: '#1f1f1f' }}
+                    style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-border)' }}
                   >
                     <span>{h.emoji}</span>
                     <span className="truncate max-w-[80px]">{h.name}</span>
@@ -776,8 +776,8 @@ export default function Dashboard({ setActiveTab }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Progress Ring for selected date */}
         <div
-          className="rounded-3xl p-6 border border-white/8 flex items-center gap-5"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          className="rounded-3xl p-6 border flex items-center gap-5"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
         >
           <ProgressRing
             percentage={completionPercentSelected}
@@ -897,7 +897,7 @@ export default function Dashboard({ setActiveTab }) {
         return (
           <div
             className="rounded-2xl p-4 border"
-            style={{ background: '#111111', borderColor: '#1f1f1f' }}
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-base">🕐</span>
@@ -958,8 +958,8 @@ export default function Dashboard({ setActiveTab }) {
 
         {selectedDateHabits.length === 0 ? (
           <div
-            className="rounded-3xl p-8 border border-dashed border-white/10 text-center"
-            style={{ background: 'rgba(255,255,255,0.02)' }}
+            className="rounded-3xl p-8 border border-dashed text-center"
+            style={{ background: 'var(--bg-subtle)', borderColor: 'var(--border-subtle)' }}
           >
             <div className="text-4xl mb-3">🌱</div>
             <h4 className="text-white font-semibold mb-1">

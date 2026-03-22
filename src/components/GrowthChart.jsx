@@ -69,8 +69,8 @@ export function ChartGrid() {
         return (
           <g key={pct}>
             <line x1={PAD.l} y1={y} x2={PAD.l + cW} y2={y}
-              stroke={pct === 0 || pct === 100 ? '#222' : '#161616'} strokeWidth="1" />
-            <text x={PAD.l - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#3b3b3b"
+              stroke="var(--bg-inner-border)" strokeWidth="1" />
+            <text x={PAD.l - 4} y={y + 4} textAnchor="end" fontSize="9" fill="var(--text-dim)"
               fontFamily="Inter, system-ui, sans-serif">{pct}%</text>
           </g>
         );
@@ -189,7 +189,7 @@ export default function GrowthChart({ habits, accentColor, compact = false, rang
         {segments.map((seg, i) => <path key={`f${i}`} d={buildSmoothPath(seg, true)} fill={`url(#cgrad_${accent.slice(1)})`} />)}
         {segments.map((seg, i) => <path key={`l${i}`} d={buildSmoothPath(seg)} fill="none" stroke={accent} strokeWidth="1.8" strokeLinecap="round" />)}
         {labelIdxs.map(i => (
-          <text key={i} x={points[i].x} y={H - 6} textAnchor="middle" fontSize="8.5" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">
+          <text key={i} x={points[i].x} y={H - 6} textAnchor="middle" fontSize="8.5" fill="var(--text-dim)" fontFamily="Inter, system-ui, sans-serif">
             {formatXLabel(points[i].date, range.days)}
           </text>
         ))}

@@ -75,7 +75,7 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
       <>
         <div
           className="flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200"
-          style={isCompletedOnEffective ? { borderColor: `${habit.color}33`, background: `${habit.color}08` } : { borderColor: '#1a1a1a', background: 'rgba(255,255,255,0.02)' }}
+          style={isCompletedOnEffective ? { borderColor: `${habit.color}33`, background: `${habit.color}08` } : { borderColor: 'var(--bg-inner-border)', background: 'var(--bg-subtle)' }}
         >
           {/* Check / numeric button */}
           {isNumeric ? (
@@ -88,8 +88,8 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
               disabled={!canToggle}
               className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px] font-bold border-2 transition-all duration-200"
               style={{
-                background: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.05)',
-                borderColor: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.12)',
+                background: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.15)' : 'var(--bg-subtle)',
+                borderColor: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.5)' : 'var(--border-subtle)',
                 color: metGoal ? '#080808' : numericValue != null ? '#fbbf24' : '#6b7280',
                 opacity: !canToggle ? 0.3 : 1,
               }}
@@ -106,7 +106,7 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
                   ? { opacity: 0.3, borderColor: '#4b5563', background: 'rgba(75,85,99,0.3)' }
                   : isCompletedOnEffective
                   ? { background: habit.color, borderColor: habit.color, color: '#fff', boxShadow: `0 0 12px ${habit.color}60` }
-                  : { borderColor: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)' }
+                  : { borderColor: 'var(--border-subtle)', background: 'var(--bg-subtle)' }
               }
             >
               {isCompletedOnEffective ? '✓' : ''}
@@ -165,8 +165,8 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
         style={{
           background: stats.isCompletedToday
             ? `linear-gradient(135deg, ${habit.color}15, ${habit.color}08)`
-            : 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-          borderColor: stats.isCompletedToday ? `${habit.color}50` : 'rgba(255,255,255,0.08)',
+            : 'var(--bg-subtle)',
+          borderColor: stats.isCompletedToday ? `${habit.color}50` : 'var(--border-subtle)',
           boxShadow: stats.isCompletedToday ? `0 4px 20px ${habit.color}20` : '',
         }}
       >
@@ -337,7 +337,7 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
                             ? habit.color
                             : isCurrentToday && !isCompleted
                             ? `${habit.color}25`
-                            : 'rgba(255,255,255,0.05)',
+                            : 'var(--bg-subtle)',
                           boxShadow: isCompleted && isApplicable ? `0 0 5px ${habit.color}50` : '',
                           border: isCurrentToday ? `1px solid ${habit.color}60` : '1px solid transparent',
                           opacity: isFuture ? 0.15 : !isApplicable ? 0.15 : 1,
@@ -370,7 +370,7 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
         >
           <div
             className="w-full max-w-sm rounded-3xl border border-white/10 p-6 animate-bounce-in"
-            style={{ background: '#111111' }}
+            style={{ background: 'var(--bg-card)' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="text-center mb-4">

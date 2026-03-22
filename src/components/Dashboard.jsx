@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
-import { getGreeting, getFormattedDate, getTodayString, getDayLabel, isHabitApplicableOnDate } from '../utils/dateUtils.js';
+import { getGreeting, getFormattedDate, getTodayString, getDayLabel, isHabitApplicableOnDate, getLastNDays } from '../utils/dateUtils.js';
 import { getLevelColor } from '../utils/gamification.js';
 import ProgressRing from './ProgressRing.jsx';
 import XPBar from './XPBar.jsx';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
-import SharedGrowthChart from './GrowthChart.jsx';
+import SharedGrowthChart, { RANGES, PAD, cW, cH, buildSmoothPath, xAxisStep, formatXLabel, RangeSelector, ChartGrid } from './GrowthChart.jsx';
 
 // ─── Category Config ──────────────────────────────────────────────────────────
 
@@ -34,18 +34,6 @@ function getDayCompletion(habits, dateStr, today) {
   if (applicable.length === 0) return null;
   const completed = applicable.filter(h => h.completions.includes(dateStr)).length;
   return completed / applicable.length;
-}
-
-// ─── Shared bezier path builder ───────────────────────────────────────────────
-
-function cardinalSmooth(pts, t = 0.35) {
-  if (!pts.length) return '';
-  let d = `M ${pts[0].x},${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i-1)], p1 = pts[i], p2 = pts[i+1], p3 = pts[Math.min(pts.length-1, i+2)];
-    d += ` C ${p1.x+(p2.x-p0.x)*t},${p1.y+(p2.y-p0.y)*t} ${p2.x-(p3.x-p1.x)*t},${p2.y-(p3.y-p1.y)*t} ${p2.x},${p2.y}`;
-  }
-  return d;
 }
 
 // ─── Category Summary Card ────────────────────────────────────────────────────
@@ -94,376 +82,64 @@ function CategoryCard({ category, dateHabits, selectedDate }) {
   );
 }
 
-// ─── Growth Chart ─────────────────────────────────────────────────────────────
+// ─── Health Growth Chart ──────────────────────────────────────────────────────
 
-function LineChart({ data, color = '#26a69a' }) {
-  const [hoverIdx, setHoverIdx] = useState(null);
+const HEALTH_CHART_RANGES = RANGES.slice(0, 4); // 1W, 1M, 3M, 6M
+
+function HealthGrowthChart({ habits, achievements }) {
+  const [rangeIdx, setRangeIdx] = useState(1);
+  const [hover, setHover] = useState(null);
   const svgRef = useRef(null);
+  const range = HEALTH_CHART_RANGES[rangeIdx];
+  const W = 600, H = 200;
 
-  const W = 560, H = 120;
-  const PAD = { l: 26, r: 8, t: 10, b: 22 };
-  const iW = W - PAD.l - PAD.r;
-  const iH = H - PAD.t - PAD.b;
-  const base = PAD.t + iH;
+  const data = useMemo(() => {
+    return getLastNDays(range.days).map(date => {
+      const vals = {};
+      H_METRICS.forEach(m => { vals[m.key] = getHealthPct(habits, m.key, date); });
+      const arr = Object.values(vals).filter(v => v !== null);
+      return { date, ...vals, avg: arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null };
+    });
+  }, [habits, range.days]);
+
   const n = data.length;
-  const areaId = `tv-area-${color.replace('#', '')}`;
 
-  const pts = data.map((d, i) => ({
-    x: PAD.l + (i / (n - 1)) * iW,
-    y: d.pct !== null ? PAD.t + (1 - Math.min(d.pct, 1)) * iH : null,
-    pct: d.pct,
-    label: d.dateStr || d.label,
-  }));
+  const series = useMemo(() => H_METRICS.map(m => {
+    const pts = data.map((d, i) => ({
+      x: PAD.l + (i / Math.max(n - 1, 1)) * cW,
+      y: d[m.key] !== null ? PAD.t + (1 - Math.min(d[m.key], 1)) * cH : null,
+    }));
+    const segs = []; let cur = [];
+    pts.forEach(p => { if (p.y !== null) cur.push(p); else if (cur.length) { segs.push(cur); cur = []; } });
+    if (cur.length) segs.push(cur);
+    return { ...m, pts, segs };
+  }), [data, n]);
 
-  let linePath = '', areaPath = '';
-  let seg = [];
-  const flush = () => {
-    if (seg.length >= 2) {
-      const lp = cardinalSmooth(seg);
-      linePath += lp + ' ';
-      let ap = `M ${seg[0].x},${base} L ${seg[0].x},${seg[0].y}`;
-      for (let i = 0; i < seg.length - 1; i++) {
-        const p0 = seg[Math.max(0, i-1)], p1 = seg[i], p2 = seg[i+1], p3 = seg[Math.min(seg.length-1, i+2)];
-        ap += ` C ${p1.x+(p2.x-p0.x)*0.35},${p1.y+(p2.y-p0.y)*0.35} ${p2.x-(p3.x-p1.x)*0.35},${p2.y-(p3.y-p1.y)*0.35} ${p2.x},${p2.y}`;
-      }
-      areaPath += ap + ` L ${seg[seg.length-1].x},${base} Z `;
-    }
-    seg = [];
-  };
-  for (const p of pts) { p.y !== null ? seg.push(p) : flush(); }
-  flush();
+  const handleMouseMove = useCallback((e) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    let closest = null, minDist = Infinity;
+    series[0]?.pts.forEach((p, i) => {
+      const dist = Math.abs(p.x - svgX);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    });
+    setHover(closest !== null ? closest : null);
+  }, [series]);
 
-  if (pts.filter(p => p.y !== null).length < 2) {
-    return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
-  }
+  const nonNull = data.filter(d => d.avg !== null);
+  const avg = nonNull.length ? Math.round(nonNull.reduce((s, d) => s + d.avg, 0) / nonNull.length * 100) : 0;
+  const peak = nonNull.length ? Math.round(Math.max(...nonNull.map(d => d.avg)) * 100) : 0;
+  const perfect = nonNull.filter(d => d.avg >= 1).length;
 
-  const hoverPt = hoverIdx !== null ? pts[hoverIdx] : null;
-  const hoverX = hoverPt?.x ?? null;
-
-  const xLabels = (() => {
+  const step = xAxisStep(range.days);
+  const labelIdxs = useMemo(() => {
     const idxs = [];
-    const step = Math.ceil(n / 5);
     for (let i = 0; i < n; i += step) idxs.push(i);
     if (idxs[idxs.length - 1] !== n - 1) idxs.push(n - 1);
     return idxs;
-  })();
+  }, [n, step]);
 
-  return (
-    <div className="relative select-none">
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
-        style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
-        onMouseMove={e => {
-          const rect = svgRef.current.getBoundingClientRect();
-          const idx = Math.round(((e.clientX - rect.left) / rect.width * W - PAD.l) / iW * (n - 1));
-          setHoverIdx(Math.max(0, Math.min(n - 1, idx)));
-        }}
-        onMouseLeave={() => setHoverIdx(null)}
-      >
-        <defs>
-          <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {[0, 0.25, 0.5, 0.75, 1].map(v => {
-          const y = PAD.t + (1 - v) * iH;
-          return (
-            <g key={v}>
-              <line x1={PAD.l} y1={y} x2={PAD.l + iW} y2={y}
-                stroke={v === 0 || v === 1 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
-              <text x={PAD.l - 4} y={y + 3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
-                {Math.round(v * 100)}%
-              </text>
-            </g>
-          );
-        })}
-
-        {areaPath && <path d={areaPath} fill={`url(#${areaId})`} />}
-        {linePath && <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
-
-        {hoverX !== null && hoverPt?.y !== null && (
-          <>
-            <line x1={hoverX} y1={PAD.t} x2={hoverX} y2={base}
-              stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3,3" />
-            <circle cx={hoverX} cy={hoverPt.y} r="3.5" fill="#0f0f1a" stroke={color} strokeWidth="2" />
-            <circle cx={hoverX} cy={hoverPt.y} r="6" fill={color} opacity="0.15" />
-          </>
-        )}
-
-        {xLabels.map(i => {
-          const p = pts[i];
-          if (!p) return null;
-          const lbl = p.label?.length <= 3 ? p.label : new Date(p.label + 'T00:00:00').getDate();
-          return (
-            <text key={i} x={p.x} y={H - 3} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">{lbl}</text>
-          );
-        })}
-      </svg>
-
-      {hoverPt?.pct !== null && hoverX !== null && (
-        <div className="absolute top-0 pointer-events-none z-20"
-          style={{ left: `${Math.min(Math.max((hoverX / W) * 100, 10), 70)}%`, transform: 'translateX(-50%)' }}>
-          <div className="rounded-xl border border-white/12 px-3 py-2 shadow-xl"
-            style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(10px)' }}>
-            <p className="text-slate-400 text-[10px]">{hoverPt.label}</p>
-            <p className="font-bold text-sm" style={{ color }}>{Math.round((hoverPt.pct || 0) * 100)}%</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Health Growth Chart ──────────────────────────────────────────────────────
-
-const H_METRICS = [
-  { key: 'water',    emoji: '💧', label: 'Water',    color: '#38bdf8', goal: 2, fmt: v => `${v}L`                               },
-  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#a78bfa', goal: 8, fmt: v => `${v}h`                               },
-  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#fb923c', goal: 5, fmt: v => `${v}/5 meals`                       },
-  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#34d399', goal: 2, fmt: v => `${v} session${v !== 1 ? 's' : ''}` },
-];
-
-const MEAL_IDS_H = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
-const EXERCISE_IDS_H = ['habit_jiujitsu', 'habit_gym'];
-
-const HEALTH_MEDALS = [
-  { id: 'hydration_week',   emoji: '💧', label: 'Hydration Week',   desc: '7-day water goal streak' },
-  { id: 'hydration_master', emoji: '💧', label: 'Hydration Master', desc: '30-day water goal streak' },
-  { id: 'sleep_week',       emoji: '😴', label: 'Sleep Week',       desc: '7-day sleep goal streak' },
-  { id: 'sleep_master',     emoji: '😴', label: 'Sleep Master',     desc: '30-day sleep goal streak' },
-  { id: 'meals_week',       emoji: '🍽️', label: 'Meal Streak',     desc: '7 perfect meal days' },
-  { id: 'double_training',  emoji: '⚡', label: 'Double Training',  desc: 'Gym + BJJ same day, 5×' },
-  { id: 'wellness_warrior', emoji: '🏆', label: 'Wellness Warrior', desc: 'All health goals in one week' },
-];
-
-function getHealthPct(habits, key, dateStr) {
-  if (key === 'water') {
-    const v = habits.find(x => x.id === 'habit_water')?.numericValues?.[dateStr];
-    return v != null ? v / 2 : null;
-  }
-  if (key === 'sleep') {
-    const v = habits.find(x => x.id === 'habit_sleep')?.numericValues?.[dateStr];
-    return v != null ? v / 8 : null;
-  }
-  if (key === 'meals') {
-    const c = MEAL_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
-    return c > 0 ? c / 5 : null;
-  }
-  if (key === 'exercise') {
-    const c = EXERCISE_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
-    return c > 0 ? c / 2 : null;
-  }
-  return null;
-}
-
-function getHealthRaw(habits, key, dateStr) {
-  if (key === 'water') {
-    const v = habits.find(x => x.id === 'habit_water')?.numericValues?.[dateStr];
-    return v != null ? `${v}L` : '—';
-  }
-  if (key === 'sleep') {
-    const v = habits.find(x => x.id === 'habit_sleep')?.numericValues?.[dateStr];
-    return v != null ? `${v}h` : '—';
-  }
-  if (key === 'meals') {
-    const c = MEAL_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
-    return c > 0 ? `${c}/5` : '—';
-  }
-  if (key === 'exercise') {
-    const c = EXERCISE_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
-    return c > 0 ? `${c} session${c > 1 ? 's' : ''}` : '—';
-  }
-  return '—';
-}
-
-// (cardinalSmooth is defined above, near CategoryCard)
-
-function HealthMultiLineChart({ points, isSemester }) {
-  const [hoverIdx, setHoverIdx] = useState(null);
-  const svgRef = useRef(null);
-
-  const W = 560, H = 140;
-  const PAD = { l: 26, r: 8, t: 10, b: 22 };
-  const iW = W - PAD.l - PAD.r;
-  const iH = H - PAD.t - PAD.b;
-  const base = PAD.t + iH;
-  const n = points.length;
-
-  if (n < 2) return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
-
-  // Build bezier paths for each metric series
-  const series = H_METRICS.map(m => {
-    let linePath = '', areaPath = '';
-    let seg = [];
-    const flush = () => {
-      if (seg.length >= 2) {
-        const lp = cardinalSmooth(seg);
-        linePath += lp + ' ';
-        let ap = `M ${seg[0].x},${base} L ${seg[0].x},${seg[0].y}`;
-        for (let i = 0; i < seg.length - 1; i++) {
-          const p0 = seg[Math.max(0,i-1)], p1 = seg[i], p2 = seg[i+1], p3 = seg[Math.min(seg.length-1,i+2)];
-          ap += ` C ${p1.x+(p2.x-p0.x)*0.35},${p1.y+(p2.y-p0.y)*0.35} ${p2.x-(p3.x-p1.x)*0.35},${p2.y-(p3.y-p1.y)*0.35} ${p2.x},${p2.y}`;
-        }
-        areaPath += ap + ` L ${seg[seg.length-1].x},${base} Z `;
-      }
-      seg = [];
-    };
-    points.forEach((pt, i) => {
-      const v = pt[m.key];
-      if (v !== null) seg.push({ x: PAD.l + (i/(n-1))*iW, y: PAD.t + (1-Math.min(v,1))*iH });
-      else flush();
-    });
-    flush();
-    return { ...m, linePath, areaPath };
-  });
-
-  const hoverX = hoverIdx !== null ? PAD.l + (hoverIdx / (n-1)) * iW : null;
-  const hoverPt = hoverIdx !== null ? points[hoverIdx] : null;
-
-  const xLabels = isSemester
-    ? points.map((pt, i) => ({ i, label: pt.label }))
-    : (() => {
-        const idxs = [];
-        const step = Math.ceil(n / 5);
-        for (let i = 0; i < n; i += step) idxs.push(i);
-        if (idxs[idxs.length-1] !== n-1) idxs.push(n-1);
-        return idxs.map(i => ({ i, label: new Date(points[i]?.dateStr + 'T00:00:00').getDate() }));
-      })();
-
-  return (
-    <div className="relative select-none">
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
-        style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
-        onMouseMove={e => {
-          const rect = svgRef.current.getBoundingClientRect();
-          const idx = Math.round(((e.clientX - rect.left) / rect.width * W - PAD.l) / iW * (n-1));
-          setHoverIdx(Math.max(0, Math.min(n-1, idx)));
-        }}
-        onMouseLeave={() => setHoverIdx(null)}
-      >
-        <defs>
-          {series.map(s => (
-            <linearGradient key={s.key} id={`hml-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={s.color} stopOpacity="0.16" />
-              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
-            </linearGradient>
-          ))}
-        </defs>
-
-        {[0, 0.25, 0.5, 0.75, 1].map(v => {
-          const y = PAD.t + (1-v) * iH;
-          return (
-            <g key={v}>
-              <line x1={PAD.l} y1={y} x2={PAD.l+iW} y2={y}
-                stroke={v === 0 || v === 1 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'} strokeWidth="1" />
-              <text x={PAD.l-4} y={y+3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
-                {Math.round(v*100)}%
-              </text>
-            </g>
-          );
-        })}
-
-        {series.map(s => s.areaPath && <path key={`a-${s.key}`} d={s.areaPath} fill={`url(#hml-${s.key})`} />)}
-        {series.map(s => s.linePath && (
-          <path key={`l-${s.key}`} d={s.linePath} fill="none" stroke={s.color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-
-        {hoverX !== null && hoverPt && (
-          <>
-            <line x1={hoverX} y1={PAD.t} x2={hoverX} y2={base}
-              stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3,3" />
-            {series.map(s => {
-              const v = hoverPt[s.key];
-              if (v === null) return null;
-              const cy = PAD.t + (1-Math.min(v,1)) * iH;
-              return (
-                <g key={`d-${s.key}`}>
-                  <circle cx={hoverX} cy={cy} r="3.5" fill="#0f0f1a" stroke={s.color} strokeWidth="2" />
-                  <circle cx={hoverX} cy={cy} r="6" fill={s.color} opacity="0.12" />
-                </g>
-              );
-            })}
-          </>
-        )}
-
-        {xLabels.map(({ i, label }) => (
-          <text key={i} x={PAD.l + (i/(n-1))*iW} y={H-3}
-            fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">{label}</text>
-        ))}
-      </svg>
-
-      {hoverPt && hoverX !== null && (
-        <div className="absolute top-0 pointer-events-none z-20"
-          style={{ left: `${Math.min(Math.max((hoverX/W)*100, 10), 68)}%`, transform: 'translateX(-50%)' }}>
-          <div className="rounded-2xl border border-white/12 shadow-2xl px-3.5 py-2.5"
-            style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(12px)', minWidth: '130px' }}>
-            <p className="text-slate-400 mb-1.5 font-semibold text-[10px] uppercase tracking-wider">
-              {isSemester ? hoverPt.label : new Date(hoverPt.dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </p>
-            {H_METRICS.map(m => {
-              const v = hoverPt[m.key];
-              const rawVal = v !== null ? Math.round(v * m.goal * 10) / 10 : null;
-              return (
-                <div key={m.key} className="flex items-center gap-2 py-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
-                  <span className="text-slate-400 text-[10px]">{m.label}</span>
-                  <span className="ml-auto font-bold text-[10px]" style={{ color: v !== null ? m.color : 'rgb(75,85,99)' }}>
-                    {rawVal !== null ? m.fmt(rawVal) : '—'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HealthGrowthChart({ habits, achievements }) {
-  const [view, setView] = useState('month');
-  const [chartType, setChartType] = useState('line');
-  const today = getTodayString();
-  const now = new Date();
-  const Y = now.getFullYear(), M = now.getMonth();
-
-  const monthPoints = useMemo(() => {
-    const days = new Date(Y, M+1, 0).getDate();
-    return Array.from({ length: days }, (_, i) => {
-      const day = i + 1;
-      const dateStr = `${Y}-${String(M+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const past = dateStr <= today;
-      const vals = {};
-      H_METRICS.forEach(m => { vals[m.key] = past ? getHealthPct(habits, m.key, dateStr) : null; });
-      const arr = Object.values(vals).filter(v => v !== null);
-      return { day, dateStr, pct: arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : (past ? 0 : null), ...vals };
-    });
-  }, [habits, today, Y, M]);
-
-  const semesterPoints = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(Y, M-(5-i), 1);
-      const y = d.getFullYear(), m = d.getMonth();
-      const days = new Date(y, m+1, 0).getDate();
-      const label = d.toLocaleDateString('en-US', { month: 'short' });
-      const avgs = {};
-      H_METRICS.forEach(met => {
-        let sum = 0, cnt = 0;
-        for (let day = 1; day <= days; day++) {
-          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          if (ds > today) continue;
-          const v = getHealthPct(habits, met.key, ds);
-          if (v !== null) { sum += v; cnt++; }
-        }
-        avgs[met.key] = cnt > 0 ? sum/cnt : null;
-      });
-      const arr = Object.values(avgs).filter(v => v !== null);
-      return { label, isCurrent: i === 5, pct: arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null, ...avgs };
-    });
-  }, [habits, today, Y, M]);
-
-  // Legend: most recent available value per metric (look back up to 14 days)
   const latestValues = useMemo(() => H_METRICS.map(m => {
     for (let d = 0; d <= 14; d++) {
       const dt = new Date(); dt.setDate(dt.getDate() - d);
@@ -474,142 +150,114 @@ function HealthGrowthChart({ habits, achievements }) {
     return { ...m, pct: null, rawVal: null, daysAgo: null };
   }), [habits]);
 
-  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const unlockedSet = new Set((achievements || []).map(a => a.id));
-  const activePoints = view === 'month' ? monthPoints : semesterPoints;
-  const validPoints = activePoints.filter(d => d.pct !== null && d.pct > 0);
+  const hoverData = hover !== null ? data[hover] : null;
 
   return (
-    <div className="rounded-3xl p-5 border border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
-      {/* Header — identical structure to GrowthChart */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-white font-semibold text-base flex items-center gap-2">🏥 Health</h3>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-xl overflow-hidden border border-white/10">
-            {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
-              <button key={v} onClick={() => setView(v)}
-                className="px-3 py-1.5 text-xs font-medium transition-all"
-                style={{ background: view === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: view === v ? 'white' : 'rgb(148,163,184)' }}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-xl overflow-hidden border border-white/10">
-            {[['bar', '▐▌'], ['line', '∿']].map(([v, icon]) => (
-              <button key={v} onClick={() => setChartType(v)}
-                className="px-3 py-1.5 text-xs font-medium transition-all"
-                style={{ background: chartType === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: chartType === v ? 'white' : 'rgb(148,163,184)' }}>
-                {icon}
-              </button>
-            ))}
-          </div>
+    <div className="rounded-2xl border overflow-hidden"
+      style={{ background: 'var(--bg-inner, #0a0a0a)', borderColor: 'var(--bg-inner-border, #1a1a1a)' }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div>
+          <p className="text-white font-semibold text-sm">Health Metrics</p>
+          <p className="text-[#4b5563] text-xs mt-0.5">Daily goal completion rate</p>
         </div>
+        <RangeSelector ranges={HEALTH_CHART_RANGES} activeIdx={rangeIdx} onSelect={(i) => { setRangeIdx(i); setHover(null); }} accent="#34d399" />
       </div>
 
-      {/* Legend — most recent logged value per metric */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      {/* Stats row */}
+      <div className="flex items-center gap-4 px-4 pb-2">
+        <div><p className="text-white font-bold text-base leading-none">{avg}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Avg</p></div>
+        <div className="w-px h-5 bg-[#1a1a1a]" />
+        <div><p className="text-white font-bold text-base leading-none">{peak}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Peak</p></div>
+        <div className="w-px h-5 bg-[#1a1a1a]" />
+        <div><p className="font-bold text-base leading-none" style={{ color: '#34d399' }}>{perfect}</p><p className="text-[#4b5563] text-[10px] mt-0.5">Perfect</p></div>
+        {hoverData && (
+          <>
+            <div className="flex-1" />
+            <div className="text-right">
+              <p className="font-bold text-base leading-none" style={{ color: '#34d399' }}>
+                {hoverData.avg !== null ? `${Math.round(hoverData.avg * 100)}%` : '—'}
+              </p>
+              <p className="text-[#4b5563] text-[10px] mt-0.5">
+                {new Date(hoverData.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Series legend */}
+      <div className="flex flex-wrap gap-1.5 px-4 pb-3">
         {latestValues.map(m => (
-          <div key={m.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border"
-            style={{ background: `${m.color}0d`, borderColor: `${m.color}30` }}>
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
-            <span className="text-[10px] text-slate-400">{m.emoji} {m.label}</span>
-            <span className="text-[10px] font-bold" style={{ color: m.pct !== null ? m.color : 'rgb(71,85,105)' }}>
+          <div key={m.key} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border"
+            style={{ background: `${m.color}0d`, borderColor: `${m.color}25` }}>
+            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
+            <span className="text-[9px] text-[#4b5563]">{m.emoji} {m.label}</span>
+            <span className="text-[9px] font-bold" style={{ color: m.pct !== null ? m.color : '#374151' }}>
               {m.rawVal !== null ? m.fmt(m.rawVal) : '—'}
             </span>
-            {m.daysAgo > 0 && <span className="text-[9px] text-slate-600">{m.daysAgo}d ago</span>}
+            {m.daysAgo > 0 && <span className="text-[9px] text-[#374151]">{m.daysAgo}d ago</span>}
           </div>
         ))}
       </div>
 
-      {/* Month view */}
-      {view === 'month' && (
-        <div>
-          <p className="text-slate-500 text-xs mb-3">{currentMonthLabel} — daily % of goal</p>
-          {chartType === 'line' ? (
-            <HealthMultiLineChart points={monthPoints} isSemester={false} />
-          ) : (
-            <>
-              <div className="flex items-end gap-[2px]" style={{ height: '100px' }}>
-                {monthPoints.map(({ day, dateStr, pct }) => {
-                  const isToday = dateStr === today;
-                  const barH = pct > 0 ? Math.max(4, Math.round(pct * 96)) : 3;
-                  const barColor = pct === null || pct === 0 ? 'rgba(255,255,255,0.05)'
-                    : pct >= 1 ? '#10B981' : pct >= 0.5 ? '#34d399' : '#065f46';
-                  return (
-                    <div key={day} className="flex-1 rounded-t-sm transition-all"
-                      style={{ height: `${barH}px`, background: barColor, minHeight: '3px',
-                        outline: isToday ? '1px solid #34d399' : '', boxShadow: isToday ? '0 0 6px #34d39980' : '' }}
-                      title={`${dateStr}: ${pct !== null ? Math.round(pct*100)+'% health score' : 'no data'}`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex justify-between mt-1.5 px-0.5">
-                {[1, 7, 14, 21, 28].filter(d => d <= monthPoints.length).map(d => (
-                  <span key={d} className="text-[9px] text-slate-600">{d}</span>
-                ))}
-                {monthPoints.length > 28 && <span className="text-[9px] text-slate-600">{monthPoints.length}</span>}
-              </div>
-            </>
-          )}
-          {validPoints.length > 0 && (
-            <p className="text-[11px] text-slate-500 mt-2 text-right">
-              Avg {Math.round(validPoints.reduce((s,d)=>s+d.pct,0)/validPoints.length*100)}% ·{' '}
-              Best {Math.round(Math.max(...validPoints.map(d=>d.pct))*100)}%
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Semester view */}
-      {view === 'semester' && (
-        <div>
-          <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily % of goal</p>
-          {chartType === 'line' ? (
-            <LineChart data={semesterPoints} color="#26a69a" />
-          ) : (
-            <div className="flex items-end gap-3" style={{ height: '110px' }}>
-              {semesterPoints.map(({ label, pct, isCurrent }) => {
-                const barH = pct !== null ? Math.max(6, Math.round(pct * 90)) : 3;
-                const barColor = pct === null
-                  ? 'rgba(255,255,255,0.05)'
-                  : pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#26a69a' : '#065f46';
-                return (
-                  <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="flex-1 w-full flex flex-col justify-end items-center gap-0.5">
-                      {pct !== null && (
-                        <span className="text-[9px] text-slate-400">{Math.round(pct * 100)}%</span>
-                      )}
-                      <div className="w-full rounded-t-lg transition-all duration-700"
-                        style={{ height: `${barH}px`, background: barColor, minHeight: '3px',
-                          boxShadow: isCurrent && pct !== null ? `0 0 8px ${barColor}60` : '' }} />
-                    </div>
-                    <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
-                  </div>
-                );
+      {/* SVG chart */}
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full"
+        style={{ height: H, display: 'block', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove} onMouseLeave={() => setHover(null)}>
+        <defs>
+          {series.map(s => (
+            <linearGradient key={s.key} id={`hgrad_${s.key}`} x1="0" y1={PAD.t} x2="0" y2={PAD.t + cH} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.18" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+            </linearGradient>
+          ))}
+        </defs>
+        <ChartGrid />
+        {series.map(s => s.segs.map((seg, i) => (
+          <path key={`f${s.key}${i}`} d={buildSmoothPath(seg, true)} fill={`url(#hgrad_${s.key})`} />
+        )))}
+        {series.map(s => s.segs.map((seg, i) => (
+          <path key={`l${s.key}${i}`} d={buildSmoothPath(seg)} fill="none" stroke={s.color} strokeWidth="1.6" strokeLinecap="round" />
+        )))}
+        {labelIdxs.map(i => (
+          <text key={i} x={PAD.l + (i / Math.max(n - 1, 1)) * cW} y={H - 6}
+            textAnchor="middle" fontSize="8.5" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">
+            {formatXLabel(data[i].date, range.days)}
+          </text>
+        ))}
+        {hover !== null && series[0]?.pts[hover] && (() => {
+          const hx = series[0].pts[hover].x;
+          return (
+            <g>
+              <line x1={hx} y1={PAD.t} x2={hx} y2={PAD.t + cH} stroke="#34d399" strokeWidth="1" strokeDasharray="3 2" opacity="0.4" />
+              {series.map(s => {
+                const p = s.pts[hover];
+                if (!p || p.y === null) return null;
+                return <circle key={s.key} cx={hx} cy={p.y} r="4" fill={s.color} stroke="var(--bg-inner, #0a0a0a)" strokeWidth="2" />;
               })}
-            </div>
-          )}
-        </div>
-      )}
+            </g>
+          );
+        })()}
+      </svg>
 
       {/* Health medals */}
-      <div className="mt-4 pt-4 border-t border-white/5">
-        <p className="text-slate-500 text[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'var(--bg-inner-border, #1a1a1a)' }}>
+        <p className="text-[#4b5563] text-[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
+        <div className="flex flex-wrap gap-1.5">
           {HEALTH_MEDALS.map(ach => {
             const unlocked = unlockedSet.has(ach.id);
             return (
-              <div key={ach.id}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
+              <div key={ach.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
                 style={{
                   background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
                   borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.07)',
                   color: unlocked ? '#fcd34d' : 'rgb(100,116,139)',
                   boxShadow: unlocked ? '0 0 8px rgba(250,204,21,0.2)' : '',
                 }}
-                title={ach.desc}
-              >
+                title={ach.desc}>
                 <span>{unlocked ? '🏅' : '🔒'}</span>
                 <span className="font-medium">{ach.emoji} {ach.label}</span>
               </div>

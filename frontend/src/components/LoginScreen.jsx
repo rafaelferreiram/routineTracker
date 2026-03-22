@@ -39,7 +39,7 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      const result = mode === 'login'
+      const result = (mode === 'login' || mode === 'other')
         ? await login(username, password)
         : await signup(username, password);
       if (result.error) setError(result.error);
@@ -53,6 +53,7 @@ export default function LoginScreen() {
     setUsername('');
     setPassword('');
     setError('');
+    setMode('login');
   }
 
   const isGabriela = selectedUser?.username === 'gabriela' ||
@@ -107,20 +108,27 @@ export default function LoginScreen() {
                 );
               })}
             </div>
-            <div className="mt-4 text-center">
+            <div className="mt-4 flex justify-center gap-4">
               <button
                 data-testid="new-account-btn"
                 onClick={() => { setMode('signup'); setSelectedUser(null); setUsername(''); setPassword(''); }}
                 className="text-[#4b5563] hover:text-white text-xs transition-colors underline underline-offset-2"
               >
-                + New account
+                + Nova conta
+              </button>
+              <button
+                data-testid="other-account-btn"
+                onClick={() => { setMode('other'); setSelectedUser(null); setUsername(''); setPassword(''); }}
+                className="text-[#4b5563] hover:text-white text-xs transition-colors underline underline-offset-2"
+              >
+                Outra conta
               </button>
             </div>
           </div>
         )}
 
         {/* Form card */}
-        {(selectedUser || mode === 'signup' || knownUsers.length === 0) && (
+        {(selectedUser || mode === 'signup' || mode === 'other' || knownUsers.length === 0) && (
           <div className="rounded-3xl border border-[#1f1f1f] overflow-hidden"
             style={{ background: '#111111' }}>
 
@@ -134,6 +142,8 @@ export default function LoginScreen() {
                   </div>
                   <span className="text-white font-semibold">{selectedUser.displayName}</span>
                 </div>
+              ) : mode === 'other' ? (
+                <span className="text-white font-semibold">Entrar com outra conta</span>
               ) : (
                 <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#0f0f0f' }}>
                   {['login', 'signup'].map(m => (
@@ -149,11 +159,11 @@ export default function LoginScreen() {
                   ))}
                 </div>
               )}
-              {selectedUser && (
+              {(selectedUser || mode === 'other') && knownUsers.length > 0 && (
                 <button data-testid="back-btn"
                   onClick={handleBack}
                   className="text-[#4b5563] hover:text-white text-sm transition-colors px-2 py-1">
-                  ← Back
+                  ← Voltar
                 </button>
               )}
             </div>
@@ -210,10 +220,10 @@ export default function LoginScreen() {
                 {loading ? (
                   <>
                     <span className="inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    {mode === 'login' ? 'Signing in...' : 'Creating...'}
+                    {(mode === 'login' || mode === 'other') ? 'Entrando...' : 'Criando...'}
                   </>
                 ) : (
-                  mode === 'login' ? 'Sign In' : 'Create Account'
+                  (mode === 'login' || mode === 'other') ? 'Entrar' : 'Criar Conta'
                 )}
               </button>
             </form>

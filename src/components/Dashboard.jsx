@@ -12,9 +12,12 @@ import AddHabitModal from './AddHabitModal.jsx';
 export const CATEGORIES = [
   { name: 'Religion', icon: '🙏', color: '#8B5CF6' },
   { name: 'Exercise', icon: '💪', color: '#10B981' },
+  { name: 'Meals',    icon: '🍽️', color: '#F59E0B' },
   { name: 'Work',     icon: '💼', color: '#3B82F6' },
-  { name: 'Study',    icon: '📚', color: '#F59E0B' },
+  { name: 'Study',    icon: '📚', color: '#D97706' },
   { name: 'Family',   icon: '❤️',  color: '#EC4899' },
+  { name: 'Health',   icon: '🌿', color: '#06B6D4' },
+  { name: 'Other',    icon: '⭐', color: '#94A3B8' },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

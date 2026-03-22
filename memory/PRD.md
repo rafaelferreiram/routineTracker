@@ -57,6 +57,7 @@
 | GET | /api/health | Health check |
 | POST | /api/auth/login | Login → JWT + user info |
 | POST | /api/auth/register | Create new account |
+| POST | /api/auth/google | Google OAuth → JWT + user info |
 | GET | /api/data | Get user's full state |
 | PUT | /api/data | Save user's full state |
 
@@ -82,6 +83,14 @@
 - displayName passed to StoreProvider via `{...theme, displayName}`
 - New user account creation works end-to-end
 - Imported real user data dump from GitHub for both rafael and gabriela
+
+### 2026-03-22 - Google Social Login
+- Added "Continue with Google" button on login screen
+- Backend route `/api/auth/google` exchanges Emergent session_id for JWT
+- Creates new user or links existing user by email
+- Frontend handles OAuth callback via URL hash (#session_id=...)
+- Uses Emergent Auth service (auth.emergentagent.com) for Google OAuth flow
+- All 15 tests passing (11 backend + 4 frontend)
 
 ### 2026-03-22 - Hamburger Menu + Data Re-import
 - Replaced cramped 5-tab "More" bottom sheet with clean hamburger menu

@@ -83,7 +83,14 @@
 - New user account creation works end-to-end
 - Imported real user data dump from GitHub for both rafael and gabriela
 
-### 2026-03-22 - Mobile Navigation Redesign
+### 2026-03-22 - Hamburger Menu + Data Re-import
+- Replaced cramped 5-tab "More" bottom sheet with clean hamburger menu
+- Mobile bottom bar now has only 4 spacious tabs (Today, Habits, Stats, Journal) with top-indicator active state
+- Hamburger (☰) button in fixed header opens a full-screen slide-in drawer from the right
+- Drawer: user info strip, "Main" section (4 tabs), "More" section (5 tabs: Medals, Events, Friends, Customize, Profile), Backup & Restore, Sign Out
+- Mobile header is now fixed top (inside Navbar), content gets pt-[74px] offset
+- Added `animate-slide-in-right` CSS animation for the drawer
+- Re-imported exact user data from provided JSON dump: 24 habits with all March completions, water/sleep numericValues (21 days each), 10 achievements, 2 events, settings with 8 categories array
 - New bottom nav with 4 primary tabs: Today, Habits, Stats, Journal + "More" button
 - "More" slides up an iOS-style sheet with: Medals, Events, Friends, Customize, Profile + Sign out
 - More sheet has user info strip (avatar, name, level/XP)

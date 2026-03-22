@@ -151,6 +151,15 @@ body {
   animation: backdropIn 0.2s ease-out both;
 }
 
+/* ── Slide in from right (hamburger drawer) ────────────────────────────── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ── Touch tap highlight ─────────────────────────────────────────────── */
 button, a {
   -webkit-tap-highlight-color: transparent;

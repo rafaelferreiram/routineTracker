@@ -1,7 +1,6 @@
 import { useState, useEffect, Component } from 'react';
 import { useAuth } from './store/useAuth.js';
 import { getTheme, applyTheme } from './utils/themes.js';
-import { getLevelColor } from './utils/gamification.js';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -40,9 +39,8 @@ import FriendsPanel from './components/FriendsPanel.jsx';
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
-  const { confetti, levelUpPending, clearLevelUp, accentColor, settings, profile, currentLevel } = useHabits();
+  const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
   const { currentUser } = useAuth();
-  const levelColor = getLevelColor(currentLevel);
 
   // Apply full theme (colors + accent) whenever either changes
   useEffect(() => {
@@ -72,63 +70,8 @@ function AppContent() {
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />
 
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
-          {/* ── Mobile header ─────────────────────────────────────────── */}
-          <div
-            className="lg:hidden sticky top-0 z-30 px-4 flex items-center justify-between border-b"
-            style={{
-              height: 56,
-              background: 'var(--bg-nav, rgba(8,8,8,0.97))',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderColor: 'var(--bg-border, #1f1f1f)',
-            }}
-          >
-            {/* Left: avatar + name + level */}
-            <button
-              data-testid="mobile-header-profile-btn"
-              onClick={() => setActiveTab('profile')}
-              className="flex items-center gap-2.5 active:opacity-70 transition-opacity"
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{
-                  background: `rgba(${hexToRgb(levelColor)}, 0.2)`,
-                  color: levelColor,
-                  border: `1.5px solid rgba(${hexToRgb(levelColor)}, 0.45)`,
-                }}
-              >
-                {(profile?.name || currentUser?.displayName || '?')[0].toUpperCase()}
-              </div>
-              <div className="text-left">
-                <p className="text-white font-semibold text-sm leading-none">
-                  {profile?.name || currentUser?.displayName}
-                </p>
-                <p className="text-[10px] font-medium mt-0.5 leading-none" style={{ color: levelColor }}>
-                  Lv.{currentLevel} · {(profile?.totalXP || 0).toLocaleString()} XP
-                </p>
-              </div>
-            </button>
-
-            {/* Right: section badge + backup */}
-            <div className="flex items-center gap-2">
-              <span
-                className="text-xs text-[#6b7280] capitalize font-medium px-2.5 py-1 rounded-full"
-                style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)' }}
-              >
-                {activeTab === 'achievements' ? 'Medals' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-              </span>
-              <button
-                data-testid="mobile-backup-btn"
-                onClick={() => setShowExport(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90"
-                style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)', color: '#6b7280' }}
-              >
-                <span className="text-sm">⊞</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl pb-28 lg:pb-8">
+          {/* Mobile header is now rendered inside Navbar — just add top padding */}
+          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl pt-[74px] lg:pt-6 pb-28 lg:pb-8">
             <div key={activeTab} className="animate-fade-in">
               {renderContent()}
             </div>

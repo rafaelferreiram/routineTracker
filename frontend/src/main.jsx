@@ -10,7 +10,7 @@ function AppShell() {
   const { currentUser } = useAuth();
   if (!currentUser) return <LoginScreen />;
   return (
-    <StoreProvider username={currentUser.username} defaultTheme={currentUser.theme}>
+    <StoreProvider username={currentUser.username} defaultTheme={{ ...currentUser.theme, displayName: currentUser.displayName }}>
       <App />
     </StoreProvider>
   );

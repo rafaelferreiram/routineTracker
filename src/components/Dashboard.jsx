@@ -84,6 +84,46 @@ function CategoryCard({ category, dateHabits, selectedDate }) {
 
 // ─── Health Growth Chart ──────────────────────────────────────────────────────
 
+const H_METRICS = [
+  { key: 'water',    emoji: '💧', label: 'Water',    color: '#38bdf8', goal: 2, fmt: v => `${v}L`                               },
+  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#a78bfa', goal: 8, fmt: v => `${v}h`                               },
+  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#fb923c', goal: 5, fmt: v => `${v}/5 meals`                       },
+  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#34d399', goal: 2, fmt: v => `${v} session${v !== 1 ? 's' : ''}` },
+];
+
+const MEAL_IDS_H    = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
+const EXERCISE_IDS_H = ['habit_jiujitsu', 'habit_gym'];
+
+const HEALTH_MEDALS = [
+  { id: 'hydration_week',   emoji: '💧', label: 'Hydration Week',   desc: '7-day water goal streak' },
+  { id: 'hydration_master', emoji: '💧', label: 'Hydration Master', desc: '30-day water goal streak' },
+  { id: 'sleep_week',       emoji: '😴', label: 'Sleep Week',       desc: '7-day sleep goal streak' },
+  { id: 'sleep_master',     emoji: '😴', label: 'Sleep Master',     desc: '30-day sleep goal streak' },
+  { id: 'meals_week',       emoji: '🍽️', label: 'Meal Streak',     desc: '7 perfect meal days' },
+  { id: 'double_training',  emoji: '⚡', label: 'Double Training',  desc: 'Gym + BJJ same day, 5×' },
+  { id: 'wellness_warrior', emoji: '🏆', label: 'Wellness Warrior', desc: 'All health goals in one week' },
+];
+
+function getHealthPct(habits, key, dateStr) {
+  if (key === 'water') {
+    const v = habits.find(x => x.id === 'habit_water')?.numericValues?.[dateStr];
+    return v != null ? v / 2 : null;
+  }
+  if (key === 'sleep') {
+    const v = habits.find(x => x.id === 'habit_sleep')?.numericValues?.[dateStr];
+    return v != null ? v / 8 : null;
+  }
+  if (key === 'meals') {
+    const c = MEAL_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return c > 0 ? c / 5 : null;
+  }
+  if (key === 'exercise') {
+    const c = EXERCISE_IDS_H.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return c > 0 ? c / 2 : null;
+  }
+  return null;
+}
+
 const HEALTH_CHART_RANGES = RANGES.slice(0, 4); // 1W, 1M, 3M, 6M
 
 function HealthGrowthChart({ habits, achievements }) {

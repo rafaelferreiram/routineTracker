@@ -771,7 +771,8 @@ function reducer(state, action) {
         habits: state.habits.map(h => {
           if (h.id !== habitId) return h;
           const goal = h.goal || 1;
-          const isCompleted = value >= goal;
+          // Any positive value logged counts as done; goal is a visual target only
+          const isCompleted = value > 0;
           const newNumericValues = { ...(h.numericValues || {}), [date]: value };
           let newCompletions = (h.completions || []).filter(d => d !== date);
           if (isCompleted) newCompletions = [...newCompletions, date];

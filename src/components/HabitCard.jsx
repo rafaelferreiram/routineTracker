@@ -5,11 +5,13 @@ import { StreakPill } from './StreakBadge.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 
 export default function HabitCard({ habit, showWeeklyGrid = true, compact = false, selectedDate = null, weekDays = null }) {
-  const { toggleCompletion, deleteHabit, getHabitStats, freezeShields, useFreezeShield } = useHabits();
+  const { toggleCompletion, deleteHabit, getHabitStats, freezeShields, useFreezeShield, logNumericValue, accentColor } = useHabits();
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showNumericInput, setShowNumericInput] = useState(false);
+  const [numericInputVal, setNumericInputVal] = useState('');
 
   const stats = getHabitStats(habit);
   const today = getTodayString();
@@ -52,59 +54,99 @@ export default function HabitCard({ habit, showWeeklyGrid = true, compact = fals
     toggleCompletion(habit.id, date);
   }, [toggleCompletion, habit.id, today]);
 
+  // Numeric habit helpers (always defined, safe for hooks rules)
+  const isNumeric = habit.type === 'numeric';
+  const numericValue = isNumeric ? (habit.numericValues || {})[effectiveDate] : null;
+  const metGoal = isNumeric && numericValue != null && numericValue >= (habit.goal || 1);
+
+  const handleNumericLog = useCallback(() => {
+    const val = parseFloat(numericInputVal);
+    if (!isNaN(val) && val > 0) {
+      logNumericValue(habit.id, effectiveDate, val);
+      setShowNumericInput(false);
+      setNumericInputVal('');
+    }
+  }, [numericInputVal, habit.id, effectiveDate, logNumericValue]);
+
   if (compact) {
     const canToggle = !isEffectiveFuture && isApplicableOnEffective;
+
     return (
       <>
         <div
-          className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200 ${
-            isCompletedOnEffective
-              ? 'bg-white/5 border-white/10'
-              : 'bg-white/5 border-white/10 hover:border-white/20'
-          }`}
-          style={isCompletedOnEffective ? { borderColor: `${habit.color}33`, background: `${habit.color}08` } : {}}
+          className="flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200"
+          style={isCompletedOnEffective ? { borderColor: `${habit.color}33`, background: `${habit.color}08` } : { borderColor: '#1a1a1a', background: 'rgba(255,255,255,0.02)' }}
         >
-          {/* Check button */}
-          <button
-            onClick={handleToggleEffective}
-            disabled={!canToggle}
-            className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200 ${
-              justCompleted ? 'animate-pop' : ''
-            } ${
-              !canToggle
-                ? 'opacity-30 cursor-not-allowed border-slate-600 bg-slate-700/30'
-                : isCompletedOnEffective
-                ? 'border-transparent text-white shadow-lg'
-                : 'border-white/30 hover:border-white/50 bg-white/5 hover:bg-white/10'
-            }`}
-            style={
-              isCompletedOnEffective && canToggle
-                ? { background: habit.color, boxShadow: `0 0 12px ${habit.color}60` }
-                : {}
-            }
-          >
-            {isCompletedOnEffective ? '✓' : ''}
-          </button>
+          {/* Check / numeric button */}
+          {isNumeric ? (
+            <button
+              onClick={() => {
+                if (!canToggle) return;
+                setShowNumericInput(v => !v);
+                setNumericInputVal(numericValue != null ? String(numericValue) : '');
+              }}
+              disabled={!canToggle}
+              className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px] font-bold border-2 transition-all duration-200"
+              style={{
+                background: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.05)',
+                borderColor: metGoal ? habit.color : numericValue != null ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.12)',
+                color: metGoal ? '#080808' : numericValue != null ? '#fbbf24' : '#6b7280',
+                opacity: !canToggle ? 0.3 : 1,
+              }}
+            >
+              {numericValue != null ? `${numericValue}` : `+`}
+            </button>
+          ) : (
+            <button
+              onClick={handleToggleEffective}
+              disabled={!canToggle}
+              className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200 ${justCompleted ? 'animate-pop' : ''}`}
+              style={
+                !canToggle
+                  ? { opacity: 0.3, borderColor: '#4b5563', background: 'rgba(75,85,99,0.3)' }
+                  : isCompletedOnEffective
+                  ? { background: habit.color, borderColor: habit.color, color: '#fff', boxShadow: `0 0 12px ${habit.color}60` }
+                  : { borderColor: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)' }
+              }
+            >
+              {isCompletedOnEffective ? '✓' : ''}
+            </button>
+          )}
 
           {/* Emoji */}
           <span className="text-xl flex-shrink-0">{habit.emoji}</span>
 
-          {/* Name */}
+          {/* Name + numeric inline input */}
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-medium truncate transition-all ${isCompletedOnEffective ? 'text-slate-400 line-through' : 'text-white'}`}>
               {habit.name}
             </p>
+            {isNumeric && showNumericInput && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <input
+                  type="number"
+                  step={habit.unit === 'L' ? '0.1' : '0.5'}
+                  min="0"
+                  value={numericInputVal}
+                  onChange={e => setNumericInputVal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleNumericLog(); if (e.key === 'Escape') setShowNumericInput(false); }}
+                  placeholder={`Goal: ${habit.goal}${habit.unit}`}
+                  className="w-28 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-xs outline-none border border-[#2a2a2a] focus:border-[#22c55e]/50"
+                  style={{ colorScheme: 'dark' }}
+                  autoFocus
+                />
+                <span className="text-[#6b7280] text-xs">{habit.unit}</span>
+                <button
+                  onClick={handleNumericLog}
+                  className="text-xs font-bold px-2 py-1 rounded-lg"
+                  style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}
+                >✓</button>
+              </div>
+            )}
           </div>
 
           {/* Streak */}
-          {stats.streak > 0 && <StreakPill streak={stats.streak} />}
-
-          {/* Difficulty badge */}
-          {habit.difficulty && habit.difficulty !== 'medium' && (
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium difficulty-${habit.difficulty}`}>
-              {habit.difficulty === 'easy' ? '🟢' : '🔴'}
-            </span>
-          )}
+          {stats.streak > 0 && !showNumericInput && <StreakPill streak={stats.streak} />}
         </div>
 
         {showEdit && <AddHabitModal editHabit={habit} onClose={() => setShowEdit(false)} />}

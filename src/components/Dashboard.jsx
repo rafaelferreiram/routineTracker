@@ -345,6 +345,256 @@ function GrowthChart({ habits }) {
   );
 }
 
+// ─── Health Growth Chart ──────────────────────────────────────────────────────
+
+const HEALTH_METRICS = [
+  { key: 'water',    label: '💧 Water',    color: '#3b82f6', unit: 'L',  goal: 2 },
+  { key: 'sleep',    label: '😴 Sleep',    color: '#8b5cf6', unit: 'h',  goal: 8 },
+  { key: 'meals',    label: '🍽️ Meals',    color: '#F59E0B', unit: '',   goal: 5 },
+  { key: 'exercise', label: '💪 Exercise', color: '#10B981', unit: '',   goal: 2 },
+];
+
+const MEAL_IDS_HEALTH = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
+const EXERCISE_IDS_HEALTH = ['habit_jiujitsu', 'habit_gym'];
+
+const HEALTH_ACHIEVEMENT_META = [
+  { id: 'hydration_week',   label: '💧 Hydration Week',   desc: '7-day water goal streak' },
+  { id: 'hydration_master', label: '💧 Hydration Master', desc: '30-day water goal streak' },
+  { id: 'sleep_week',       label: '😴 Sleep Week',       desc: '7-day sleep goal streak' },
+  { id: 'sleep_master',     label: '😴 Sleep Master',     desc: '30-day sleep goal streak' },
+  { id: 'meals_week',       label: '🍽️ Meal Streak',     desc: '7 perfect meal days' },
+  { id: 'double_training',  label: '⚡ Double Training',  desc: 'Gym + BJJ same day, 5×' },
+  { id: 'wellness_warrior', label: '🏆 Wellness Warrior', desc: 'All health goals in one week' },
+];
+
+function getHealthDayPct(habits, metric, dateStr) {
+  if (metric === 'water') {
+    const h = habits.find(x => x.id === 'habit_water');
+    const v = h?.numericValues?.[dateStr];
+    return v != null ? v / 2 : null;
+  }
+  if (metric === 'sleep') {
+    const h = habits.find(x => x.id === 'habit_sleep');
+    const v = h?.numericValues?.[dateStr];
+    return v != null ? v / 8 : null;
+  }
+  if (metric === 'meals') {
+    const count = MEAL_IDS_HEALTH.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return count > 0 ? count / 5 : null;
+  }
+  if (metric === 'exercise') {
+    const count = EXERCISE_IDS_HEALTH.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return count > 0 ? count / 2 : null;
+  }
+  return null;
+}
+
+function getHealthDayRawLabel(habits, metric, dateStr) {
+  if (metric === 'water') {
+    const v = habits.find(x => x.id === 'habit_water')?.numericValues?.[dateStr];
+    return v != null ? `${v}L` : null;
+  }
+  if (metric === 'sleep') {
+    const v = habits.find(x => x.id === 'habit_sleep')?.numericValues?.[dateStr];
+    return v != null ? `${v}h` : null;
+  }
+  if (metric === 'meals') {
+    const count = MEAL_IDS_HEALTH.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return count > 0 ? `${count} meals` : null;
+  }
+  if (metric === 'exercise') {
+    const count = EXERCISE_IDS_HEALTH.filter(id => habits.find(x => x.id === id)?.completions.includes(dateStr)).length;
+    return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : null;
+  }
+  return null;
+}
+
+function HealthGrowthChart({ habits, achievements }) {
+  const [metric, setMetric] = useState('water');
+  const [view, setView] = useState('month');
+  const [chartType, setChartType] = useState('bar');
+  const today = getTodayString();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  const currentMetric = HEALTH_METRICS.find(m => m.key === metric);
+
+  const monthData = useMemo(() => {
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const pct = dateStr > today ? null : getHealthDayPct(habits, metric, dateStr);
+      return { day, dateStr, pct };
+    });
+  }, [habits, metric, today, currentYear, currentMonth]);
+
+  const semesterData = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(currentYear, currentMonth - (5 - i), 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const label = d.toLocaleDateString('en-US', { month: 'short' });
+      let sum = 0, count = 0;
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (dateStr > today) continue;
+        const pct = getHealthDayPct(habits, metric, dateStr);
+        if (pct !== null) { sum += pct; count++; }
+      }
+      return { label, pct: count > 0 ? sum / count : null, isCurrent: i === 5 };
+    });
+  }, [habits, metric, today, currentYear, currentMonth]);
+
+  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const unlockedSet = new Set((achievements || []).map(a => a.id));
+  const color = currentMetric.color;
+  const metricName = currentMetric.label.replace(/^\S+\s/, '');
+
+  return (
+    <div className="rounded-3xl p-5 border border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-white font-semibold text-base flex items-center gap-2">🏥 Health</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl overflow-hidden border border-white/10">
+            {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)}
+                className="px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: view === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: view === v ? 'white' : 'rgb(148,163,184)' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-xl overflow-hidden border border-white/10">
+            {[['bar', '▐▌'], ['line', '∿']].map(([v, icon]) => (
+              <button key={v} onClick={() => setChartType(v)}
+                className="px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: chartType === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)', color: chartType === v ? 'white' : 'rgb(148,163,184)' }}>
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Metric selector */}
+      <div className="flex gap-1.5 mb-4 flex-wrap">
+        {HEALTH_METRICS.map(m => (
+          <button key={m.key} onClick={() => setMetric(m.key)}
+            className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all border"
+            style={{
+              background: metric === m.key ? `${m.color}20` : 'rgba(255,255,255,0.04)',
+              borderColor: metric === m.key ? `${m.color}60` : 'rgba(255,255,255,0.08)',
+              color: metric === m.key ? m.color : 'rgb(148,163,184)',
+            }}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Month chart */}
+      {view === 'month' && (() => {
+        const validData = monthData.filter(d => d.pct !== null);
+        return (
+          <div>
+            <p className="text-slate-500 text-xs mb-3">{currentMonthLabel} — daily {metricName}</p>
+            {chartType === 'line' ? (
+              <LineChart data={monthData} color={color} />
+            ) : (
+              <>
+                <div className="flex items-end gap-[2px]" style={{ height: '100px' }}>
+                  {monthData.map(({ day, dateStr, pct }) => {
+                    const isToday = dateStr === today;
+                    const barH = pct !== null ? Math.max(4, Math.round(Math.min(pct, 1) * 96)) : 3;
+                    const rawLabel = getHealthDayRawLabel(habits, metric, dateStr);
+                    const barColor = pct === null
+                      ? 'rgba(255,255,255,0.05)'
+                      : pct >= 1 ? color : pct >= 0.5 ? `${color}99` : `${color}55`;
+                    return (
+                      <div key={day} className="flex-1 rounded-t-sm transition-all"
+                        style={{ height: `${barH}px`, background: barColor, outline: isToday ? `1px solid ${color}` : '', boxShadow: isToday ? `0 0 6px ${color}80` : '', minHeight: '3px' }}
+                        title={rawLabel ? `${dateStr}: ${rawLabel}` : dateStr}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between mt-1.5 px-0.5">
+                  {[1, 7, 14, 21, 28].filter(d => d <= monthData.length).map(d => (
+                    <span key={d} className="text-[9px] text-slate-600">{d}</span>
+                  ))}
+                  {monthData.length > 28 && <span className="text-[9px] text-slate-600">{monthData.length}</span>}
+                </div>
+              </>
+            )}
+            {validData.length > 0 && (
+              <p className="text-[11px] text-slate-500 mt-2 text-right">
+                Avg {Math.round(validData.reduce((s, d) => s + d.pct, 0) / validData.length * 100)}% of goal ·{' '}
+                Best {Math.round(Math.max(...validData.map(d => d.pct)) * 100)}%
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Semester chart */}
+      {view === 'semester' && (
+        <div>
+          <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily {metricName}</p>
+          {chartType === 'line' ? (
+            <LineChart data={semesterData} color={color} />
+          ) : (
+            <div className="flex items-end gap-3" style={{ height: '110px' }}>
+              {semesterData.map(({ label, pct, isCurrent }) => {
+                const barH = pct !== null ? Math.max(6, Math.round(pct * 90)) : 3;
+                const barColor = pct === null ? 'rgba(255,255,255,0.05)' : pct >= 1 ? color : pct >= 0.5 ? `${color}99` : `${color}55`;
+                return (
+                  <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="flex-1 w-full flex flex-col justify-end items-center gap-0.5">
+                      {pct !== null && <span className="text-[9px] text-slate-400">{Math.round(pct * 100)}%</span>}
+                      <div className="w-full rounded-t-lg transition-all duration-700"
+                        style={{ height: `${barH}px`, background: barColor, minHeight: '3px', boxShadow: isCurrent && pct !== null ? `0 0 8px ${color}60` : '' }}
+                      />
+                    </div>
+                    <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Health medals */}
+      <div className="mt-4 pt-4 border-t border-white/5">
+        <p className="text-slate-600 text-[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
+        <div className="flex flex-wrap gap-2">
+          {HEALTH_ACHIEVEMENT_META.map(ach => {
+            const unlocked = unlockedSet.has(ach.id);
+            return (
+              <div key={ach.id}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
+                style={{
+                  background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
+                  borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.07)',
+                  color: unlocked ? '#fcd34d' : 'rgb(100,116,139)',
+                  boxShadow: unlocked ? '0 0 8px rgba(250,204,21,0.2)' : '',
+                }}
+                title={ach.desc}
+              >
+                <span>{unlocked ? '🏅' : '🔒'}</span>
+                <span className="font-medium">{ach.label.replace(/^\S+\s/, '')}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Mini Calendar ────────────────────────────────────────────────────────────
 
 function MiniCalendar({ habits, selectedDate, onSelectDate }) {
@@ -473,6 +723,7 @@ export default function Dashboard({ setActiveTab }) {
   const {
     habits,
     profile,
+    achievements,
     todayHabits,
     completedToday,
     stats,
@@ -776,6 +1027,9 @@ export default function Dashboard({ setActiveTab }) {
 
       {/* ── Growth Chart ──────────────────────────────────────────────────── */}
       {habits.length > 0 && <GrowthChart habits={habits} />}
+
+      {/* ── Health Growth Chart ───────────────────────────────────────────── */}
+      {habits.length > 0 && <HealthGrowthChart habits={habits} achievements={achievements} />}
 
       {/* ── On This Day ─────────────────────────────────────────────────── */}
       {(() => {

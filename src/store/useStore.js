@@ -16,7 +16,7 @@ const days = (...nums) => nums.map(d);
 
 // ─── Meals Habits (added via migration) ───────────────────────────────────────
 
-const ALL_MARCH = days(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22);
+const ALL_MARCH = days(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21);
 
 const MEALS_HABITS = [
   {
@@ -29,8 +29,8 @@ const MEALS_HABITS = [
     createdAt: '2026-03-01',
     completions: ALL_MARCH,
     completionTimestamps: {},
-    streak: 22,
-    bestStreak: 22,
+    streak: 21,
+    bestStreak: 21,
   },
   {
     id: 'habit_lunch',
@@ -42,8 +42,8 @@ const MEALS_HABITS = [
     createdAt: '2026-03-01',
     completions: ALL_MARCH,
     completionTimestamps: {},
-    streak: 22,
-    bestStreak: 22,
+    streak: 21,
+    bestStreak: 21,
   },
   {
     id: 'habit_dinner',
@@ -55,8 +55,8 @@ const MEALS_HABITS = [
     createdAt: '2026-03-01',
     completions: ALL_MARCH,
     completionTimestamps: {},
-    streak: 22,
-    bestStreak: 22,
+    streak: 21,
+    bestStreak: 21,
   },
   {
     id: 'habit_fruits',
@@ -68,8 +68,8 @@ const MEALS_HABITS = [
     createdAt: '2026-03-01',
     completions: ALL_MARCH,
     completionTimestamps: {},
-    streak: 22,
-    bestStreak: 22,
+    streak: 21,
+    bestStreak: 21,
   },
   {
     id: 'habit_vitamins',
@@ -81,8 +81,8 @@ const MEALS_HABITS = [
     createdAt: '2026-03-01',
     completions: ALL_MARCH,
     completionTimestamps: {},
-    streak: 22,
-    bestStreak: 22,
+    streak: 21,
+    bestStreak: 21,
   },
 ];
 
@@ -356,6 +356,13 @@ function getInitialState() {
         if (missing.length > 0) {
           parsed.habits = [...parsed.habits, ...missing];
         }
+        // Migration: remove 2026-03-22 from meals completions (not done yet)
+        const mealsIds = new Set(MEALS_HABITS.map(h => h.id));
+        parsed.habits = parsed.habits.map(h => {
+          if (!mealsIds.has(h.id)) return h;
+          const completions = (h.completions || []).filter(d => d !== '2026-03-22');
+          return { ...h, completions };
+        });
       }
       return {
         toasts: [],

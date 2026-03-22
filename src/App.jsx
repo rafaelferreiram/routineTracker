@@ -32,6 +32,7 @@ import ConfettiEffect from './components/ConfettiEffect.jsx';
 import LevelUpCeremony from './components/LevelUpCeremony.jsx';
 import ExportImport from './components/ExportImport.jsx';
 import CustomizePanel from './components/CustomizePanel.jsx';
+import ProfilePanel from './components/ProfilePanel.jsx';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
@@ -70,6 +71,7 @@ function AppContent() {
       case 'journal':       return <JournalPanel />;
       case 'events':        return <EventsPanel />;
       case 'customize':     return <CustomizePanel setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />;
+      case 'profile':       return <ProfilePanel />;
       default:              return <Dashboard setActiveTab={setActiveTab} />;
     }
   };

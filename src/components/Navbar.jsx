@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
+import { useAuth } from '../store/useAuth.js';
 import { getLevelColor } from '../utils/gamification.js';
 
 const NAV_ITEMS = [
@@ -10,10 +11,12 @@ const NAV_ITEMS = [
   { id: 'journal',      label: 'Journal',   icon: '📖' },
   { id: 'events',       label: 'Events',    icon: '✈️' },
   { id: 'customize',    label: 'Customize', icon: '🎨' },
+  { id: 'profile',      label: 'Profile',   icon: null }, // icon rendered dynamically
 ];
 
 export default function Navbar({ activeTab, setActiveTab, onExport }) {
   const { profile, achievements, currentLevel, completionPercent, todayHabits, completedToday, updateProfile, accentColor, settings } = useHabits();
+  const { currentUser } = useAuth();
   const appName = (settings && settings.appName) || 'RoutineQuest';
   const appIcon = (settings && settings.appIcon) || '⚡';
   const levelColor = getLevelColor(currentLevel);
@@ -95,6 +98,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
         <nav className="flex flex-col gap-0.5 flex-1">
           {NAV_ITEMS.map(item => {
             const isActive = activeTab === item.id;
+            const isProfile = item.id === 'profile';
+            const initial = (currentUser?.displayName || '?')[0].toUpperCase();
             return (
               <button
                 key={item.id}
@@ -106,7 +111,20 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
                 }`}
                 style={isActive ? { background: 'rgba(255,255,255,0.06)', color: 'white' } : {}}
               >
-                <span className="text-base w-5 text-center leading-none">{item.icon}</span>
+                {isProfile ? (
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                    style={{
+                      background: isActive ? `${accentColor}25` : 'rgba(255,255,255,0.08)',
+                      border: isActive ? `1.5px solid ${accentColor}60` : '1.5px solid rgba(255,255,255,0.12)',
+                      color: isActive ? accentColor : '#6b7280',
+                    }}
+                  >
+                    {initial}
+                  </div>
+                ) : (
+                  <span className="text-base w-5 text-center leading-none">{item.icon}</span>
+                )}
                 <span className="text-sm">{item.label}</span>
                 {isActive && (
                   <div className="ml-auto w-1 h-4 rounded-full" style={{ background: accentColor }} />
@@ -144,23 +162,44 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
       </aside>
 
       {/* ── Mobile Bottom Nav ────────────────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#1f1f1f] safe-area-pb"
-        style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(20px)' }}>
-        <div className="flex items-center justify-around px-1 py-2.5">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t safe-area-pb"
+        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
+        <div className="flex items-center justify-around px-1 py-2">
           {NAV_ITEMS.map(item => {
             const isActive = activeTab === item.id;
+            const isProfile = item.id === 'profile';
+            const initial = (currentUser?.displayName || '?')[0].toUpperCase();
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all duration-150 min-w-[52px] ${
+                className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl transition-all duration-150 ${
                   isActive ? 'text-white' : 'text-[#4b5563]'
                 }`}
+                style={{ minWidth: 36 }}
               >
-                <span className={`text-xl transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}>
-                  {item.icon}
-                </span>
-                <span className={`text-[9px] font-semibold ${isActive ? 'text-[#22c55e]' : 'text-[#4b5563]'}`}>
+                {isProfile ? (
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ${isActive ? 'scale-110' : ''}`}
+                    style={{
+                      background: isActive
+                        ? `rgba(var(--accent-rgb, 34 197 94) / 0.25)`
+                        : 'rgba(255,255,255,0.07)',
+                      border: isActive
+                        ? `1.5px solid rgba(var(--accent-rgb, 34 197 94) / 0.6)`
+                        : '1.5px solid rgba(255,255,255,0.1)',
+                      color: isActive ? 'var(--accent, #22c55e)' : '#6b7280',
+                    }}
+                  >
+                    {initial}
+                  </div>
+                ) : (
+                  <span className={`text-[18px] leading-none transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}>
+                    {item.icon}
+                  </span>
+                )}
+                <span className={`text-[8px] font-semibold leading-none mt-0.5 ${isActive ? '' : 'text-[#4b5563]'}`}
+                  style={isActive ? { color: 'var(--accent, #22c55e)' } : {}}>
                   {item.label}
                 </span>
               </button>

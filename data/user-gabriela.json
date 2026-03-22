@@ -1,0 +1,24 @@
+{
+  "version": "routinequest_v1",
+  "exportedAt": "2026-03-22T00:00:00.000Z",
+  "meta": {
+    "username": "gabriela",
+    "displayName": "Gabriela",
+    "theme": { "themeId": "rose", "accentColor": "#ec4899" },
+    "note": "Fresh account — no habits or achievements yet. Ready for Gabriela to set up her own routine."
+  },
+  "profile": {
+    "name": "Gabriela",
+    "totalXP": 0,
+    "level": 1,
+    "joinDate": "2026-03-22",
+    "freezeShields": 0,
+    "focusHabitId": null,
+    "focusHabitDate": null
+  },
+  "achievements": [],
+  "events": [],
+  "journalEntries": [],
+  "moods": {},
+  "habits": []
+}

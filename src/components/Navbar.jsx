@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'achievements', label: 'Medals',    icon: '🏅' },
   { id: 'journal',      label: 'Journal',   icon: '📖' },
   { id: 'events',       label: 'Events',    icon: '✈️' },
+  { id: 'friends',      label: 'Friends',   icon: '👥' },
   { id: 'customize',    label: 'Customize', icon: '🎨' },
   { id: 'profile',      label: 'Profile',   icon: null }, // icon rendered dynamically
 ];

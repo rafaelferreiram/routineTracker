@@ -33,6 +33,7 @@ import LevelUpCeremony from './components/LevelUpCeremony.jsx';
 import ExportImport from './components/ExportImport.jsx';
 import CustomizePanel from './components/CustomizePanel.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
+import FriendsPanel from './components/FriendsPanel.jsx';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
@@ -71,6 +72,7 @@ function AppContent() {
       case 'journal':       return <JournalPanel />;
       case 'events':        return <EventsPanel />;
       case 'customize':     return <CustomizePanel setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />;
+      case 'friends':       return <FriendsPanel />;
       case 'profile':       return <ProfilePanel />;
       default:              return <Dashboard setActiveTab={setActiveTab} />;
     }

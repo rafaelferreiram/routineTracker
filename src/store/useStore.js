@@ -14,6 +14,78 @@ const days = (...nums) => nums.map(d);
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
+// ─── Meals Habits (added via migration) ───────────────────────────────────────
+
+const ALL_MARCH = days(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22);
+
+const MEALS_HABITS = [
+  {
+    id: 'habit_breakfast',
+    name: 'Take Breakfast',
+    emoji: '🥞',
+    category: 'Meals',
+    color: '#F59E0B',
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    completions: ALL_MARCH,
+    completionTimestamps: {},
+    streak: 22,
+    bestStreak: 22,
+  },
+  {
+    id: 'habit_lunch',
+    name: 'Have Lunch',
+    emoji: '🥗',
+    category: 'Meals',
+    color: '#10B981',
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    completions: ALL_MARCH,
+    completionTimestamps: {},
+    streak: 22,
+    bestStreak: 22,
+  },
+  {
+    id: 'habit_dinner',
+    name: 'Have Dinner',
+    emoji: '🍽️',
+    category: 'Meals',
+    color: '#F97316',
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    completions: ALL_MARCH,
+    completionTimestamps: {},
+    streak: 22,
+    bestStreak: 22,
+  },
+  {
+    id: 'habit_fruits',
+    name: 'Eat Fruits',
+    emoji: '🍎',
+    category: 'Meals',
+    color: '#EF4444',
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    completions: ALL_MARCH,
+    completionTimestamps: {},
+    streak: 22,
+    bestStreak: 22,
+  },
+  {
+    id: 'habit_vitamins',
+    name: 'Take Vitamins',
+    emoji: '💊',
+    category: 'Meals',
+    color: '#8B5CF6',
+    frequency: 'daily',
+    createdAt: '2026-03-01',
+    completions: ALL_MARCH,
+    completionTimestamps: {},
+    streak: 22,
+    bestStreak: 22,
+  },
+];
+
 const DEFAULT_HABITS = [
   // ── RELIGION ──────────────────────────────────────────────────────────────
   {
@@ -245,6 +317,7 @@ const DEFAULT_HABITS = [
     streak: 6,
     bestStreak: 12,
   },
+  ...MEALS_HABITS,
 ];
 
 function getInitialState() {
@@ -275,6 +348,14 @@ function getInitialState() {
           appIcon: '⚡',
           ...parsed.settings,
         };
+      }
+      // Migration: inject Meals habits if not present
+      if (parsed.habits) {
+        const existingIds = new Set(parsed.habits.map(h => h.id));
+        const missing = MEALS_HABITS.filter(h => !existingIds.has(h.id));
+        if (missing.length > 0) {
+          parsed.habits = [...parsed.habits, ...missing];
+        }
       }
       return {
         toasts: [],

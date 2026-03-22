@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 
-const CATEGORIES = ['Religion', 'Exercise', 'Work', 'Study', 'Family', 'Health', 'Other'];
+const CATEGORIES = ['Religion', 'Exercise', 'Meals', 'Work', 'Study', 'Family', 'Health', 'Other'];
 
 const CATEGORY_EMOJIS = {
   Religion: '🙏',

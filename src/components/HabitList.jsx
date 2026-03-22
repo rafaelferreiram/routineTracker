@@ -10,6 +10,7 @@ import HabitCard from './HabitCard.jsx';
 const CATEGORIES = [
   { name: 'Religion', icon: '🙏', color: '#8B5CF6' },
   { name: 'Exercise', icon: '💪', color: '#10B981' },
+  { name: 'Meals',    icon: '🍽️', color: '#F59E0B' },
   { name: 'Work',     icon: '💼', color: '#3B82F6' },
   { name: 'Study',    icon: '📚', color: '#F59E0B' },
   { name: 'Family',   icon: '❤️', color: '#EC4899' },

@@ -32,6 +32,9 @@ export const api = {
   register: (username, password) =>
     apiCall('POST', '/auth/register', { username, password }),
 
+  googleAuth: (sessionId) =>
+    apiCall('POST', '/auth/google', { session_id: sessionId }),
+
   getData: () =>
     apiCall('GET', '/data'),
 

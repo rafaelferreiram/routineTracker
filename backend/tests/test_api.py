@@ -3,7 +3,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://693d0a76-5f7e-480f-b5bd-cb2f6a68017e.preview.emergentagent.com"
+BASE_URL = "https://social-auth-dev.preview.emergentagent.com"
 
 class TestHealth:
     def test_health(self):

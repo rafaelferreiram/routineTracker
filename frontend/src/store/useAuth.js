@@ -89,9 +89,29 @@ export function AuthProvider({ children }) {
     setCurrentUser(null);
   }
 
+  async function loginWithGoogle(sessionId) {
+    try {
+      const data = await api.googleAuth(sessionId);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+      persistKnownUser(data.user);
+      setCurrentUser(data.user);
+      setUsers(loadKnownUsers());
+      return { ok: true };
+    } catch (err) {
+      return { error: err.message || 'Google login failed' };
+    }
+  }
+
+  function startGoogleLogin() {
+    // Redirect to Emergent Google Auth
+    const redirectUri = encodeURIComponent(window.location.origin);
+    window.location.href = `https://auth.emergentagent.com/oauth/google?redirect_uri=${redirectUri}`;
+  }
+
   return createElement(
     AuthContext.Provider,
-    { value: { currentUser, users, login, signup, logout } },
+    { value: { currentUser, users, login, signup, logout, loginWithGoogle, startGoogleLogin } },
     children,
   );
 }

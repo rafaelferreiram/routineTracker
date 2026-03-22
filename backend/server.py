@@ -7,7 +7,7 @@ import bcrypt
 from jose import jwt, JWTError
 from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
-import os
+import os, requests as http_req
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -67,6 +67,9 @@ class AuthReq(BaseModel):
     username: str
     password: str
 
+class GoogleAuthReq(BaseModel):
+    session_id: str
+
 class DataReq(BaseModel):
     data: Any
 
@@ -122,6 +125,84 @@ def register(req: AuthReq):
             'username': username,
             'displayName': display,
             'theme': theme,
+        }
+    }
+
+# ── Google OAuth ───────────────────────────────────────────────────────────────
+@app.post('/api/auth/google')
+def google_auth(req: GoogleAuthReq):
+    """Exchange Emergent session_id for our JWT. Creates user if first time."""
+    # 1. Exchange session_id with Emergent Auth (server-side only)
+    try:
+        resp = http_req.get(
+            'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data',
+            headers={'X-Session-ID': req.session_id},
+            timeout=10,
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail='Could not reach Google auth service')
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=400, detail='Invalid Google session')
+
+    g = resp.json()
+    email   = g.get('email', '').lower().strip()
+    name    = g.get('name', email.split('@')[0])
+    picture = g.get('picture', '')
+
+    if not email:
+        raise HTTPException(status_code=400, detail='No email from Google')
+
+    # 2. Find or create user by email
+    user = users_c.find_one({'email': email})
+
+    if user:
+        # Existing user — update Google info
+        uid      = str(user['_id'])
+        username = user['username']
+        users_c.update_one(
+            {'_id': user['_id']},
+            {'$set': {
+                'display_name':   name,
+                'picture':        picture,
+                'auth_provider':  'google',
+                'last_google_at': datetime.now(timezone.utc),
+            }}
+        )
+        theme = user.get('theme', {'accentColor': '#22c55e'})
+    else:
+        # New user — derive username from email
+        base = email.split('@')[0].lower()
+        base = ''.join(c for c in base if c.isalnum() or c == '_')[:20] or 'user'
+        username = base
+        counter  = 1
+        while users_c.find_one({'username': username}):
+            username = f'{base}{counter}'
+            counter += 1
+
+        theme = {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'}
+        ins = users_c.insert_one({
+            'username':      username,
+            'display_name':  name,
+            'email':         email,
+            'picture':       picture,
+            'auth_provider': 'google',
+            'theme':         theme,
+            'created_at':    datetime.now(timezone.utc),
+        })
+        uid = str(ins.inserted_id)
+
+    token = make_token(uid, username)
+    return {
+        'token': token,
+        'user': {
+            'id':          uid,
+            'username':    username,
+            'displayName': name,
+            'email':       email,
+            'picture':     picture,
+            'theme':       theme,
+            'authProvider': 'google',
         }
     }
 

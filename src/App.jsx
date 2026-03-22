@@ -25,6 +25,7 @@ import HabitList from './components/HabitList.jsx';
 import StatsPanel from './components/StatsPanel.jsx';
 import AchievementsPanel from './components/AchievementsPanel.jsx';
 import JournalPanel from './components/JournalPanel.jsx';
+import EventsPanel from './components/EventsPanel.jsx';
 import ToastContainer from './components/ToastNotification.jsx';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import LevelUpCeremony from './components/LevelUpCeremony.jsx';
@@ -42,6 +43,7 @@ function AppContent() {
       case 'stats':         return <StatsPanel />;
       case 'achievements':  return <AchievementsPanel />;
       case 'journal':       return <JournalPanel />;
+      case 'events':        return <EventsPanel />;
       default:              return <Dashboard setActiveTab={setActiveTab} />;
     }
   };

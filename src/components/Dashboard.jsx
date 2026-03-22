@@ -480,6 +480,7 @@ export default function Dashboard({ setActiveTab }) {
     focusHabitDate,
     setFocusHabit,
     clearFocusHabit,
+    events,
   } = useHabits();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -545,6 +546,51 @@ export default function Dashboard({ setActiveTab }) {
             : `${completedToday.length} of ${todayHabits.length} habits done. Keep going!`}
         </p>
       </div>
+
+      {/* ── Upcoming Events Strip ─────────────────────────────────────── */}
+      {(() => {
+        const upcoming = (events || [])
+          .filter(e => e.date >= today)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(0, 4);
+        if (upcoming.length === 0) return null;
+        return (
+          <div
+            className="rounded-2xl p-3.5 border"
+            style={{ background: '#111111', borderColor: '#1f1f1f' }}
+          >
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[#4b5563] text-xs font-semibold uppercase tracking-wider">Upcoming</span>
+              <button
+                onClick={() => setActiveTab('events')}
+                className="text-[#4b5563] hover:text-[#22c55e] text-xs transition-colors"
+              >
+                All →
+              </button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
+              {upcoming.map(event => {
+                const days = Math.round((new Date(event.date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+                return (
+                  <div
+                    key={event.id}
+                    className="flex-shrink-0 flex items-center gap-2.5 px-3 py-2 rounded-xl border"
+                    style={{ background: `${event.color}0d`, borderColor: `${event.color}25` }}
+                  >
+                    <span className="text-lg">{event.emoji}</span>
+                    <div>
+                      <p className="text-white text-xs font-semibold leading-none truncate max-w-[100px]">{event.title}</p>
+                      <p className="text-[10px] mt-0.5 font-medium" style={{ color: days <= 7 ? '#fbbf24' : event.color }}>
+                        {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days}d away`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Category Summary Strip (for selected date) ───────────────────── */}
       <div className="grid grid-cols-5 gap-2">

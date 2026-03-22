@@ -3,11 +3,12 @@ import { useHabits } from '../hooks/useHabits.js';
 import { getLevelColor } from '../utils/gamification.js';
 
 const NAV_ITEMS = [
-  { id: 'today',        label: 'Today',    icon: '⊙' },
-  { id: 'habits',       label: 'Habits',   icon: '◈' },
-  { id: 'stats',        label: 'Stats',    icon: '▦' },
-  { id: 'achievements', label: 'Medals',   icon: '◉' },
-  { id: 'journal',      label: 'Journal',  icon: '◧' },
+  { id: 'today',        label: 'Today',    icon: '🏠' },
+  { id: 'habits',       label: 'Habits',   icon: '✅' },
+  { id: 'stats',        label: 'Stats',    icon: '📊' },
+  { id: 'achievements', label: 'Medals',   icon: '🏅' },
+  { id: 'journal',      label: 'Journal',  icon: '📖' },
+  { id: 'events',       label: 'Events',   icon: '✈️' },
 ];
 
 export default function Navbar({ activeTab, setActiveTab, onExport }) {

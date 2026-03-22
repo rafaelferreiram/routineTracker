@@ -271,6 +271,7 @@ function getInitialState() {
         toasts: [],
         confetti: false,
         levelUpPending: null,
+        events: [],
         ...parsed,
       };
     }
@@ -291,6 +292,10 @@ function getInitialState() {
     habits: DEFAULT_HABITS,
     achievements: [],
     journalEntries: [],
+    events: [
+      { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
+      { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
+    ],
     settings: { theme: 'dark' },
     toasts: [],
     confetti: false,
@@ -326,6 +331,11 @@ export const ACTIONS = {
   // Journal
   ADD_JOURNAL_ENTRY: 'ADD_JOURNAL_ENTRY',
   DELETE_JOURNAL_ENTRY: 'DELETE_JOURNAL_ENTRY',
+
+  // Events
+  ADD_EVENT: 'ADD_EVENT',
+  UPDATE_EVENT: 'UPDATE_EVENT',
+  DELETE_EVENT: 'DELETE_EVENT',
 
   // Freeze Shield
   TOGGLE_FREEZE_SHIELD: 'TOGGLE_FREEZE_SHIELD',
@@ -487,6 +497,37 @@ function reducer(state, action) {
       };
     }
 
+    case ACTIONS.ADD_EVENT: {
+      const event = {
+        id: `event_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        createdAt: new Date().toISOString(),
+        emoji: '📅',
+        color: '#22c55e',
+        note: '',
+        ...action.payload,
+      };
+      return {
+        ...state,
+        events: [...(state.events || []), event].sort((a, b) => a.date.localeCompare(b.date)),
+      };
+    }
+
+    case ACTIONS.UPDATE_EVENT: {
+      return {
+        ...state,
+        events: (state.events || [])
+          .map(e => e.id === action.payload.id ? { ...e, ...action.payload } : e)
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      };
+    }
+
+    case ACTIONS.DELETE_EVENT: {
+      return {
+        ...state,
+        events: (state.events || []).filter(e => e.id !== action.payload.id),
+      };
+    }
+
     case ACTIONS.TOGGLE_FREEZE_SHIELD: {
       return {
         ...state,
@@ -563,7 +604,7 @@ const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
-  const prevHabitsRef = useRef(state.habits);
+  const prevHabitsRef = useRef(null); // null so first run always checks
   const prevAchievementsRef = useRef(state.achievements);
 
   // Persist to localStorage (debounced) — do NOT persist levelUpPending
@@ -577,6 +618,7 @@ export function StoreProvider({ children }) {
           habits: state.habits,
           achievements: state.achievements,
           journalEntries: state.journalEntries || [],
+          events: state.events || [],
           settings: state.settings,
         };
         localStorage.setItem('routineTracker_v3', JSON.stringify(toSave));
@@ -587,7 +629,7 @@ export function StoreProvider({ children }) {
     return () => clearTimeout(saveTimerRef.current);
   }, [state.profile, state.habits, state.achievements, state.journalEntries, state.settings]);
 
-  // Check achievements whenever habits change
+  // Check achievements on mount + whenever habits change
   useEffect(() => {
     if (prevHabitsRef.current === state.habits) return;
     const prevHabits = prevHabitsRef.current;
@@ -619,8 +661,8 @@ export function StoreProvider({ children }) {
       }
     });
 
-    // Award freeze shield if any habit just hit 7-day streak milestone
-    const justHit7 = state.habits.some(h => {
+    // Award freeze shield if any habit just hit 7-day streak milestone (skip on initial mount)
+    const justHit7 = prevHabits !== null && state.habits.some(h => {
       const oldH = prevHabits.find(p => p.id === h.id);
       return oldH && (oldH.streak || 0) < 7 && (h.streak || 0) >= 7;
     });

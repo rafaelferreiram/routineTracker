@@ -5,7 +5,7 @@ import { calculateXPGain, computeStats, getLevelFromXP, getLevelProgress, getLev
 
 export function useHabits() {
   const { state, dispatch } = useStore();
-  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending } = state;
+  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events } = state;
 
   // ─── Computed Values ───────────────────────────────────────────────────────
 
@@ -132,6 +132,18 @@ export function useHabits() {
     dispatch({ type: ACTIONS.CLEAR_LEVEL_UP });
   }, [dispatch]);
 
+  const addEvent = useCallback((eventData) => {
+    dispatch({ type: ACTIONS.ADD_EVENT, payload: eventData });
+  }, [dispatch]);
+
+  const updateEvent = useCallback((eventData) => {
+    dispatch({ type: ACTIONS.UPDATE_EVENT, payload: eventData });
+  }, [dispatch]);
+
+  const deleteEvent = useCallback((eventId) => {
+    dispatch({ type: ACTIONS.DELETE_EVENT, payload: { id: eventId } });
+  }, [dispatch]);
+
   // ─── Selectors ────────────────────────────────────────────────────────────
 
   const getHabitById = useCallback((id) => habits.find(h => h.id === id), [habits]);
@@ -161,6 +173,7 @@ export function useHabits() {
     settings,
     toasts,
     confetti,
+    events: events || [],
 
     // New state
     freezeShields,
@@ -195,5 +208,8 @@ export function useHabits() {
     setFocusHabit,
     clearFocusHabit,
     clearLevelUp,
+    addEvent,
+    updateEvent,
+    deleteEvent,
   };
 }

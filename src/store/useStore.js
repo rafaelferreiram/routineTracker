@@ -14,7 +14,7 @@ const days = (...nums) => nums.map(d);
 
 // ─── Real Baseline Profile & Achievements (v2 bootstrap) ──────────────────────
 
-const BOOTSTRAP_VERSION = 2;
+const BOOTSTRAP_VERSION = 3;
 
 // ─── Default Categories ────────────────────────────────────────────────────────
 
@@ -451,8 +451,8 @@ function getInitialState(username, defaultTheme = {}) {
           ...parsed.settings,
         };
       }
-      // Migration: inject Meals habits if not present
-      if (parsed.habits) {
+      // Migration: inject Meals habits if not present (Rafael only — has pre-filled completions)
+      if (username === 'rafael' && parsed.habits) {
         const existingIds = new Set(parsed.habits.map(h => h.id));
         const missing = MEALS_HABITS.filter(h => !existingIds.has(h.id));
         if (missing.length > 0) {
@@ -466,18 +466,13 @@ function getInitialState(username, defaultTheme = {}) {
           return { ...h, completions };
         });
       }
-      // Migration: inject Water/Sleep habits if not present
-      if (parsed.habits) {
+      // Migration: inject Water/Sleep habits if not present (Rafael only — has pre-filled completions)
+      if (username === 'rafael' && parsed.habits) {
         const existingIds = new Set(parsed.habits.map(h => h.id));
         const missing = WATER_SLEEP_HABITS.filter(h => !existingIds.has(h.id));
         if (missing.length > 0) {
           parsed.habits = [...parsed.habits, ...missing];
         }
-        // Ensure all habits have numericValues field
-        parsed.habits = parsed.habits.map(h => ({
-          numericValues: {},
-          ...h,
-        }));
         // Remove March 22 from water/sleep (not done yet tonight)
         parsed.habits = parsed.habits.map(h => {
           if (h.id !== 'habit_water' && h.id !== 'habit_sleep') return h;
@@ -486,6 +481,27 @@ function getInitialState(username, defaultTheme = {}) {
           delete numericValues['2026-03-22'];
           return { ...h, completions, numericValues };
         });
+      }
+      // Ensure all habits have numericValues field (all users)
+      if (parsed.habits) {
+        parsed.habits = parsed.habits.map(h => ({
+          numericValues: {},
+          ...h,
+        }));
+      }
+      // Migration v3: clean up non-Rafael users who got Rafael's habit completions+achievements injected
+      if (username !== 'rafael' && (!parsed.bootstrapVersion || parsed.bootstrapVersion < 3)) {
+        const injectedIds = new Set([
+          ...MEALS_HABITS.map(h => h.id),
+          ...WATER_SLEEP_HABITS.map(h => h.id),
+        ]);
+        if (parsed.habits) {
+          parsed.habits = parsed.habits
+            .filter(h => !injectedIds.has(h.id)) // remove incorrectly injected habits
+            .map(h => ({ numericValues: {}, ...h }));
+        }
+        parsed.achievements = [];
+        parsed.bootstrapVersion = 3;
       }
       // Migration v2: sync rafael's profile/achievements if stored data is stale bootstrap
       if (username === 'rafael' && (!parsed.bootstrapVersion || parsed.bootstrapVersion < BOOTSTRAP_VERSION)) {

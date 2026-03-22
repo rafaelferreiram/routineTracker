@@ -83,7 +83,7 @@ export function ChartGrid() {
 
 export default function GrowthChart({ habits, accentColor, compact = false, ranges: rangesProp }) {
   const activeRanges = rangesProp || RANGES;
-  const [rangeIdx, setRangeIdx] = useState(Math.min(1, (rangesProp || RANGES).length - 1));
+  const [rangeIdx, setRangeIdx] = useState(0);
   const [hover, setHover] = useState(null);
   const svgRef = useRef(null);
   const accent = accentColor || '#22c55e';

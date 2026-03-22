@@ -94,10 +94,60 @@ export function getFormattedDate() {
 }
 
 /**
+ * Returns the weekly target for x-per-week frequency strings
+ */
+export function getWeeklyTarget(frequency) {
+  if (frequency === 'weekly_1') return 1;
+  if (frequency === 'weekly_2') return 2;
+  if (frequency === 'weekly_3') return 3;
+  return 0;
+}
+
+/**
+ * Calculates streak in weeks for weekly-target habits
+ */
+function calculateWeeklyStreak(completions, target) {
+  if (!completions || completions.length === 0) return 0;
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  // Sunday of current week
+  const currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - today.getDay());
+
+  let streak = 0;
+
+  // Check current week — if already met target, count it
+  const cws = formatDateString(currentWeekStart);
+  const cwe = formatDateString(new Date(currentWeekStart.getTime() + 6 * 86400000));
+  const currentDone = completions.filter(d => d >= cws && d <= cwe).length;
+  if (currentDone >= target) streak++;
+
+  // Check previous complete weeks going back
+  for (let w = 1; w <= 52; w++) {
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(currentWeekStart.getDate() - (w - 1) * 7 - 1);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+    const ws = formatDateString(weekStart);
+    const we = formatDateString(weekEnd);
+    const done = completions.filter(d => d >= ws && d <= we).length;
+    if (done >= target) streak++;
+    else break;
+  }
+
+  return streak;
+}
+
+/**
  * Calculates current streak for a habit
  */
 export function calculateStreak(completions, frequency = 'daily') {
   if (!completions || completions.length === 0) return 0;
+
+  const weeklyTarget = getWeeklyTarget(frequency);
+  if (weeklyTarget > 0) return calculateWeeklyStreak(completions, weeklyTarget);
 
   const sorted = [...completions].sort((a, b) => b.localeCompare(a));
   const today = getTodayString();
@@ -115,21 +165,13 @@ export function calculateStreak(completions, frequency = 'daily') {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
-      // For weekday-only habits, skip weekends
       if (frequency === 'weekdays') {
         const day = checkDate.getDay();
-        if (day === 0 || day === 6) {
-          checkDate.setDate(checkDate.getDate() - 1);
-          continue;
-        }
+        if (day === 0 || day === 6) { checkDate.setDate(checkDate.getDate() - 1); continue; }
       }
-      // For weekend-only habits, skip weekdays
       if (frequency === 'weekends') {
         const day = checkDate.getDay();
-        if (day !== 0 && day !== 6) {
-          checkDate.setDate(checkDate.getDate() - 1);
-          continue;
-        }
+        if (day !== 0 && day !== 6) { checkDate.setDate(checkDate.getDate() - 1); continue; }
       }
       break;
     }
@@ -146,6 +188,8 @@ export function isHabitApplicableToday(habit) {
   if (habit.frequency === 'daily') return true;
   if (habit.frequency === 'weekdays') return day >= 1 && day <= 5;
   if (habit.frequency === 'weekends') return day === 0 || day === 6;
+  // weekly_1 / weekly_2 / weekly_3 — always shown, tracked any day
+  if (getWeeklyTarget(habit.frequency) > 0) return true;
   return true;
 }
 
@@ -186,5 +230,6 @@ export function isHabitApplicableOnDate(habit, dateStr) {
   const dow = new Date(dateStr + 'T00:00:00').getDay();
   if (habit.frequency === 'weekdays') return dow >= 1 && dow <= 5;
   if (habit.frequency === 'weekends') return dow === 0 || dow === 6;
+  if (getWeeklyTarget(habit.frequency) > 0) return true;
   return true;
 }

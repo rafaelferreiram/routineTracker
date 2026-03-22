@@ -1,5 +1,6 @@
 import { useState, useEffect, Component } from 'react';
 import { useAuth } from './store/useAuth.js';
+import { getTheme, applyTheme } from './utils/themes.js';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -41,27 +42,12 @@ function AppContent() {
   const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
   const { currentUser, logout } = useAuth();
 
-  // Inject accent color as CSS variable whenever it changes
+  // Apply full theme (colors + accent) whenever either changes
   useEffect(() => {
-    const hex = accentColor || '#22c55e';
-    document.documentElement.style.setProperty('--accent', hex);
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    document.documentElement.style.setProperty('--accent-rgb', `${r} ${g} ${b}`);
-  }, [accentColor]);
-
-  // Inject background color CSS variables whenever settings.bgColor changes
-  useEffect(() => {
-    const bg = (settings && settings.bgColor) || (currentUser && currentUser.theme && currentUser.theme.bgColor) || '#080808';
-    document.documentElement.style.setProperty('--bg-main', bg);
-    document.body.style.background = bg;
-    // Derive card/border from bg by lightening slightly
-    const card = currentUser?.theme?.bgCard || '#111111';
-    const border = currentUser?.theme?.bgBorder || '#1f1f1f';
-    document.documentElement.style.setProperty('--bg-card', card);
-    document.documentElement.style.setProperty('--bg-border', border);
-  }, [settings, currentUser]);
+    const themeId = (settings && settings.theme) || 'dark';
+    const theme = getTheme(themeId);
+    applyTheme(theme, accentColor);
+  }, [settings, accentColor]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -86,7 +72,7 @@ function AppContent() {
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
           {/* Mobile header */}
           <div className="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b"
-            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
+            style={{ background: 'var(--bg-nav, rgba(8,8,8,0.95))', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
               <span className="text-white font-bold text-base tracking-tight">RoutineQuest</span>

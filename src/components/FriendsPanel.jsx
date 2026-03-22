@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useAuth } from '../store/useAuth.js';
 import { getLevelFromXP, getLevelColor, getLevelIcon, ACHIEVEMENTS } from '../utils/gamification.js';
-import { getLast7Days, getTodayString, isHabitApplicableToday, calculateStreak } from '../utils/dateUtils.js';
+import { getTodayString, isHabitApplicableToday, calculateStreak } from '../utils/dateUtils.js';
+import GrowthChart from './GrowthChart.jsx';
 
 function readUserData(username) {
   try {
@@ -18,60 +19,6 @@ function hexToRgb(hex) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `${r} ${g} ${b}`;
-}
-
-function Last7Chart({ habits, accent }) {
-  const days = getLast7Days();
-  const today = getTodayString();
-
-  const bars = days.map(date => {
-    const applicable = habits.filter(h => {
-      if (h.frequency === 'daily') return true;
-      if (h.frequency === 'weekdays') {
-        const d = new Date(date + 'T12:00:00');
-        return d.getDay() !== 0 && d.getDay() !== 6;
-      }
-      return true;
-    });
-    const done = applicable.filter(h => (h.completions || []).includes(date)).length;
-    const pct = applicable.length > 0 ? done / applicable.length : 0;
-    const isToday = date === today;
-    return { date, pct, isToday, done, total: applicable.length };
-  });
-
-  const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-  return (
-    <div className="flex items-end gap-1 h-14">
-      {bars.map(({ date, pct, isToday }) => {
-        const d = new Date(date + 'T12:00:00');
-        const label = dayLabels[d.getDay()];
-        const height = Math.max(pct * 100, 4);
-        return (
-          <div key={date} className="flex flex-col items-center gap-1 flex-1">
-            <div className="w-full rounded-sm flex-1 flex items-end" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
-              <div
-                className="w-full rounded-sm transition-all"
-                style={{
-                  height: `${height}%`,
-                  minHeight: 3,
-                  background: pct === 1
-                    ? accent
-                    : pct > 0
-                      ? `rgba(${hexToRgb(accent)}, 0.45)`
-                      : 'rgba(255,255,255,0.06)',
-                  borderRadius: 4,
-                }}
-              />
-            </div>
-            <span className="text-[8px] font-medium" style={{ color: isToday ? accent : '#4b5563' }}>
-              {label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 function FriendCard({ user }) {
@@ -146,12 +93,9 @@ function FriendCard({ user }) {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Last 7 days chart */}
+        {/* Growth chart */}
         {habits.length > 0 && (
-          <div>
-            <p className="text-[#4b5563] text-[10px] font-semibold uppercase tracking-wider mb-2">Last 7 days</p>
-            <Last7Chart habits={habits} accent={accent} />
-          </div>
+          <GrowthChart habits={habits} accentColor={accent} compact />
         )}
 
         {/* Stats row */}

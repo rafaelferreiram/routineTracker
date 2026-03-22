@@ -32,8 +32,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
   return (
     <>
       {/* ── Desktop Sidebar ─────────────────────────────────────────────── */}
-      <aside className="hidden lg:flex flex-col w-60 xl:w-64 min-h-screen border-r border-[#1f1f1f] fixed left-0 top-0 bottom-0 z-40 p-5"
-        style={{ background: '#0a0a0a' }}>
+      <aside className="hidden lg:flex flex-col w-60 xl:w-64 min-h-screen fixed left-0 top-0 bottom-0 z-40 p-5 border-r"
+        style={{ background: 'var(--bg-sidebar, #0a0a0a)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
 
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8 px-1">
@@ -49,8 +49,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
 
         {/* Profile */}
         <div
-          className="mb-6 p-3.5 rounded-2xl border border-[#1f1f1f] cursor-pointer hover:border-[#2a2a2a] transition-all group"
-          style={{ background: '#111111' }}
+          className="mb-6 p-3.5 rounded-2xl border cursor-pointer transition-all group"
+          style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}
           onClick={() => setEditingName(true)}
         >
           <div className="flex items-center gap-2.5 mb-3">
@@ -84,10 +84,10 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           </div>
 
           {/* Today progress bar */}
-          <div className="h-1 bg-[#1f1f1f] rounded-full overflow-hidden">
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-progress, #1f1f1f)' }}>
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${completionPercent}%`, background: completionPercent === 100 ? accentColor : '#3f3f3f' }}
+              style={{ width: `${completionPercent}%`, background: completionPercent === 100 ? accentColor : 'var(--text-subtle, #3f3f3f)' }}
             />
           </div>
           <p className="text-[#4b5563] text-[10px] mt-1.5">
@@ -141,7 +141,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
             <span className="text-[#4b5563] text-xs">Medals</span>
             <span className="text-white text-xs font-bold">{achievements.length}/{30}</span>
           </div>
-          <div className="mt-2 h-1 bg-[#1f1f1f] rounded-full overflow-hidden">
+          <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-progress, #1f1f1f)' }}>
             <div
               className="h-full rounded-full"
               style={{
@@ -164,7 +164,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
 
       {/* ── Mobile Bottom Nav ────────────────────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t safe-area-pb"
-        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
+        style={{ background: 'var(--bg-nav, rgba(8,8,8,0.95))', backdropFilter: 'blur(20px)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
         <div className="flex items-center justify-around px-1 py-2">
           {NAV_ITEMS.map(item => {
             const isActive = activeTab === item.id;

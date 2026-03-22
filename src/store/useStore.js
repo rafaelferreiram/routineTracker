@@ -16,6 +16,19 @@ const days = (...nums) => nums.map(d);
 
 const BOOTSTRAP_VERSION = 2;
 
+// ─── Default Categories ────────────────────────────────────────────────────────
+
+const DEFAULT_CATEGORIES = [
+  { name: 'Religion', emoji: '🙏' },
+  { name: 'Exercise', emoji: '💪' },
+  { name: 'Meals',    emoji: '🍽️' },
+  { name: 'Work',     emoji: '💼' },
+  { name: 'Study',    emoji: '📚' },
+  { name: 'Family',   emoji: '❤️' },
+  { name: 'Health',   emoji: '🌿' },
+  { name: 'Other',    emoji: '⭐' },
+];
+
 const BASELINE_PROFILE = {
   name: 'Rafael',
   totalXP: 3685,
@@ -434,6 +447,7 @@ function getInitialState(username, defaultTheme = {}) {
           accentColor: '#22c55e',
           appName: 'RoutineQuest',
           appIcon: '⚡',
+          categories: DEFAULT_CATEGORIES,
           ...parsed.settings,
         };
       }
@@ -511,7 +525,7 @@ function getInitialState(username, defaultTheme = {}) {
           { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
         ]
       : [],
-    settings: { theme: 'dark', accentColor: defaultTheme.accentColor || '#22c55e', bgColor: defaultTheme.bgColor || '#080808', appName: 'RoutineQuest', appIcon: '⚡' },
+    settings: { theme: defaultTheme.themeId || 'dark', accentColor: defaultTheme.accentColor || '#22c55e', appName: 'RoutineQuest', appIcon: '⚡', categories: DEFAULT_CATEGORIES },
     moods: {},
     toasts: [],
     confetti: false,

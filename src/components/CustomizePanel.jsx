@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
+import { THEMES } from '../utils/themes.js';
 
 const ACCENT_PRESETS = [
   { label: 'Green',   value: '#22c55e' },
@@ -19,8 +20,8 @@ const APP_ICONS = ['⚡','🔥','💎','🚀','🎯','⭐','🌟','💪','🧠',
 
 function Section({ title, children }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ background: '#0d0d0d', borderColor: '#1a1a1a' }}>
-      <div className="px-5 py-3.5 border-b" style={{ borderColor: '#1a1a1a' }}>
+    <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-inner, #0d0d0d)', borderColor: 'var(--bg-inner-border, #1a1a1a)' }}>
+      <div className="px-5 py-3.5 border-b" style={{ borderColor: 'var(--bg-inner-border, #1a1a1a)' }}>
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
       <div className="p-5 space-y-4">{children}</div>
@@ -49,6 +50,25 @@ export default function CustomizePanel({ onExport }) {
   const [appNameInput, setAppNameInput] = useState(appName);
   const [customHex, setCustomHex] = useState('');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatEmoji, setNewCatEmoji] = useState('⭐');
+
+  const categories = (settings.categories && settings.categories.length > 0)
+    ? settings.categories
+    : [{ name: 'Other', emoji: '⭐' }];
+
+  const addCategory = () => {
+    const name = newCatName.trim();
+    if (!name) return;
+    if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) return;
+    updateSettings({ categories: [...categories, { name, emoji: newCatEmoji }] });
+    setNewCatName('');
+    setNewCatEmoji('⭐');
+  };
+
+  const removeCategory = (catName) => {
+    updateSettings({ categories: categories.filter(c => c.name !== catName) });
+  };
   const [resetConfirm, setResetConfirm] = useState(false);
   const [savedFlash, setSavedFlash] = useState('');
 
@@ -91,7 +111,7 @@ export default function CustomizePanel({ onExport }) {
 
   const handleReset = () => {
     if (resetConfirm) {
-      localStorage.removeItem('routineTracker_v3');
+      localStorage.removeItem(`routineTracker_v3_${currentUser?.username}`);
       window.location.reload();
     } else {
       setResetConfirm(true);
@@ -109,6 +129,34 @@ export default function CustomizePanel({ onExport }) {
 
       {/* ── Appearance ── */}
       <Section title="🎨  Appearance">
+        <Field label="Theme">
+          <div className="grid grid-cols-5 gap-2">
+            {Object.values(THEMES).map(t => {
+              const isActive = (settings.theme || 'dark') === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => updateSettings({ theme: t.id, accentColor: t.defaultAccent })}
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: t.bgCard,
+                    borderColor: isActive ? 'var(--accent, #22c55e)' : t.bgBorder,
+                    boxShadow: isActive ? `0 0 0 2px var(--accent, #22c55e)` : 'none',
+                  }}
+                >
+                  {/* Mini preview */}
+                  <div className="w-full h-7 rounded-lg relative overflow-hidden" style={{ background: t.bgMain }}>
+                    <div className="absolute bottom-1 left-1 right-1 h-1.5 rounded-full" style={{ background: t.defaultAccent, opacity: 0.8 }} />
+                  </div>
+                  <span className="text-[9px] font-semibold leading-none" style={{ color: t.isLight ? t.textPrimary : t.textSecondary }}>
+                    {t.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
         <Field label="Accent Color" hint="Used across charts, buttons, progress bars and indicators.">
           <div className="flex flex-wrap gap-2.5 mb-3">
             {ACCENT_PRESETS.map(preset => {
@@ -275,6 +323,47 @@ export default function CustomizePanel({ onExport }) {
               </p>
               <p className="text-[#4b5563] text-xs">Clear habits, completions, XP and achievements</p>
             </div>
+          </button>
+        </div>
+      </Section>
+
+      {/* ── Categories ── */}
+      <Section title="🗂️  Categories">
+        <div className="flex flex-wrap gap-2 mb-3">
+          {categories.map(cat => (
+            <div key={cat.name} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm"
+              style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
+              <span>{cat.emoji}</span>
+              <span className="text-white text-xs font-medium">{cat.name}</span>
+              <button onClick={() => removeCategory(cat.name)}
+                className="text-[#4b5563] hover:text-red-400 transition-colors ml-0.5 leading-none"
+                title="Remove">×</button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newCatEmoji}
+            onChange={e => setNewCatEmoji(e.target.value)}
+            className="w-12 px-2 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-sm outline-none text-center"
+            maxLength={2}
+            placeholder="⭐"
+          />
+          <input
+            type="text"
+            value={newCatName}
+            onChange={e => setNewCatName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCategory()}
+            placeholder="Category name..."
+            className="flex-1 px-3 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-sm outline-none placeholder-[#374151]"
+            maxLength={24}
+          />
+          <button onClick={addCategory}
+            disabled={!newCatName.trim()}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+            style={{ background: 'var(--accent, #22c55e)', color: '#000' }}>
+            Add
           </button>
         </div>
       </Section>

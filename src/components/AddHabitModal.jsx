@@ -1,22 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 
-const CATEGORIES = ['Religion', 'Exercise', 'Meals', 'Work', 'Study', 'Family', 'Health', 'Other'];
-
-const CATEGORY_EMOJIS = {
-  Religion: '🙏',
-  Exercise: '💪',
-  Work: '💼',
-  Study: '📚',
-  Family: '❤️',
-  Health: '🌿',
-  Other: '⭐',
-};
+const DEFAULT_CATEGORIES = [
+  { name: 'Religion', emoji: '🙏' },
+  { name: 'Exercise', emoji: '💪' },
+  { name: 'Meals', emoji: '🍽️' },
+  { name: 'Work', emoji: '💼' },
+  { name: 'Study', emoji: '📚' },
+  { name: 'Family', emoji: '❤️' },
+  { name: 'Health', emoji: '🌿' },
+  { name: 'Other', emoji: '⭐' },
+];
 
 const FREQUENCIES = [
-  { value: 'daily', label: 'Every day', icon: '📅' },
-  { value: 'weekdays', label: 'Weekdays only', icon: '💼' },
-  { value: 'weekends', label: 'Weekends only', icon: '🎉' },
+  { value: 'daily',    label: 'Every day',   icon: '📅' },
+  { value: 'weekdays', label: 'Weekdays',     icon: '💼' },
+  { value: 'weekends', label: 'Weekends',     icon: '🎉' },
+  { value: 'weekly_3', label: '3× / week',   icon: '🔥' },
+  { value: 'weekly_2', label: '2× / week',   icon: '⚡' },
+  { value: 'weekly_1', label: '1× / week',   icon: '🎯' },
 ];
 
 const COLORS = [
@@ -34,12 +36,15 @@ const SUGGESTED_EMOJIS = [
 ];
 
 export default function AddHabitModal({ onClose, editHabit = null }) {
-  const { addHabit, updateHabit } = useHabits();
+  const { addHabit, updateHabit, settings } = useHabits();
+  const categories = (settings.categories && settings.categories.length > 0)
+    ? settings.categories
+    : DEFAULT_CATEGORIES;
   const isEdit = !!editHabit;
 
   const [name, setName] = useState(editHabit?.name || '');
   const [emoji, setEmoji] = useState(editHabit?.emoji || '⭐');
-  const [category, setCategory] = useState(editHabit?.category || 'Religion');
+  const [category, setCategory] = useState(editHabit?.category || categories[0]?.name || 'Other');
   const [color, setColor] = useState(editHabit?.color || '#7C3AED');
   const [frequency, setFrequency] = useState(editHabit?.frequency || 'daily');
   const [difficulty, setDifficulty] = useState(editHabit?.difficulty || 'medium');
@@ -189,19 +194,19 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
           <div>
             <label className="block text-slate-400 text-xs font-medium mb-2">Category</label>
             <div className="grid grid-cols-4 gap-2">
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <button
-                  key={cat}
+                  key={cat.name}
                   type="button"
-                  onClick={() => setCategory(cat)}
+                  onClick={() => setCategory(cat.name)}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${
-                    category === cat
+                    category === cat.name
                       ? 'bg-primary/20 border-primary/60 text-white shadow-lg shadow-primary/20'
                       : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <span>{CATEGORY_EMOJIS[cat]}</span>
-                  <span className="truncate text-xs">{cat}</span>
+                  <span>{cat.emoji}</span>
+                  <span className="truncate text-xs">{cat.name}</span>
                 </button>
               ))}
             </div>
@@ -230,7 +235,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
           {/* Frequency */}
           <div>
             <label className="block text-slate-400 text-xs font-medium mb-2">Frequency</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 grid-rows-2">
               {FREQUENCIES.map(f => (
                 <button
                   key={f.value}
@@ -294,7 +299,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
               <div>
                 <p className="text-white font-semibold text-sm">{name || 'Your habit name'}</p>
                 <p className="text-slate-400 text-xs flex items-center gap-1 flex-wrap">
-                  {CATEGORY_EMOJIS[category]} {category} · {FREQUENCIES.find(f => f.value === frequency)?.label}
+                  {categories.find(c => c.name === category)?.emoji} {category} · {FREQUENCIES.find(f => f.value === frequency)?.label}
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full capitalize"
                     style={{
                       color: difficulty === 'easy' ? '#4ade80' : difficulty === 'hard' ? '#f87171' : '#fbbf24',

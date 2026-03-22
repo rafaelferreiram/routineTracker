@@ -22,7 +22,7 @@ const SEED_USERS = [
     username: 'gabriela',
     displayName: 'Gabriela',
     passwordHash: hashPassword('gabriela'),
-    theme: { accentColor: '#ec4899', bgColor: '#100811', bgCard: '#1c1022', bgBorder: '#2e1a35' },
+    theme: { accentColor: '#ec4899', themeId: 'rose' },
   },
 ];
 

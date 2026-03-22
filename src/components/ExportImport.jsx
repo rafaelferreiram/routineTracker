@@ -55,7 +55,7 @@ export default function ExportImport({ onClose }) {
     >
       <div
         className="w-full max-w-sm rounded-3xl border border-[#1f1f1f] shadow-2xl animate-slide-up overflow-hidden"
-        style={{ background: '#111111' }}
+        style={{ background: 'var(--bg-card)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-[#1f1f1f]">
@@ -66,7 +66,7 @@ export default function ExportImport({ onClose }) {
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-xl text-[#4b5563] hover:text-white flex items-center justify-center transition-colors"
-            style={{ background: '#1f1f1f' }}
+            style={{ background: 'var(--bg-border)' }}
           >
             ✕
           </button>

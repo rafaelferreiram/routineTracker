@@ -108,7 +108,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
     >
       <div
         className="w-full max-w-lg rounded-3xl border border-white/10 shadow-2xl animate-slide-up overflow-hidden"
-        style={{ background: '#111111' }}
+        style={{ background: 'var(--bg-card)' }}
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
@@ -138,7 +138,7 @@ export default function AddHabitModal({ onClose, editHabit = null }) {
               </button>
 
               {showEmojiPicker && (
-                <div className="absolute top-16 left-0 z-10 p-3 rounded-2xl border border-white/10 shadow-2xl w-64" style={{ background: '#111111' }}>
+                <div className="absolute top-16 left-0 z-10 p-3 rounded-2xl border border-white/10 shadow-2xl w-64" style={{ background: 'var(--bg-card)' }}>
                   <p className="text-slate-400 text-xs mb-2 font-medium">Choose an emoji</p>
                   <div className="grid grid-cols-8 gap-1 mb-2">
                     {SUGGESTED_EMOJIS.map(e => (

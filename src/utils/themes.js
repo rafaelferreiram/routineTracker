@@ -12,10 +12,14 @@ export const THEMES = {
     bgInner:  '#0d0d0d',
     bgInnerBorder: '#1a1a1a',
     bgProgress: '#1f1f1f',
+    bgSubtle:  'rgba(255,255,255,0.03)',
+    borderSubtle: 'rgba(255,255,255,0.08)',
     textPrimary:   '#f1f5f9',
     textSecondary: '#9ca3af',
     textMuted:     '#6b7280',
     textSubtle:    '#4b5563',
+    textDim:       '#3b3b3b',
+    textFaded:     'rgba(255,255,255,0.18)',
     defaultAccent: '#22c55e',
   },
   light: {
@@ -31,10 +35,14 @@ export const THEMES = {
     bgInner:  '#f9fafb',
     bgInnerBorder: '#e5e7eb',
     bgProgress: '#e5e7eb',
+    bgSubtle:  'rgba(0,0,0,0.025)',
+    borderSubtle: 'rgba(0,0,0,0.08)',
     textPrimary:   '#111827',
     textSecondary: '#374151',
     textMuted:     '#6b7280',
     textSubtle:    '#9ca3af',
+    textDim:       '#c8cfd8',
+    textFaded:     'rgba(0,0,0,0.2)',
     defaultAccent: '#22c55e',
   },
   ocean: {
@@ -50,10 +58,14 @@ export const THEMES = {
     bgInner:  '#081629',
     bgInnerBorder: '#163050',
     bgProgress: '#0f2540',
+    bgSubtle:  'rgba(255,255,255,0.03)',
+    borderSubtle: 'rgba(255,255,255,0.08)',
     textPrimary:   '#e0f0ff',
     textSecondary: '#7db8e0',
     textMuted:     '#4a7a9b',
     textSubtle:    '#2d5a78',
+    textDim:       '#1e3f58',
+    textFaded:     'rgba(224,240,255,0.18)',
     defaultAccent: '#06b6d4',
   },
   rose: {
@@ -69,10 +81,14 @@ export const THEMES = {
     bgInner:  '#fce8f3',
     bgInnerBorder: '#f9d0e7',
     bgProgress: '#fce7f3',
+    bgSubtle:  'rgba(0,0,0,0.025)',
+    borderSubtle: 'rgba(0,0,0,0.07)',
     textPrimary:   '#3b0a28',
     textSecondary: '#78184a',
     textMuted:     '#9d4e74',
     textSubtle:    '#c084a0',
+    textDim:       '#e8c0d4',
+    textFaded:     'rgba(0,0,0,0.2)',
     defaultAccent: '#ec4899',
   },
   forest: {
@@ -88,10 +104,14 @@ export const THEMES = {
     bgInner:  '#e8fdf0',
     bgInnerBorder: '#d0f5e0',
     bgProgress: '#dcfce7',
+    bgSubtle:  'rgba(0,0,0,0.025)',
+    borderSubtle: 'rgba(0,0,0,0.07)',
     textPrimary:   '#052e16',
     textSecondary: '#166534',
     textMuted:     '#4a7c59',
     textSubtle:    '#86b899',
+    textDim:       '#b8d8c0',
+    textFaded:     'rgba(0,0,0,0.2)',
     defaultAccent: '#16a34a',
   },
 };
@@ -116,10 +136,14 @@ export function applyTheme(theme, accentColor) {
   root.style.setProperty('--bg-inner',         theme.bgInner);
   root.style.setProperty('--bg-inner-border',  theme.bgInnerBorder);
   root.style.setProperty('--bg-progress',      theme.bgProgress);
+  root.style.setProperty('--bg-subtle',         theme.bgSubtle);
+  root.style.setProperty('--border-subtle',    theme.borderSubtle);
   root.style.setProperty('--text-primary',     theme.textPrimary);
   root.style.setProperty('--text-secondary',   theme.textSecondary);
   root.style.setProperty('--text-muted',       theme.textMuted);
   root.style.setProperty('--text-subtle',      theme.textSubtle);
+  root.style.setProperty('--text-dim',         theme.textDim);
+  root.style.setProperty('--text-faded',       theme.textFaded);
   root.style.setProperty('--accent',           accent);
   root.style.setProperty('--accent-rgb',       `${r} ${g} ${b}`);
   document.body.style.background = theme.bgMain;

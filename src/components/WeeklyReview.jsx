@@ -42,7 +42,7 @@ export default function WeeklyReview({ onClose }) {
     >
       <div
         className="w-full max-w-sm rounded-3xl border border-[#1f1f1f] shadow-2xl animate-slide-up overflow-hidden"
-        style={{ background: '#111111' }}
+        style={{ background: 'var(--bg-card)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -52,7 +52,7 @@ export default function WeeklyReview({ onClose }) {
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-xl text-[#4b5563] hover:text-white flex items-center justify-center transition-colors"
-              style={{ background: '#1f1f1f' }}
+              style={{ background: 'var(--bg-border)' }}
             >
               ✕
             </button>
@@ -106,7 +106,7 @@ export default function WeeklyReview({ onClose }) {
           {/* Next week intention */}
           <div
             className="p-3 rounded-xl border"
-            style={{ background: '#0f0f0f', borderColor: '#1f1f1f' }}
+            style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-border)' }}
           >
             <p className="text-[#4b5563] text-xs">
               {weekStats.rate < 70

@@ -70,7 +70,7 @@ function FreqBadge({ habit, onUpdate }) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
             className="absolute right-0 top-8 z-20 rounded-xl border shadow-2xl overflow-hidden min-w-[130px]"
-            style={{ background: '#111111', borderColor: '#1f1f1f' }}
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
           >
             {FREQ_OPTIONS.map(f => (
               <button
@@ -155,8 +155,8 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
           done ? '' : 'hover:border-[#2a2a2a]'
         }`}
         style={{
-          background: done ? `${habit.color}0f` : '#0f0f0f',
-          borderColor: done ? `${habit.color}35` : '#1a1a1a',
+          background: done ? `${habit.color}0f` : 'var(--bg-inner)',
+          borderColor: done ? `${habit.color}35` : 'var(--bg-inner-border)',
         }}
       >
         {/* Check Button — numeric vs boolean */}
@@ -169,12 +169,12 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
                 ? (accentColor || '#22c55e')
                 : numericValue != null
                   ? 'rgba(251,191,36,0.15)'
-                  : 'rgba(255,255,255,0.06)',
+                  : 'var(--bg-subtle)',
               border: numericValue != null && numericValue >= (habit.goal || 1)
                 ? `2px solid ${accentColor || '#22c55e'}`
                 : numericValue != null
                   ? '2px solid rgba(251,191,36,0.5)'
-                  : '2px solid rgba(255,255,255,0.08)',
+                  : '2px solid var(--border-subtle)',
               color: numericValue != null && numericValue >= (habit.goal || 1)
                 ? '#080808'
                 : numericValue != null ? '#fbbf24' : '#4b5563',
@@ -239,7 +239,7 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
             <button
               onClick={() => onEdit(habit)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-[#4b5563] hover:text-white transition-colors"
-              style={{ background: '#1a1a1a' }}
+              style={{ background: 'var(--bg-inner-border)' }}
               title="Edit"
             >
               ✏
@@ -247,7 +247,7 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-[#4b5563] hover:text-red-400 transition-colors"
-              style={{ background: '#1a1a1a' }}
+              style={{ background: 'var(--bg-inner-border)' }}
               title="Delete"
             >
               ✕
@@ -293,7 +293,7 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
         >
           <div
             className="w-full max-w-sm rounded-3xl border border-[#1f1f1f] p-6 animate-bounce-in"
-            style={{ background: '#111111' }}
+            style={{ background: 'var(--bg-card)' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="text-center mb-5">
@@ -305,7 +305,7 @@ function HabitCheckRow({ habit, date, isToday, onToggle, onEdit, onDelete, onUpd
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 py-3 rounded-2xl text-white font-semibold text-sm transition-all border border-[#1f1f1f]"
-                style={{ background: '#1a1a1a' }}
+                style={{ background: 'var(--bg-inner-border)' }}
               >
                 Cancel
               </button>
@@ -339,13 +339,13 @@ function CategoryGroup({ category, habits, date, onToggle, onEdit, onDelete, onU
   const pct = total > 0 ? (done / total) : 0;
 
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: '#1a1a1a', background: '#0a0a0a' }}>
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--bg-inner-border)', background: 'var(--bg-inner)' }}>
       {/* Category header */}
       <div
         className="flex items-center gap-3 px-4 py-3 border-b"
         style={{
-          background: allDone ? `${category.color}0d` : '#111111',
-          borderColor: allDone ? `${category.color}25` : '#1a1a1a',
+          background: allDone ? `${category.color}0d` : 'var(--bg-card)',
+          borderColor: allDone ? `${category.color}25` : 'var(--bg-inner-border)',
         }}
       >
         <span className="text-lg">{category.icon}</span>
@@ -484,7 +484,7 @@ export default function HabitList() {
       </div>
 
       {/* ── View Toggle ─────────────────────────────────────────────────── */}
-      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: '#111111', border: '1px solid #1a1a1a' }}>
+      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-inner-border)' }}>
         {[
           { id: 'today',  label: 'Check-In', icon: '✅' },
           { id: 'manage', label: 'Manage',   icon: '⚙️' },
@@ -494,7 +494,7 @@ export default function HabitList() {
             onClick={() => setView(v.id)}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
             style={view === v.id ? {
-              background: '#1f1f1f',
+              background: 'var(--bg-border)',
               color: 'white',
               boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
             } : {
@@ -518,7 +518,7 @@ export default function HabitList() {
               <button
                 onClick={() => setWeekOffset(w => w - 1)}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[#4b5563] hover:text-white transition-colors text-lg"
-                style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-inner-border)' }}
               >
                 ‹
               </button>
@@ -529,7 +529,7 @@ export default function HabitList() {
                 onClick={() => setWeekOffset(w => w + 1)}
                 disabled={isCurrentWeek}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[#4b5563] hover:text-white transition-colors text-lg disabled:opacity-25 disabled:cursor-not-allowed"
-                style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-inner-border)' }}
               >
                 ›
               </button>
@@ -556,7 +556,7 @@ export default function HabitList() {
                     disabled={isFuture}
                     className="flex flex-col items-center gap-1.5 py-2.5 rounded-xl transition-all"
                     style={{
-                      background: isSelected ? '#1f1f1f' : 'transparent',
+                      background: isSelected ? 'var(--bg-border)' : 'transparent',
                       border: isSelected
                         ? '1px solid #2a2a2a'
                         : isToday
@@ -576,7 +576,7 @@ export default function HabitList() {
                       <div
                         className="w-4 h-1 rounded-full transition-all"
                         style={{
-                          background: allDone ? '#22c55e' : pct > 0 ? `rgba(34,197,94,${0.3 + pct * 0.5})` : '#1f1f1f',
+                          background: allDone ? '#22c55e' : pct > 0 ? `rgba(34,197,94,${0.3 + pct * 0.5})` : 'var(--bg-border)',
                         }}
                       />
                     )}
@@ -591,8 +591,8 @@ export default function HabitList() {
             <div
               className="rounded-2xl p-4 border"
               style={{
-                background: allDoneToday ? 'rgba(34,197,94,0.08)' : '#111111',
-                borderColor: allDoneToday ? 'rgba(34,197,94,0.25)' : '#1a1a1a',
+                background: allDoneToday ? 'rgba(34,197,94,0.08)' : 'var(--bg-card)',
+                borderColor: allDoneToday ? 'rgba(34,197,94,0.25)' : 'var(--bg-inner-border)',
               }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -689,8 +689,8 @@ export default function HabitList() {
                     borderColor: `${cat.color || '#22c55e'}40`,
                     color: cat.color || '#22c55e',
                   } : {
-                    background: '#111111',
-                    borderColor: '#1a1a1a',
+                    background: 'var(--bg-card)',
+                    borderColor: 'var(--bg-inner-border)',
                     color: '#6b7280',
                   }}
                 >
@@ -698,7 +698,7 @@ export default function HabitList() {
                   <span>{cat.name}</span>
                   <span
                     className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
-                    style={{ background: isActive ? `${cat.color || '#22c55e'}25` : '#1a1a1a' }}
+                    style={{ background: isActive ? `${cat.color || '#22c55e'}25` : 'var(--bg-inner-border)' }}
                   >
                     {count}
                   </span>

@@ -169,7 +169,7 @@ export default function CustomizePanel({ onExport }) {
                   className="w-8 h-8 rounded-full transition-all hover:scale-110 relative flex items-center justify-center"
                   style={{
                     background: preset.value,
-                    boxShadow: isActive ? `0 0 0 2px #0d0d0d, 0 0 0 3.5px ${preset.value}` : 'none',
+                    boxShadow: isActive ? `0 0 0 2px var(--bg-inner), 0 0 0 3.5px ${preset.value}` : 'none',
                     transform: isActive ? 'scale(1.2)' : undefined,
                   }}
                 >
@@ -244,7 +244,7 @@ export default function CustomizePanel({ onExport }) {
             {showIconPicker && (
               <div
                 className="absolute top-14 left-0 z-20 p-3 rounded-2xl border shadow-2xl"
-                style={{ background: '#111111', borderColor: '#1f1f1f', width: 220 }}
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)', width: 220 }}
               >
                 <div className="grid grid-cols-6 gap-1.5">
                   {APP_ICONS.map(ic => (
@@ -299,7 +299,7 @@ export default function CustomizePanel({ onExport }) {
             <button
               onClick={onExport}
               className="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all text-left"
-              style={{ background: '#111111', borderColor: '#1f1f1f', color: '#9ca3af' }}
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)', color: '#9ca3af' }}
             >
               <span className="text-lg">📦</span>
               <div>
@@ -312,8 +312,8 @@ export default function CustomizePanel({ onExport }) {
             onClick={handleReset}
             className="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all text-left"
             style={{
-              background: resetConfirm ? 'rgba(239,68,68,0.1)' : '#111111',
-              borderColor: resetConfirm ? 'rgba(239,68,68,0.4)' : '#1f1f1f',
+              background: resetConfirm ? 'rgba(239,68,68,0.1)' : 'var(--bg-card)',
+              borderColor: resetConfirm ? 'rgba(239,68,68,0.4)' : 'var(--bg-border)',
             }}
           >
             <span className="text-lg">{resetConfirm ? '⚠️' : '🗑️'}</span>
@@ -384,7 +384,7 @@ export default function CustomizePanel({ onExport }) {
           <button
             onClick={logout}
             className="px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
-            style={{ background: '#111111', borderColor: '#1f1f1f', color: '#6b7280' }}
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)', color: '#6b7280' }}
           >
             Sign Out
           </button>

@@ -122,7 +122,7 @@ function HealthChart({ habits, achievements }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
+      <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-inner-border)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
@@ -220,7 +220,7 @@ function HealthChart({ habits, achievements }) {
           })}
           {labelIdxs.map(i => (
             <text key={i} x={PAD.l + (i / Math.max(data.length - 1, 1)) * cW} y={H - 6}
-              textAnchor="middle" fontSize="8.5" fill="#3b3b3b" fontFamily="Inter, system-ui, sans-serif">
+              textAnchor="middle" fontSize="8.5" fill="var(--text-dim)" fontFamily="Inter, system-ui, sans-serif">
               {formatXLabel(data[i].date, range.days)}
             </text>
           ))}
@@ -239,8 +239,8 @@ function HealthChart({ habits, achievements }) {
       </div>
 
       {/* Health Medals */}
-      <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
-        <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: '#1a1a1a' }}>
+      <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-inner-border)' }}>
+        <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: 'var(--bg-inner-border)' }}>
           <p className="text-white font-semibold text-sm">Health Medals</p>
           <p className="text-[#4b5563] text-xs mt-0.5">
             {healthMedals.filter(a => unlockedIds.has(a.id)).length} / {healthMedals.length} unlocked
@@ -255,8 +255,8 @@ function HealthChart({ habits, achievements }) {
                 key={achievement.id}
                 className="flex items-center gap-2.5 p-3 rounded-2xl border transition-all"
                 style={{
-                  background: unlocked ? `${rarity.bg}` : '#111111',
-                  borderColor: unlocked ? rarity.border : '#1a1a1a',
+                  background: unlocked ? `${rarity.bg}` : 'var(--bg-card)',
+                  borderColor: unlocked ? rarity.border : 'var(--bg-inner-border)',
                   boxShadow: unlocked ? rarity.glow : 'none',
                   opacity: unlocked ? 1 : 0.45,
                   filter: unlocked ? 'none' : 'grayscale(0.6)',
@@ -336,8 +336,8 @@ function MoodHistory({ moods }) {
     : null;
 
   return (
-    <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
-      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: '#1a1a1a' }}>
+    <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-inner-border)' }}>
+      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: 'var(--bg-inner-border)' }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-white font-semibold text-sm">Mood History</p>
@@ -380,7 +380,7 @@ function MoodHistory({ moods }) {
                 title={`${date}${mood ? ` · ${mood.emoji} ${mood.label}` : ' · no entry'}`}
                 className="aspect-square rounded-md flex items-center justify-center text-[10px]"
                 style={{
-                  background: m ? `${m.color}20` : 'rgba(255,255,255,0.03)',
+                  background: m ? `${m.color}20` : 'var(--bg-subtle)',
                   border: `1px solid ${m ? m.color + '40' : 'transparent'}`,
                 }}
               >
@@ -491,7 +491,7 @@ export default function StatsPanel() {
 
       {/* Habit breakdown */}
       {habitStats.length > 0 && (
-        <div className="rounded-3xl p-5 border border-white/5" style={{ background: '#0d0d0d' }}>
+        <div className="rounded-3xl p-5 border border-white/5" style={{ background: 'var(--bg-card)' }}>
           <h3 className="text-white font-semibold text-sm mb-4">Habit Breakdown</h3>
           <div className="space-y-3">
             {habitStats.map(habit => {

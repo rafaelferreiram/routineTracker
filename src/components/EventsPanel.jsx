@@ -24,7 +24,7 @@ function EventForm({ initial = null, onSave, onCancel }) {
   return (
     <div
       className="rounded-2xl border p-4 space-y-3 animate-slide-up"
-      style={{ background: '#0f0f0f', borderColor: '#1f1f1f' }}
+      style={{ background: 'var(--bg-inner)', borderColor: 'var(--bg-border)' }}
     >
       {/* Emoji + title row */}
       <div className="flex gap-3">
@@ -40,7 +40,7 @@ function EventForm({ initial = null, onSave, onCancel }) {
           {showEmoji && (
             <div
               className="absolute top-14 left-0 z-20 p-2 rounded-xl border shadow-2xl grid grid-cols-5 gap-1 w-44"
-              style={{ background: '#111111', borderColor: '#1f1f1f' }}
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
             >
               {EVENT_EMOJIS.map(e => (
                 <button
@@ -104,7 +104,7 @@ function EventForm({ initial = null, onSave, onCancel }) {
         <button
           onClick={onCancel}
           className="flex-1 py-2.5 rounded-xl text-[#6b7280] hover:text-white text-sm font-medium transition-all border border-[#1f1f1f] hover:border-[#2a2a2a]"
-          style={{ background: '#111111' }}
+          style={{ background: 'var(--bg-card)' }}
         >
           Cancel
         </button>
@@ -201,8 +201,8 @@ export default function EventsPanel() {
                   key={event.id}
                   className="flex items-center gap-3.5 p-3.5 rounded-2xl border group transition-all"
                   style={{
-                    background: isToday ? `${event.color}12` : '#111111',
-                    borderColor: isToday ? `${event.color}40` : '#1f1f1f',
+                    background: isToday ? `${event.color}12` : 'var(--bg-card)',
+                    borderColor: isToday ? `${event.color}40` : 'var(--bg-border)',
                     boxShadow: isToday ? `0 0 16px ${event.color}15` : 'none',
                   }}
                 >
@@ -237,7 +237,7 @@ export default function EventsPanel() {
                     <button
                       onClick={() => setEditingId(event.id)}
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-xs text-[#6b7280] hover:text-white transition-colors"
-                      style={{ background: '#1f1f1f' }}
+                      style={{ background: 'var(--bg-border)' }}
                       title="Edit"
                     >
                       ✏
@@ -245,7 +245,7 @@ export default function EventsPanel() {
                     <button
                       onClick={() => deleteEvent(event.id)}
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-xs text-[#6b7280] hover:text-red-400 transition-colors"
-                      style={{ background: '#1f1f1f' }}
+                      style={{ background: 'var(--bg-border)' }}
                       title="Delete"
                     >
                       ✕
@@ -267,10 +267,10 @@ export default function EventsPanel() {
               <div
                 key={event.id}
                 className="flex items-center gap-3.5 p-3.5 rounded-2xl border opacity-50"
-                style={{ background: '#111111', borderColor: '#1f1f1f' }}
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
               >
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 grayscale"
-                  style={{ background: '#1a1a1a', border: '1.5px solid #1f1f1f' }}>
+                  style={{ background: 'var(--bg-inner-border)', border: '1.5px solid #1f1f1f' }}>
                   {event.emoji}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -280,7 +280,7 @@ export default function EventsPanel() {
                 <button
                   onClick={() => deleteEvent(event.id)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-xs text-[#4b5563] hover:text-red-400 transition-colors flex-shrink-0"
-                  style={{ background: '#1a1a1a' }}
+                  style={{ background: 'var(--bg-inner-border)' }}
                 >
                   ✕
                 </button>

@@ -297,6 +297,16 @@ html[data-theme="light"] .bg-\[\#1a1a1a\],   html[data-theme="rose"] .bg-\[\#1a1
 html[data-theme="light"] .border-\[\#1f1f1f\], html[data-theme="rose"] .border-\[\#1f1f1f\], html[data-theme="forest"] .border-\[\#1f1f1f\] { border-color: var(--bg-border)      !important; }
 html[data-theme="light"] .border-\[\#1a1a1a\], html[data-theme="rose"] .border-\[\#1a1a1a\], html[data-theme="forest"] .border-\[\#1a1a1a\] { border-color: var(--bg-inner-border) !important; }
 html[data-theme="light"] .border-\[\#2a2a2a\], html[data-theme="rose"] .border-\[\#2a2a2a\], html[data-theme="forest"] .border-\[\#2a2a2a\] { border-color: var(--bg-border)      !important; }
+html[data-theme="light"] .bg-\[\#1f1f1f\],   html[data-theme="rose"] .bg-\[\#1f1f1f\],   html[data-theme="forest"] .bg-\[\#1f1f1f\]   { background: var(--bg-border)         !important; }
+html[data-theme="ocean"] .bg-\[\#1f1f1f\]   { background: var(--bg-border) !important; }
+
+/* ── Tailwind opacity-modifier white classes on light/ocean themes ──── */
+html[data-theme="light"] .bg-slate-700\/20, html[data-theme="rose"] .bg-slate-700\/20, html[data-theme="forest"] .bg-slate-700\/20 { background: var(--bg-subtle) !important; }
+html[data-theme="light"] .border-slate-600,  html[data-theme="rose"] .border-slate-600, html[data-theme="forest"] .border-slate-600 { border-color: var(--border-subtle) !important; }
+html[data-theme="light"] .bg-red-900\/30,    html[data-theme="rose"] .bg-red-900\/30,   html[data-theme="forest"] .bg-red-900\/30   { background: rgba(239,68,68,0.12) !important; }
+
+/* ── hover:bg-red-900/30 ──────────────────────────────────────────────── */
+html[data-theme="light"] .hover\:bg-red-900\/30:hover,  html[data-theme="rose"] .hover\:bg-red-900\/30:hover,  html[data-theme="forest"] .hover\:bg-red-900\/30:hover  { background: rgba(239,68,68,0.15) !important; }
 
 /* ── Input/textarea on light themes ──────────────────────────────────── */
 html[data-theme="light"] input,  html[data-theme="rose"] input,  html[data-theme="forest"] input,

@@ -1,80 +1,337 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
-import { getLast7Days, getShortWeekday, getTodayString } from '../utils/dateUtils.js';
+import { getLastNDays, getShortWeekday, getTodayString } from '../utils/dateUtils.js';
 import { getLevelColor, getLevelTitle, getLevelIcon, getLevelFromXP, getLevelProgress, getXPForCurrentLevel, getXPNeededForNextLevel } from '../utils/gamification.js';
 import XPBar from './XPBar.jsx';
-import ProgressRing from './ProgressRing.jsx';
 import WeeklyReview from './WeeklyReview.jsx';
 
-function StatCard({ label, value, sub, icon, color = '#7C3AED', large = false }) {
-  return (
-    <div
-      className="rounded-3xl p-5 border border-white/8 flex flex-col gap-2"
-      style={{
-        background: `${color}0d`,
-        borderColor: `${color}20`,
-      }}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-2xl">{icon}</span>
-        {sub && <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{sub}</span>}
-      </div>
-      <div>
-        <p
-          className={`font-bold leading-none ${large ? 'text-4xl' : 'text-3xl'}`}
-          style={{ color }}
-        >
-          {value}
-        </p>
-        <p className="text-slate-400 text-sm mt-1">{label}</p>
-      </div>
-    </div>
-  );
+// ─── Chart ────────────────────────────────────────────────────────────────────
+
+const RANGES = [
+  { label: '1W', days: 7 },
+  { label: '1M', days: 30 },
+  { label: '3M', days: 90 },
+  { label: '6M', days: 180 },
+  { label: '1Y', days: 365 },
+];
+
+const W = 600, H = 200;
+const PAD = { l: 42, r: 12, t: 16, b: 32 };
+const cW = W - PAD.l - PAD.r;
+const cH = H - PAD.t - PAD.b;
+
+function buildSmoothPath(pts, close = false) {
+  if (pts.length === 0) return '';
+  if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const p0 = pts[i - 1];
+    const p1 = pts[i];
+    const cpx = (p0.x + p1.x) / 2;
+    d += ` C ${cpx} ${p0.y}, ${cpx} ${p1.y}, ${p1.x} ${p1.y}`;
+  }
+  if (close && pts.length > 1) {
+    d += ` L ${pts[pts.length - 1].x} ${PAD.t + cH} L ${pts[0].x} ${PAD.t + cH} Z`;
+  }
+  return d;
 }
 
-export default function StatsPanel() {
-  const { habits, profile, stats, currentLevel, levelProgress, freezeShields } = useHabits();
-  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
-  const today = getTodayString();
-  const last7 = getLast7Days();
+function xAxisLabels(n) {
+  const maxLabels = { 7: 7, 30: 6, 90: 6, 180: 6, 365: 7 }[n] || 6;
+  const step = Math.max(1, Math.floor(n / maxLabels));
+  return step;
+}
 
-  // Build weekly heatmap data
-  const weeklyData = useMemo(() => {
-    return last7.map(date => {
-      const d = new Date(date + 'T00:00:00');
-      const dow = d.getDay();
-      const applicableHabits = habits.filter(h => {
+function formatXLabel(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (n <= 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+  if (n <= 90) return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
+function CompletionChart({ habits, accentColor }) {
+  const [rangeIdx, setRangeIdx] = useState(1); // default 1M
+  const [hover, setHover] = useState(null);
+  const svgRef = useRef(null);
+
+  const range = RANGES[rangeIdx];
+
+  const data = useMemo(() => {
+    const days = getLastNDays(range.days);
+    return days.map(date => {
+      const dow = new Date(date + 'T00:00:00').getDay();
+      const applicable = habits.filter(h => {
         const freq = h.frequency || 'daily';
         if (freq === 'weekdays' && (dow === 0 || dow === 6)) return false;
         if (freq === 'weekends' && dow >= 1 && dow <= 5) return false;
         return true;
       });
-      const completed = applicableHabits.filter(h => h.completions.includes(date)).length;
-      const total = applicableHabits.length;
-      const pct = total > 0 ? completed / total : 0;
-      return { date, completed, total, pct, day: getShortWeekday(date) };
+      const completed = applicable.filter(h => h.completions.includes(date)).length;
+      const total = applicable.length;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : null;
+      return { date, pct, completed, total };
     });
-  }, [habits, last7]);
+  }, [habits, range.days]);
 
-  // Per-habit stats
+  // Map to SVG coordinates
+  const points = useMemo(() => {
+    return data.map((d, i) => ({
+      ...d,
+      x: PAD.l + (i / Math.max(data.length - 1, 1)) * cW,
+      y: d.pct !== null ? PAD.t + (1 - d.pct / 100) * cH : null,
+    }));
+  }, [data]);
+
+  // Split into segments (skip null days)
+  const segments = useMemo(() => {
+    const segs = [];
+    let cur = [];
+    points.forEach(p => {
+      if (p.y !== null) { cur.push(p); }
+      else if (cur.length) { segs.push(cur); cur = []; }
+    });
+    if (cur.length) segs.push(cur);
+    return segs;
+  }, [points]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    let closest = null, minDist = Infinity;
+    points.forEach((p, i) => {
+      if (p.y === null) return;
+      const dist = Math.abs(p.x - svgX);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    });
+    setHover(closest !== null ? points[closest] : null);
+  }, [points]);
+
+  const accent = accentColor || '#22c55e';
+  const gradId = 'chart-grad';
+  const step = xAxisLabels(range.days);
+
+  // X-axis label indices
+  const labelIndices = useMemo(() => {
+    const idxs = [];
+    for (let i = 0; i < data.length; i += step) idxs.push(i);
+    // Always include last
+    if (idxs[idxs.length - 1] !== data.length - 1) idxs.push(data.length - 1);
+    return idxs;
+  }, [data.length, step]);
+
+  // Stats from data
+  const nonNull = data.filter(d => d.pct !== null);
+  const avg = nonNull.length ? Math.round(nonNull.reduce((s, d) => s + d.pct, 0) / nonNull.length) : 0;
+  const peak = nonNull.length ? Math.max(...nonNull.map(d => d.pct)) : 0;
+  const perfect = nonNull.filter(d => d.pct === 100).length;
+
+  return (
+    <div className="rounded-3xl border overflow-hidden" style={{ background: '#0a0a0a', borderColor: '#1a1a1a' }}>
+      {/* Header row */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div>
+          <p className="text-white font-semibold text-sm">Completion Rate</p>
+          <p className="text-[#4b5563] text-xs mt-0.5">Daily habit completion %</p>
+        </div>
+        {/* Range tabs */}
+        <div className="flex items-center gap-1 bg-[#111111] rounded-xl p-1 border border-[#1a1a1a]">
+          {RANGES.map((r, i) => (
+            <button
+              key={r.label}
+              onClick={() => { setRangeIdx(i); setHover(null); }}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+              style={rangeIdx === i
+                ? { background: `${accent}20`, color: accent, border: `1px solid ${accent}40` }
+                : { color: '#4b5563', border: '1px solid transparent' }
+              }
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Mini stats */}
+      <div className="flex gap-4 px-5 pb-3">
+        <div>
+          <p className="text-white font-bold text-lg leading-none">{avg}%</p>
+          <p className="text-[#4b5563] text-[10px] mt-0.5">Avg</p>
+        </div>
+        <div className="w-px bg-[#1a1a1a]" />
+        <div>
+          <p className="text-white font-bold text-lg leading-none">{peak}%</p>
+          <p className="text-[#4b5563] text-[10px] mt-0.5">Peak</p>
+        </div>
+        <div className="w-px bg-[#1a1a1a]" />
+        <div>
+          <p className="font-bold text-lg leading-none" style={{ color: accent }}>{perfect}</p>
+          <p className="text-[#4b5563] text-[10px] mt-0.5">Perfect days</p>
+        </div>
+        {hover && (
+          <>
+            <div className="flex-1" />
+            <div className="text-right">
+              <p className="font-bold text-lg leading-none" style={{ color: accent }}>
+                {hover.pct !== null ? `${hover.pct}%` : '—'}
+              </p>
+              <p className="text-[#4b5563] text-[10px] mt-0.5">
+                {new Date(hover.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {hover.total > 0 ? ` · ${hover.completed}/${hover.total}` : ''}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* SVG Chart */}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height: 200, display: 'block', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1={PAD.t} x2="0" y2={PAD.t + cH} gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={accent} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[0, 25, 50, 75, 100].map(pct => {
+          const y = PAD.t + (1 - pct / 100) * cH;
+          return (
+            <g key={pct}>
+              <line
+                x1={PAD.l} y1={y} x2={PAD.l + cW} y2={y}
+                stroke={pct === 0 || pct === 100 ? '#222' : '#161616'}
+                strokeWidth="1"
+              />
+              <text
+                x={PAD.l - 4} y={y + 4}
+                textAnchor="end"
+                fontSize="9"
+                fill="#3b3b3b"
+                fontFamily="Inter, system-ui, sans-serif"
+              >
+                {pct}%
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Area fill */}
+        {segments.map((seg, si) => (
+          <path
+            key={`fill-${si}`}
+            d={buildSmoothPath(seg, true)}
+            fill={`url(#${gradId})`}
+          />
+        ))}
+
+        {/* Line */}
+        {segments.map((seg, si) => (
+          <path
+            key={`line-${si}`}
+            d={buildSmoothPath(seg, false)}
+            fill="none"
+            stroke={accent}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {/* X-axis labels */}
+        {labelIndices.map(i => {
+          const p = points[i];
+          return (
+            <text
+              key={i}
+              x={p.x}
+              y={H - 6}
+              textAnchor="middle"
+              fontSize="8.5"
+              fill="#3b3b3b"
+              fontFamily="Inter, system-ui, sans-serif"
+            >
+              {formatXLabel(p.date, range.days)}
+            </text>
+          );
+        })}
+
+        {/* Hover crosshair */}
+        {hover && hover.y !== null && (
+          <g>
+            <line
+              x1={hover.x} y1={PAD.t} x2={hover.x} y2={PAD.t + cH}
+              stroke={accent} strokeWidth="1" strokeDasharray="3 2" opacity="0.5"
+            />
+            <line
+              x1={PAD.l} y1={hover.y} x2={PAD.l + cW} y2={hover.y}
+              stroke={accent} strokeWidth="1" strokeDasharray="3 2" opacity="0.25"
+            />
+            <circle
+              cx={hover.x} cy={hover.y} r="4"
+              fill={accent}
+              stroke="#0a0a0a"
+              strokeWidth="2"
+            />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, sub, icon, color = '#7C3AED' }) {
+  return (
+    <div
+      className="rounded-2xl p-4 border flex flex-col gap-2"
+      style={{ background: `${color}0d`, borderColor: `${color}20` }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xl">{icon}</span>
+        {sub && <span className="text-[10px] text-[#4b5563] bg-white/5 px-2 py-0.5 rounded-full">{sub}</span>}
+      </div>
+      <div>
+        <p className="font-bold text-2xl leading-none" style={{ color }}>{value}</p>
+        <p className="text-[#6b7280] text-xs mt-1">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Panel ───────────────────────────────────────────────────────────────
+
+export default function StatsPanel() {
+  const { habits, profile, stats, currentLevel, freezeShields, accentColor } = useHabits();
+  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
+  const today = getTodayString();
+  const last7 = getLastNDays(7);
+
   const habitStats = useMemo(() => {
     return habits.map(h => ({
       ...h,
       totalCompletions: h.completions.length,
       last7Count: last7.filter(d => h.completions.includes(d)).length,
       currentStreak: h.streak || 0,
-      bestStreak: h.bestStreak || 0,
     })).sort((a, b) => b.totalCompletions - a.totalCompletions);
   }, [habits, last7]);
 
   const levelColor = getLevelColor(currentLevel);
   const levelTitle = getLevelTitle(currentLevel);
   const levelIcon = getLevelIcon(currentLevel);
-
   const totalXP = profile.totalXP || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -84,7 +341,7 @@ export default function StatsPanel() {
         <button
           onClick={() => setShowWeeklyReview(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all"
-          style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22c55e' }}
+          style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30`, color: accentColor }}
         >
           <span>📋</span>
           <span className="hidden sm:inline">Weekly Review</span>
@@ -118,11 +375,7 @@ export default function StatsPanel() {
         <div className="flex items-center gap-4 mb-5">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg flex-shrink-0"
-            style={{
-              background: `${levelColor}25`,
-              border: `2px solid ${levelColor}60`,
-              boxShadow: `0 0 20px ${levelColor}40`,
-            }}
+            style={{ background: `${levelColor}25`, border: `2px solid ${levelColor}60`, boxShadow: `0 0 20px ${levelColor}40` }}
           >
             {levelIcon}
           </div>
@@ -136,7 +389,7 @@ export default function StatsPanel() {
                 {levelTitle}
               </span>
             </div>
-            <p className="text-slate-400 text-sm mt-1">{totalXP.toLocaleString()} total XP earned</p>
+            <p className="text-[#6b7280] text-sm mt-1">{totalXP.toLocaleString()} total XP earned</p>
           </div>
         </div>
         <XPBar totalXP={totalXP} />
@@ -144,108 +397,44 @@ export default function StatsPanel() {
 
       {/* Key metrics grid */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="Total Completions"
-          value={stats.totalCompletions.toLocaleString()}
-          icon="✅"
-          color="#10B981"
-        />
-        <StatCard
-          label="Best Streak Ever"
-          value={`${stats.bestStreakEver}d`}
-          icon="🏆"
-          color="#F59E0B"
-          sub="all habits"
-        />
-        <StatCard
-          label="Active Streak"
-          value={`${stats.currentLongestStreak}d`}
-          icon="🔥"
-          color="#F97316"
-          sub="current"
-        />
-        <StatCard
-          label="Last 7 Days Rate"
-          value={`${stats.completionRateLast7}%`}
-          icon="📈"
-          color="#8B5CF6"
-          sub="completion"
-        />
+        <StatCard label="Total Completions" value={stats.totalCompletions.toLocaleString()} icon="✅" color={accentColor} />
+        <StatCard label="Best Streak Ever" value={`${stats.bestStreakEver}d`} icon="🏆" color="#F59E0B" sub="all time" />
+        <StatCard label="Active Streak" value={`${stats.currentLongestStreak}d`} icon="🔥" color="#F97316" sub="current" />
+        <StatCard label="7-Day Rate" value={`${stats.completionRateLast7}%`} icon="📈" color="#8B5CF6" sub="completion" />
       </div>
 
-      {/* Weekly heatmap */}
-      <div className="rounded-3xl p-5 border border-white/8 bg-white/3">
-        <h3 className="text-white font-semibold text-base mb-4">Weekly Overview</h3>
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          {weeklyData.map(({ date, completed, total, pct, day }) => {
-            const isToday = date === today;
-            const opacity = total === 0 ? 0.15 : 0.15 + pct * 0.85;
-            return (
-              <div key={date} className="flex flex-col items-center gap-1.5">
-                <div
-                  className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
-                  style={{
-                    background: total === 0 ? 'rgba(255,255,255,0.04)' : pct === 1 ? '#22c55e' : pct >= 0.5 ? `rgba(34,197,94,${0.15 + pct * 0.6})` : `rgba(34,197,94,${0.08 + pct * 0.4})`,
-                    border: isToday ? '1.5px solid rgba(34,197,94,0.6)' : '1px solid rgba(255,255,255,0.04)',
-                    boxShadow: pct === 1 ? '0 0 8px rgba(34,197,94,0.4)' : '',
-                  }}
-                >
-                  {pct === 1 && total > 0 && (
-                    <span className="text-sm">⭐</span>
-                  )}
-                </div>
-                <span className="text-xs text-slate-500 font-medium">{day[0]}</span>
-                <span className="text-xs text-slate-600">{total > 0 ? `${completed}/${total}` : '—'}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2 mt-3 justify-end">
-          <span className="text-slate-500 text-xs">Less</span>
-          {['rgba(255,255,255,0.04)', 'rgba(34,197,94,0.15)', 'rgba(34,197,94,0.4)', 'rgba(34,197,94,0.7)', '#22c55e'].map((c, i) => (
-            <div
-              key={i}
-              className="w-3 h-3 rounded-sm"
-              style={{ background: c }}
-            />
-          ))}
-          <span className="text-slate-500 text-xs">More</span>
-        </div>
-      </div>
+      {/* TradingView-style chart */}
+      {habits.length > 0 && (
+        <CompletionChart habits={habits} accentColor={accentColor} />
+      )}
 
       {/* Per-habit breakdown */}
       {habitStats.length > 0 && (
-        <div className="rounded-3xl p-5 border border-white/8 bg-white/3">
-          <h3 className="text-white font-semibold text-base mb-4">Habit Breakdown</h3>
+        <div className="rounded-3xl p-5 border border-white/5" style={{ background: '#0d0d0d' }}>
+          <h3 className="text-white font-semibold text-sm mb-4">Habit Breakdown</h3>
           <div className="space-y-3">
             {habitStats.map(habit => {
-              const pct = habit.totalCompletions > 0
-                ? Math.round((habit.last7Count / 7) * 100)
-                : 0;
+              const pct = Math.round((habit.last7Count / 7) * 100);
               return (
                 <div key={habit.id} className="flex items-center gap-3">
-                  <span className="text-xl flex-shrink-0">{habit.emoji}</span>
+                  <span className="text-lg flex-shrink-0">{habit.emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1 gap-2">
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
                       <span className="text-white text-sm font-medium truncate">{habit.name}</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {habit.currentStreak > 0 && (
                           <span className="text-orange-400 text-xs font-medium">🔥{habit.currentStreak}</span>
                         )}
-                        <span className="text-slate-400 text-xs">{habit.totalCompletions}x</span>
+                        <span className="text-[#4b5563] text-xs">{habit.totalCompletions}×</span>
                       </div>
                     </div>
-                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1 bg-white/8 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${pct}%`,
-                          background: habit.color,
-                          boxShadow: `0 0 6px ${habit.color}60`,
-                        }}
+                        style={{ width: `${pct}%`, background: habit.color, boxShadow: `0 0 6px ${habit.color}60` }}
                       />
                     </div>
-                    <span className="text-slate-500 text-xs">{pct}% this week</span>
+                    <span className="text-[#4b5563] text-[10px] mt-0.5 block">{pct}% this week</span>
                   </div>
                 </div>
               );

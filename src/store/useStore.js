@@ -267,6 +267,15 @@ function getInitialState() {
           ...parsed.profile,
         };
       }
+      if (parsed.settings) {
+        parsed.settings = {
+          theme: 'dark',
+          accentColor: '#22c55e',
+          appName: 'RoutineQuest',
+          appIcon: '⚡',
+          ...parsed.settings,
+        };
+      }
       return {
         toasts: [],
         confetti: false,
@@ -296,7 +305,7 @@ function getInitialState() {
       { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
       { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
     ],
-    settings: { theme: 'dark' },
+    settings: { theme: 'dark', accentColor: '#22c55e', appName: 'RoutineQuest', appIcon: '⚡' },
     toasts: [],
     confetti: false,
     levelUpPending: null,

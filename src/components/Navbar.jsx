@@ -3,16 +3,19 @@ import { useHabits } from '../hooks/useHabits.js';
 import { getLevelColor } from '../utils/gamification.js';
 
 const NAV_ITEMS = [
-  { id: 'today',        label: 'Today',    icon: '🏠' },
-  { id: 'habits',       label: 'Habits',   icon: '✅' },
-  { id: 'stats',        label: 'Stats',    icon: '📊' },
-  { id: 'achievements', label: 'Medals',   icon: '🏅' },
-  { id: 'journal',      label: 'Journal',  icon: '📖' },
-  { id: 'events',       label: 'Events',   icon: '✈️' },
+  { id: 'today',        label: 'Today',     icon: '🏠' },
+  { id: 'habits',       label: 'Habits',    icon: '✅' },
+  { id: 'stats',        label: 'Stats',     icon: '📊' },
+  { id: 'achievements', label: 'Medals',    icon: '🏅' },
+  { id: 'journal',      label: 'Journal',   icon: '📖' },
+  { id: 'events',       label: 'Events',    icon: '✈️' },
+  { id: 'customize',    label: 'Customize', icon: '🎨' },
 ];
 
 export default function Navbar({ activeTab, setActiveTab, onExport }) {
-  const { profile, achievements, currentLevel, completionPercent, todayHabits, completedToday, updateProfile } = useHabits();
+  const { profile, achievements, currentLevel, completionPercent, todayHabits, completedToday, updateProfile, accentColor, settings } = useHabits();
+  const appName = (settings && settings.appName) || 'RoutineQuest';
+  const appIcon = (settings && settings.appIcon) || '⚡';
   const levelColor = getLevelColor(currentLevel);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name || 'Rafael');
@@ -31,11 +34,11 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8 px-1">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
-            style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
-            ⚡
+            style={{ background: `${accentColor}25`, border: `1px solid ${accentColor}50` }}>
+            {appIcon}
           </div>
           <div>
-            <h1 className="text-white font-bold text-sm leading-none tracking-tight">RoutineQuest</h1>
+            <h1 className="text-white font-bold text-sm leading-none tracking-tight">{appName}</h1>
             <p className="text-[#4b5563] text-[10px] mt-0.5">Level up your life</p>
           </div>
         </div>
@@ -80,7 +83,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           <div className="h-1 bg-[#1f1f1f] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${completionPercent}%`, background: completionPercent === 100 ? '#22c55e' : '#3f3f3f' }}
+              style={{ width: `${completionPercent}%`, background: completionPercent === 100 ? accentColor : '#3f3f3f' }}
             />
           </div>
           <p className="text-[#4b5563] text-[10px] mt-1.5">
@@ -106,7 +109,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
                 <span className="text-base w-5 text-center leading-none">{item.icon}</span>
                 <span className="text-sm">{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1 h-4 rounded-full" style={{ background: '#22c55e' }} />
+                  <div className="ml-auto w-1 h-4 rounded-full" style={{ background: accentColor }} />
                 )}
               </button>
             );

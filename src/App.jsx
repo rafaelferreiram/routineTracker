@@ -1,4 +1,4 @@
-import { useState, Component } from 'react';
+import { useState, useEffect, Component } from 'react';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -30,11 +30,23 @@ import ToastContainer from './components/ToastNotification.jsx';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import LevelUpCeremony from './components/LevelUpCeremony.jsx';
 import ExportImport from './components/ExportImport.jsx';
+import CustomizePanel from './components/CustomizePanel.jsx';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
-  const { confetti, levelUpPending, clearLevelUp } = useHabits();
+  const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
+
+  // Inject accent color as CSS variable whenever it changes
+  useEffect(() => {
+    const hex = accentColor || '#22c55e';
+    document.documentElement.style.setProperty('--accent', hex);
+    // Compute RGB triplet for rgba() usage
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    document.documentElement.style.setProperty('--accent-rgb', `${r} ${g} ${b}`);
+  }, [accentColor]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -44,6 +56,7 @@ function AppContent() {
       case 'achievements':  return <AchievementsPanel />;
       case 'journal':       return <JournalPanel />;
       case 'events':        return <EventsPanel />;
+      case 'customize':     return <CustomizePanel setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />;
       default:              return <Dashboard setActiveTab={setActiveTab} />;
     }
   };

@@ -97,6 +97,10 @@ export function useHabits() {
     dispatch({ type: ACTIONS.UPDATE_PROFILE, payload: profileData });
   }, [dispatch]);
 
+  const updateSettings = useCallback((settingsData) => {
+    dispatch({ type: ACTIONS.UPDATE_SETTINGS, payload: settingsData });
+  }, [dispatch]);
+
   const removeToast = useCallback((toastId) => {
     dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { id: toastId } });
   }, [dispatch]);
@@ -165,12 +169,15 @@ export function useHabits() {
     };
   }, [today]);
 
+  const accentColor = (settings && settings.accentColor) || '#22c55e';
+
   return {
     // State
     habits,
     profile,
     achievements,
-    settings,
+    settings: settings || {},
+    accentColor,
     toasts,
     confetti,
     events: events || [],
@@ -198,6 +205,7 @@ export function useHabits() {
     deleteHabit,
     toggleCompletion,
     updateProfile,
+    updateSettings,
     removeToast,
     addToast,
     getHabitById,

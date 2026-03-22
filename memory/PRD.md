@@ -81,6 +81,20 @@
 - Legacy rq_users localStorage migration
 - displayName passed to StoreProvider via `{...theme, displayName}`
 - New user account creation works end-to-end
+- Imported real user data dump from GitHub for both rafael and gabriela
+
+### 2026-03-22 - Mobile Navigation Redesign
+- New bottom nav with 4 primary tabs: Today, Habits, Stats, Journal + "More" button
+- "More" slides up an iOS-style sheet with: Medals, Events, Friends, Customize, Profile + Sign out
+- More sheet has user info strip (avatar, name, level/XP)
+- Active tab state: accent color label + light tinted background pill
+- More button highlights when user is on a secondary tab
+- Mobile header redesigned: user avatar + level/XP (tappable → Profile) + section badge + backup button
+- Desktop sidebar completely unchanged (all 9 items, full profile card)
+- Animations: fadeIn for tab transitions, slideUp for More sheet, backdropIn for overlay
+- `viewport-fit=cover` + apple-mobile-web-app-capable meta tags for iPhone notch support
+- `touch-action: manipulation` + `-webkit-tap-highlight-color: transparent` for native-feel touch
+- Safe area insets handled via `env(safe-area-inset-bottom)` in bottom nav
 
 ## Prioritized Backlog
 

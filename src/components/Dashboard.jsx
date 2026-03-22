@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { getGreeting, getFormattedDate, getTodayString, getDayLabel, isHabitApplicableOnDate } from '../utils/dateUtils.js';
 import { getLevelColor } from '../utils/gamification.js';
@@ -348,10 +348,10 @@ function GrowthChart({ habits }) {
 // ─── Health Growth Chart ──────────────────────────────────────────────────────
 
 const H_METRICS = [
-  { key: 'water',    emoji: '💧', label: 'Water',    color: '#3b82f6', goal: 2,  unit: 'L' },
-  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#8b5cf6', goal: 8,  unit: 'h' },
-  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#F59E0B', goal: 5,  unit: '' },
-  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#10B981', goal: 2,  unit: '' },
+  { key: 'water',    emoji: '💧', label: 'Water',    color: '#38bdf8', goal: 2, unit: 'L',        fmt: v => `${v}L`             },
+  { key: 'sleep',    emoji: '😴', label: 'Sleep',    color: '#a78bfa', goal: 8, unit: 'h',        fmt: v => `${v}h`             },
+  { key: 'meals',    emoji: '🍽️', label: 'Meals',    color: '#fb923c', goal: 5, unit: 'meals',    fmt: v => `${v}/5 meals`      },
+  { key: 'exercise', emoji: '💪', label: 'Exercise', color: '#34d399', goal: 2, unit: 'sessions', fmt: v => `${v} session${v !== 1 ? 's' : ''}` },
 ];
 
 const MEAL_IDS_H = ['habit_breakfast', 'habit_lunch', 'habit_dinner', 'habit_fruits', 'habit_vitamins'];
@@ -407,55 +407,202 @@ function getHealthRaw(habits, key, dateStr) {
   return '—';
 }
 
-function HealthMultiLineChart({ days }) {
-  // days: [{ dateStr, water, sleep, meals, exercise }] — values 0-1 or null
-  const W = 400, H = 110;
-  const pad = { l: 22, r: 4, t: 8, b: 4 };
+// Smooth cardinal-spline path builder (TradingView-style curves)
+function buildCardinalPath(pts, tension = 0.4) {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
+function buildSeriesPaths(days, key, innerW, innerH, pad) {
+  const n = days.length;
+  const baseline = pad.t + innerH;
+  let linePath = '';
+  let areaPath = '';
+  let seg = [];
+
+  const flushSeg = () => {
+    if (seg.length >= 2) {
+      const lp = buildCardinalPath(seg);
+      linePath += lp + ' ';
+      // area: drop to baseline and back
+      areaPath += `M ${seg[0].x},${baseline} L ${seg[0].x},${seg[0].y} ` +
+        buildCardinalPath(seg).replace(/^M [^ ]+ [^ ]+ /, '') +
+        ` L ${seg[seg.length - 1].x},${baseline} Z `;
+    }
+    seg = [];
+  };
+
+  days.forEach((d, i) => {
+    const v = d[key];
+    if (v !== null) {
+      seg.push({ x: pad.l + (i / (n - 1)) * innerW, y: pad.t + (1 - Math.min(v, 1)) * innerH });
+    } else {
+      flushSeg();
+    }
+  });
+  flushSeg();
+  return { linePath, areaPath };
+}
+
+function HealthMultiLineChart({ days, today }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const svgRef = useRef(null);
+
+  const W = 560, H = 160;
+  const pad = { l: 26, r: 8, t: 10, b: 22 };
   const innerW = W - pad.l - pad.r;
   const innerH = H - pad.t - pad.b;
   const n = days.length;
 
-  if (n < 2) return <p className="text-slate-600 text-xs text-center py-6">Not enough data yet</p>;
+  const handleMouseMove = useCallback((e) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * W;
+    const idx = Math.round(((relX - pad.l) / innerW) * (n - 1));
+    setHoverIdx(Math.max(0, Math.min(n - 1, idx)));
+  }, [n, innerW, pad.l]);
 
-  const buildPath = (key) => {
-    let path = '';
-    let seg = [];
-    const flush = () => {
-      if (seg.length >= 2) {
-        path += `M ${seg[0].x} ${seg[0].y} ` + seg.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ') + ' ';
-      }
-      seg = [];
-    };
-    days.forEach((d, i) => {
-      const v = d[key];
-      if (v !== null) {
-        seg.push({ x: pad.l + (i / (n - 1)) * innerW, y: pad.t + (1 - Math.min(v, 1)) * innerH });
-      } else {
-        flush();
-      }
-    });
-    flush();
-    return path;
-  };
+  if (n < 2) return <p className="text-slate-600 text-xs text-center py-8">Not enough data yet</p>;
+
+  const hoverX = hoverIdx !== null ? pad.l + (hoverIdx / (n - 1)) * innerW : null;
+  const hoverDay = hoverIdx !== null ? days[hoverIdx] : null;
+
+  // Pre-build all series paths
+  const series = H_METRICS.map(m => ({
+    ...m,
+    ...buildSeriesPaths(days, m.key, innerW, innerH, pad),
+  }));
+
+  // X-axis label positions
+  const xLabels = [];
+  const step = Math.ceil(n / 5);
+  for (let i = 0; i < n; i += step) xLabels.push(i);
+  if (xLabels[xLabels.length - 1] !== n - 1) xLabels.push(n - 1);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
-      {/* Gridlines */}
-      {[0, 0.5, 1].map(v => {
-        const y = pad.t + (1 - v) * innerH;
-        return (
-          <g key={v}>
-            <line x1={pad.l} y1={y} x2={pad.l + innerW} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-            <text x={pad.l - 3} y={y + 3} fill="rgba(255,255,255,0.2)" fontSize="7" textAnchor="end">{Math.round(v * 100)}%</text>
-          </g>
-        );
-      })}
-      {/* Series lines */}
-      {H_METRICS.map(m => {
-        const d = buildPath(m.key);
-        return d ? <path key={m.key} d={d} fill="none" stroke={m.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" /> : null;
-      })}
-    </svg>
+    <div className="relative select-none">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        <defs>
+          {series.map(m => (
+            <linearGradient key={m.key} id={`hg-${m.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={m.color} stopOpacity="0.18" />
+              <stop offset="85%" stopColor={m.color} stopOpacity="0" />
+            </linearGradient>
+          ))}
+        </defs>
+
+        {/* Horizontal grid */}
+        {[0, 0.25, 0.5, 0.75, 1].map(v => {
+          const y = pad.t + (1 - v) * innerH;
+          const isMajor = v === 0 || v === 1;
+          return (
+            <g key={v}>
+              <line x1={pad.l} y1={y} x2={pad.l + innerW} y2={y}
+                stroke={isMajor ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'}
+                strokeWidth="1"
+              />
+              <text x={pad.l - 4} y={y + 3.5} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="end">
+                {Math.round(v * 100)}%
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Area fills */}
+        {series.map(m => m.areaPath && (
+          <path key={`a-${m.key}`} d={m.areaPath} fill={`url(#hg-${m.key})`} />
+        ))}
+
+        {/* Lines */}
+        {series.map(m => m.linePath && (
+          <path key={`l-${m.key}`} d={m.linePath} fill="none"
+            stroke={m.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          />
+        ))}
+
+        {/* Crosshair */}
+        {hoverX !== null && hoverDay && (
+          <>
+            <line x1={hoverX} y1={pad.t} x2={hoverX} y2={pad.t + innerH}
+              stroke="rgba(255,255,255,0.25)" strokeWidth="1" strokeDasharray="3,3"
+            />
+            {series.map(m => {
+              const v = hoverDay[m.key];
+              if (v === null) return null;
+              const cy = pad.t + (1 - Math.min(v, 1)) * innerH;
+              return (
+                <g key={`dot-${m.key}`}>
+                  <circle cx={hoverX} cy={cy} r="3.5" fill="#0f0f1a" stroke={m.color} strokeWidth="2" />
+                  <circle cx={hoverX} cy={cy} r="6" fill={m.color} opacity="0.15" />
+                </g>
+              );
+            })}
+          </>
+        )}
+
+        {/* X-axis labels */}
+        {xLabels.map(i => {
+          const x = pad.l + (i / (n - 1)) * innerW;
+          const d = days[i];
+          if (!d) return null;
+          const dayNum = new Date(d.dateStr + 'T00:00:00').getDate();
+          return (
+            <text key={i} x={x} y={H - 3} fill="rgba(255,255,255,0.22)" fontSize="7.5" textAnchor="middle">
+              {dayNum}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* Hover tooltip */}
+      {hoverDay && hoverX !== null && (
+        <div
+          className="absolute top-0 pointer-events-none z-20"
+          style={{
+            left: `${Math.min(Math.max((hoverX / W) * 100, 10), 72)}%`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="rounded-2xl border border-white/12 shadow-2xl px-3.5 py-3 text-xs"
+            style={{ background: 'rgba(10,10,20,0.96)', backdropFilter: 'blur(12px)', minWidth: '130px' }}>
+            <p className="text-slate-400 mb-2 font-semibold text-[10px] uppercase tracking-wider">
+              {new Date(hoverDay.dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </p>
+            {H_METRICS.map(m => {
+              const v = hoverDay[m.key];
+              const rawVal = v !== null ? Math.round(v * m.goal * 10) / 10 : null;
+              return (
+                <div key={m.key} className="flex items-center gap-2 py-0.5">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
+                  <span className="text-slate-400 text-[10px]">{m.label}</span>
+                  <span className="ml-auto font-bold text-[10px]" style={{ color: v !== null ? m.color : 'rgb(75,85,99)' }}>
+                    {rawVal !== null ? m.fmt(rawVal) : '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -507,18 +654,21 @@ function HealthGrowthChart({ habits, achievements }) {
   const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const unlockedSet = new Set((achievements || []).map(a => a.id));
 
-  // Today's snapshot values for the legend
-  const todaySnap = H_METRICS.map(m => ({
-    ...m,
-    raw: getHealthRaw(habits, m.key, today),
-    pct: getHealthPct(habits, m.key, today),
-  }));
+  // Today's snapshot for the stat cards
+  const todaySnap = H_METRICS.map(m => {
+    const pct = getHealthPct(habits, m.key, today);
+    const rawVal = pct !== null ? Math.round(pct * m.goal * 10) / 10 : null;
+    return { ...m, pct, rawVal };
+  });
 
   return (
-    <div className="rounded-3xl p-5 border border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-white font-semibold text-base flex items-center gap-2">🏥 Health Overview</h3>
+    <div className="rounded-3xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-wrap gap-2">
+        <div>
+          <h3 className="text-white font-bold text-base flex items-center gap-2">🏥 Health Overview</h3>
+          <p className="text-slate-500 text-[11px] mt-0.5">All metrics as % of daily goal</p>
+        </div>
         <div className="flex rounded-xl overflow-hidden border border-white/10">
           {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
@@ -530,81 +680,102 @@ function HealthGrowthChart({ habits, achievements }) {
         </div>
       </div>
 
-      {/* Legend — shows today's values for each metric */}
-      <div className="grid grid-cols-2 gap-2 mb-4 sm:grid-cols-4">
-        {todaySnap.map(m => (
-          <div key={m.key} className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-            style={{ background: `${m.color}0d`, borderColor: `${m.color}25` }}>
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
-            <div className="min-w-0">
-              <p className="text-[10px] text-slate-500 leading-none">{m.emoji} {m.label}</p>
-              <p className="text-xs font-bold leading-none mt-0.5" style={{ color: m.pct !== null ? m.color : 'rgb(100,116,139)' }}>
-                {m.raw}
-              </p>
+      {/* Today's stat cards */}
+      <div className="grid grid-cols-4 gap-0 border-y border-white/6">
+        {todaySnap.map((m, idx) => (
+          <div key={m.key}
+            className={`px-4 py-3 ${idx < 3 ? 'border-r border-white/6' : ''}`}
+            style={{ background: m.pct !== null ? `${m.color}08` : 'transparent' }}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+              <span className="text-[10px] text-slate-500 font-medium">{m.emoji} {m.label}</span>
             </div>
+            <p className="font-black text-sm leading-none" style={{ color: m.pct !== null ? m.color : 'rgb(75,85,99)' }}>
+              {m.rawVal !== null ? m.fmt(m.rawVal) : '—'}
+            </p>
+            {m.pct !== null && (
+              <div className="mt-1.5 h-1 rounded-full bg-white/8 overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(m.pct * 100, 100)}%`, background: m.color }} />
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Month: multi-line chart */}
-      {view === 'month' && (
-        <div>
-          <p className="text-slate-500 text-xs mb-3">{currentMonthLabel} — % of daily goal per metric</p>
-          <HealthMultiLineChart days={monthDays} />
-          <div className="flex justify-between mt-1.5 px-0.5">
-            {[1, 7, 14, 21, 28].filter(d => d <= monthDays.length).map(d => (
-              <span key={d} className="text-[9px] text-slate-600">{d}</span>
-            ))}
-            {monthDays.length > 28 && <span className="text-[9px] text-slate-600">{monthDays.length}</span>}
-          </div>
-        </div>
-      )}
+      {/* Chart area */}
+      <div className="px-5 pt-4 pb-2">
+        {view === 'month' && (
+          <>
+            <HealthMultiLineChart days={monthDays} today={today} />
+            <p className="text-[10px] text-slate-600 mt-1">{currentMonthLabel}</p>
+          </>
+        )}
 
-      {/* Semester: grouped bars per month */}
-      {view === 'semester' && (
-        <div>
-          <p className="text-slate-500 text-xs mb-3">Last 6 months — avg % of goal per metric</p>
-          <div className="flex items-end gap-2" style={{ height: '110px' }}>
-            {semesterMonths.map(({ label, isCurrent, ...vals }) => (
-              <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                <div className="flex-1 w-full flex items-end gap-[2px]">
-                  {H_METRICS.map(m => {
-                    const pct = vals[m.key];
-                    const barH = pct !== null ? Math.max(4, Math.round(pct * 90)) : 3;
-                    return (
-                      <div key={m.key} className="flex-1 rounded-t-sm transition-all duration-700"
-                        style={{ height: `${barH}px`, background: pct !== null ? m.color : 'rgba(255,255,255,0.06)', minHeight: '3px', opacity: pct !== null ? 0.85 : 1, boxShadow: isCurrent && pct !== null ? `0 0 6px ${m.color}50` : '' }}
-                        title={`${label} ${m.label}: ${pct !== null ? Math.round(pct * 100) + '%' : 'no data'}`}
-                      />
-                    );
-                  })}
+        {view === 'semester' && (
+          <div>
+            <p className="text-slate-500 text-xs mb-3">Last 6 months — avg daily % of goal</p>
+            <div className="flex items-end gap-2" style={{ height: '110px' }}>
+              {semesterMonths.map(({ label, isCurrent, ...vals }) => (
+                <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="flex-1 w-full flex items-end gap-[2px]">
+                    {H_METRICS.map(m => {
+                      const pct = vals[m.key];
+                      const barH = pct !== null ? Math.max(4, Math.round(pct * 90)) : 3;
+                      return (
+                        <div key={m.key}
+                          className="flex-1 rounded-t-sm transition-all duration-700"
+                          style={{
+                            height: `${barH}px`,
+                            background: pct !== null ? m.color : 'rgba(255,255,255,0.06)',
+                            minHeight: '3px',
+                            opacity: pct !== null ? 0.85 : 1,
+                            boxShadow: isCurrent && pct !== null ? `0 0 8px ${m.color}60` : '',
+                          }}
+                          title={`${label} ${m.label}: ${pct !== null ? Math.round(pct * 100) + '%' : 'no data'}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
                 </div>
-                <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>{label}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 mt-3 justify-center">
+              {H_METRICS.map(m => (
+                <div key={m.key} className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: m.color }} />
+                  <span className="text-[10px] text-slate-400">{m.emoji} {m.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Health medals */}
-      <div className="mt-4 pt-4 border-t border-white/5">
-        <p className="text-slate-600 text-[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
+      <div className="mx-5 mb-5 mt-1 pt-4 border-t border-white/6">
+        <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mb-2.5">Health Medals</p>
         <div className="flex flex-wrap gap-2">
           {HEALTH_MEDALS.map(ach => {
             const unlocked = unlockedSet.has(ach.id);
             return (
               <div key={ach.id}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs transition-all"
                 style={{
-                  background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
-                  borderColor: unlocked ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.07)',
-                  color: unlocked ? '#fcd34d' : 'rgb(100,116,139)',
-                  boxShadow: unlocked ? '0 0 8px rgba(250,204,21,0.2)' : '',
+                  background: unlocked ? 'rgba(250,204,21,0.1)' : 'rgba(255,255,255,0.03)',
+                  borderColor: unlocked ? 'rgba(250,204,21,0.4)' : 'rgba(255,255,255,0.07)',
+                  color: unlocked ? '#fde68a' : 'rgb(71,85,105)',
+                  boxShadow: unlocked ? '0 0 12px rgba(250,204,21,0.15)' : '',
                 }}
                 title={ach.desc}
               >
-                <span>{unlocked ? '🏅' : '🔒'}</span>
-                <span className="font-medium">{ach.emoji} {ach.label}</span>
+                <span className="text-sm">{unlocked ? '🏅' : '🔒'}</span>
+                <div>
+                  <span className="font-semibold">{ach.emoji} {ach.label}</span>
+                  {unlocked && <span className="text-[9px] ml-1 opacity-60">earned</span>}
+                </div>
               </div>
             );
           })}

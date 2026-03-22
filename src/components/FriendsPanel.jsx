@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { useAuth } from '../store/useAuth.js';
 import { getLevelFromXP, getLevelColor, getLevelIcon, ACHIEVEMENTS } from '../utils/gamification.js';
 import { getTodayString, isHabitApplicableToday, calculateStreak } from '../utils/dateUtils.js';
-import GrowthChart from './GrowthChart.jsx';
+import GrowthChart, { RANGES } from './GrowthChart.jsx';
+
+const FRIEND_RANGES = RANGES.slice(0, 2); // 1W, 1M only
 
 function readUserData(username) {
   try {
@@ -95,7 +97,7 @@ function FriendCard({ user }) {
       <div className="p-4 space-y-4">
         {/* Growth chart */}
         {habits.length > 0 && (
-          <GrowthChart habits={habits} accentColor={accent} compact />
+          <GrowthChart habits={habits} accentColor={accent} compact ranges={FRIEND_RANGES} />
         )}
 
         {/* Stats row */}

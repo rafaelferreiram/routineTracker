@@ -81,12 +81,13 @@ export function ChartGrid() {
 
 // ─── GrowthChart (reusable) ────────────────────────────────────────────────────
 
-export default function GrowthChart({ habits, accentColor, compact = false }) {
-  const [rangeIdx, setRangeIdx] = useState(1);
+export default function GrowthChart({ habits, accentColor, compact = false, ranges: rangesProp }) {
+  const activeRanges = rangesProp || RANGES;
+  const [rangeIdx, setRangeIdx] = useState(Math.min(1, (rangesProp || RANGES).length - 1));
   const [hover, setHover] = useState(null);
   const svgRef = useRef(null);
   const accent = accentColor || '#22c55e';
-  const range = RANGES[rangeIdx];
+  const range = activeRanges[rangeIdx];
 
   const data = useMemo(() => {
     return getLastNDays(range.days).map(date => {
@@ -150,7 +151,7 @@ export default function GrowthChart({ habits, accentColor, compact = false }) {
           <p className="text-white font-semibold text-sm">Overall Progress</p>
           {!compact && <p className="text-[#4b5563] text-xs mt-0.5">Daily habit completion rate</p>}
         </div>
-        <RangeSelector ranges={RANGES} activeIdx={rangeIdx} onSelect={(i) => { setRangeIdx(i); setHover(null); }} accent={accent} />
+        <RangeSelector ranges={activeRanges} activeIdx={rangeIdx} onSelect={(i) => { setRangeIdx(i); setHover(null); }} accent={accent} />
       </div>
 
       <div className="flex items-center gap-4 px-4 pb-2">

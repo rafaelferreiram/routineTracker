@@ -6,6 +6,7 @@ import ProgressRing from './ProgressRing.jsx';
 import XPBar from './XPBar.jsx';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
+import SharedGrowthChart from './GrowthChart.jsx';
 
 // ─── Category Config ──────────────────────────────────────────────────────────
 
@@ -208,182 +209,6 @@ function LineChart({ data, color = '#26a69a' }) {
             <p className="text-slate-400 text-[10px]">{hoverPt.label}</p>
             <p className="font-bold text-sm" style={{ color }}>{Math.round((hoverPt.pct || 0) * 100)}%</p>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GrowthChart({ habits }) {
-  const [view, setView] = useState('month');
-  const [chartType, setChartType] = useState('bar');
-  const today = getTodayString();
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-
-  const monthData = useMemo(() => {
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      return { day, dateStr, pct: getDayCompletion(habits, dateStr, today) };
-    });
-  }, [habits, today, currentYear, currentMonth]);
-
-  const semesterData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(currentYear, currentMonth - (5 - i), 1);
-      const y = d.getFullYear();
-      const m = d.getMonth();
-      const daysInMonth = new Date(y, m + 1, 0).getDate();
-      const label = d.toLocaleDateString('en-US', { month: 'short' });
-      let sum = 0, count = 0;
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const pct = getDayCompletion(habits, dateStr, today);
-        if (pct !== null) { sum += pct; count++; }
-      }
-      return { label, pct: count > 0 ? sum / count : null, isCurrent: i === 5 };
-    });
-  }, [habits, today, currentYear, currentMonth]);
-
-  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  return (
-    <div
-      className="rounded-3xl p-5 border border-white/8"
-      style={{ background: 'rgba(255,255,255,0.02)' }}
-    >
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-white font-semibold text-base flex items-center gap-2">📈 Growth</h3>
-        <div className="flex items-center gap-2">
-          {/* Period toggle */}
-          <div className="flex rounded-xl overflow-hidden border border-white/10">
-            {[['month', 'Month'], ['semester', '6 Months']].map(([v, label]) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className="px-3 py-1.5 text-xs font-medium transition-all"
-                style={{
-                  background: view === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)',
-                  color: view === v ? 'white' : 'rgb(148,163,184)',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {/* Chart type toggle */}
-          <div className="flex rounded-xl overflow-hidden border border-white/10">
-            {[['bar', '▐▌'], ['line', '∿']].map(([v, icon]) => (
-              <button
-                key={v}
-                onClick={() => setChartType(v)}
-                className="px-3 py-1.5 text-xs font-medium transition-all"
-                title={v === 'bar' ? 'Bar chart' : 'Line chart'}
-                style={{
-                  background: chartType === v ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.03)',
-                  color: chartType === v ? 'white' : 'rgb(148,163,184)',
-                }}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {view === 'month' && (() => {
-        const validData = monthData.filter(d => d.pct !== null);
-        return (
-          <div>
-            <p className="text-slate-500 text-xs mb-3">{currentMonthLabel} — daily completion %</p>
-
-            {chartType === 'line' ? (
-              <LineChart data={monthData} color="#26a69a" />
-            ) : (
-              <>
-                <div className="flex items-end gap-[2px]" style={{ height: '100px' }}>
-                  {monthData.map(({ day, dateStr, pct }) => {
-                    const isToday = dateStr === today;
-                    const barH = pct !== null ? Math.max(4, Math.round(pct * 96)) : 3;
-                    const color = pct === null
-                      ? 'rgba(255,255,255,0.05)'
-                      : pct >= 1 ? '#10B981' : pct >= 0.5 ? '#26a69a' : '#065f46';
-                    return (
-                      <div
-                        key={day}
-                        className="flex-1 rounded-t-sm transition-all"
-                        style={{
-                          height: `${barH}px`,
-                          background: color,
-                          outline: isToday ? `1px solid ${color === 'rgba(255,255,255,0.05)' ? '#26a69a' : color}` : '',
-                          boxShadow: isToday ? `0 0 6px ${color}80` : '',
-                          minHeight: '3px',
-                        }}
-                        title={pct !== null ? `${dateStr}: ${Math.round(pct * 100)}%` : dateStr}
-                      />
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between mt-1.5 px-0.5">
-                  {[1, 7, 14, 21, 28].filter(d => d <= monthData.length).map(d => (
-                    <span key={d} className="text-[9px] text-slate-600">{d}</span>
-                  ))}
-                  {monthData.length > 28 && (
-                    <span className="text-[9px] text-slate-600">{monthData.length}</span>
-                  )}
-                </div>
-              </>
-            )}
-
-            {validData.length > 0 && (
-              <p className="text-[11px] text-slate-500 mt-2 text-right">
-                Avg {Math.round(validData.reduce((s, d) => s + d.pct, 0) / validData.length * 100)}% ·{' '}
-                Best {Math.round(Math.max(...validData.map(d => d.pct)) * 100)}%
-              </p>
-            )}
-          </div>
-        );
-      })()}
-
-      {view === 'semester' && (
-        <div>
-          <p className="text-slate-500 text-xs mb-3">Last 6 months — average daily completion %</p>
-          {chartType === 'line' ? (
-            <LineChart data={semesterData} color="#26a69a" />
-          ) : (
-            <div className="flex items-end gap-3" style={{ height: '110px' }}>
-              {semesterData.map(({ label, pct, isCurrent }) => {
-                const barH = pct !== null ? Math.max(6, Math.round(pct * 90)) : 3;
-                const color = pct === null
-                  ? 'rgba(255,255,255,0.05)'
-                  : pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#26a69a' : '#065f46';
-                return (
-                  <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="flex-1 w-full flex flex-col justify-end items-center gap-0.5">
-                      {pct !== null && (
-                        <span className="text-[9px] text-slate-400">{Math.round(pct * 100)}%</span>
-                      )}
-                      <div
-                        className="w-full rounded-t-lg transition-all duration-700"
-                        style={{
-                          height: `${barH}px`,
-                          background: color,
-                          minHeight: '3px',
-                          boxShadow: isCurrent && pct !== null ? `0 0 8px ${color}60` : '',
-                        }}
-                      />
-                    </div>
-                    <span className={`text-[10px] font-medium ${isCurrent ? 'text-white' : 'text-slate-500'}`}>
-                      {label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -1069,6 +894,7 @@ export default function Dashboard({ setActiveTab }) {
     moods,
     logMood,
     addToast,
+    accentColor,
   } = useHabits();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1365,7 +1191,7 @@ export default function Dashboard({ setActiveTab }) {
       )}
 
       {/* ── Growth Chart ──────────────────────────────────────────────────── */}
-      {habits.length > 0 && <GrowthChart habits={habits} />}
+      {habits.length > 0 && <SharedGrowthChart habits={habits} accentColor={accentColor} />}
 
       {/* ── Health Growth Chart ───────────────────────────────────────────── */}
       {habits.length > 0 && <HealthGrowthChart habits={habits} achievements={achievements} />}

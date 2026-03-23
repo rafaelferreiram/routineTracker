@@ -37,6 +37,7 @@ import ProfilePanel from './components/ProfilePanel.jsx';
 import FriendsPanel from './components/FriendsPanel.jsx';
 import OnboardingCarousel from './components/OnboardingCarousel.jsx';
 import PWAInstallPrompt from './components/PWAInstallPrompt.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
 
 const ONBOARDING_KEY = 'routinetracker_onboarding_complete';
 
@@ -102,6 +103,7 @@ function AppContent() {
       case 'customize':     return <CustomizePanel setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />;
       case 'friends':       return <FriendsPanel />;
       case 'profile':       return <ProfilePanel />;
+      case 'admin':         return <AdminPanel />;
       default:              return <Dashboard setActiveTab={setActiveTab} />;
     }
   };

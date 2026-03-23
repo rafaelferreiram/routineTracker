@@ -331,18 +331,36 @@ def login(req: AuthReq, request: Request):
     user = users_c.find_one({'username': username})
     if not user:
         raise HTTPException(status_code=400, detail='User not found')
+    
+    # Check if user is disabled
+    if user.get('disabled'):
+        raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+    
+    if not user.get('password_hash'):
+        raise HTTPException(status_code=400, detail='Esta conta não tem senha. Use o login com Google.')
+    
     if not check_pw(req.password, user['password_hash']):
         raise HTTPException(status_code=400, detail='Wrong password')
+    
+    # Update last login timestamp
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'last_login_at': datetime.now(timezone.utc)}}
+    )
+    
+    is_admin = user.get('is_admin', False)
+    
     token = make_token(str(user['_id']), user['username'])
     return {
         'token': token,
         'user': {
             'id': str(user['_id']),
             'username': user['username'],
-            'displayName': user['display_name'],
+            'displayName': user.get('display_name', user['username']),
             'email': user.get('email', ''),
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
+            'isAdmin': is_admin,
         }
     }
 
@@ -367,11 +385,21 @@ def login_email(req: EmailLoginReq, request: Request):
     if not user:
         raise HTTPException(status_code=400, detail='Email não encontrado')
     
+    # Check if user is disabled
+    if user.get('disabled'):
+        raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+    
     if not user.get('password_hash'):
         raise HTTPException(status_code=400, detail='Esta conta não tem senha. Use o login com Google.')
     
     if not check_pw(req.password, user['password_hash']):
         raise HTTPException(status_code=400, detail='Senha incorreta')
+    
+    # Update last login timestamp
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'last_login_at': datetime.now(timezone.utc)}}
+    )
     
     token = make_token(str(user['_id']), user['username'])
     return {
@@ -473,58 +501,71 @@ def google_auth(req: GoogleAuthReq):
     email_lower  = google_email.lower()
     name         = g.get('name', google_email.split('@')[0])
     picture      = g.get('picture', '')
-    google_id    = g.get('sub', g.get('id', ''))
+    google_id    = g.get('sub', g.get('id', ''))  # Google's unique user ID
 
     print(f'[GOOGLE AUTH] Google returned: email={google_email}, name={name}, google_id={google_id}, picture={picture[:50] if picture else "None"}')
 
+    if not google_id:
+        print(f'[GOOGLE AUTH] WARNING: No google_id (sub) returned from Google!')
+    
     if not email_lower:
         raise HTTPException(status_code=400, detail='No email from Google')
 
-    # 2. Find existing user by email (case-insensitive search) - Multiple strategies
+    # 2. Find existing user - PRIORITY ORDER:
+    #    1. google_id (most reliable - never changes)
+    #    2. email (fallback for older accounts)
     import re
     
     user = None
+    found_by = None
     
-    # Strategy 1: Exact lowercase match
-    user = users_c.find_one({'email': email_lower})
-    print(f'[GOOGLE AUTH] Search 1 (exact lowercase): {user is not None}')
+    # PRIORITY 1: Search by google_id (most reliable identifier)
+    if google_id:
+        user = users_c.find_one({'google_id': google_id})
+        if user:
+            found_by = 'google_id'
+            print(f'[GOOGLE AUTH] ✓ Found user by google_id: {user["username"]}')
     
-    # Strategy 2: Exact original case match
+    # PRIORITY 2: Search by email (case-insensitive)
     if not user:
-        user = users_c.find_one({'email': google_email})
-        print(f'[GOOGLE AUTH] Search 2 (exact original): {user is not None}')
+        user = users_c.find_one({'email': email_lower})
+        if user:
+            found_by = 'email_exact'
+            print(f'[GOOGLE AUTH] ✓ Found user by email (exact): {user["username"]}')
     
-    # Strategy 3: Case-insensitive regex
     if not user:
         user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
-        print(f'[GOOGLE AUTH] Search 3 (regex): {user is not None}')
-    
-    # Strategy 4: Search by google_id if we've seen this user before
-    if not user and google_id:
-        user = users_c.find_one({'google_id': google_id})
-        print(f'[GOOGLE AUTH] Search 4 (google_id): {user is not None}')
+        if user:
+            found_by = 'email_regex'
+            print(f'[GOOGLE AUTH] ✓ Found user by email (regex): {user["username"]}')
     
     if user:
-        print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}')
+        # Check if user is disabled
+        if user.get('disabled'):
+            raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+        
+        print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}, found_by={found_by}')
         
         # Existing user — update Google info but keep their username and ID
         uid      = str(user['_id'])
         username = user['username']
-        display  = name  # Use Google's display name
+        display  = user.get('display_name') or name  # Keep existing display name if set
         theme    = user.get('theme', {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'})
         
-        # Update user with Google info and picture
-        users_c.update_one(
-            {'_id': user['_id']},
-            {'$set': {
-                'picture':        picture,
-                'google_id':      google_id,
-                'display_name':   display,
-                'email':          email_lower,  # Ensure email is set
-                'last_google_at': datetime.now(timezone.utc),
-            }}
-        )
-        print(f'[GOOGLE AUTH] Updated existing user {username} with id {uid}, picture updated')
+        # Update user with Google info - ALWAYS set google_id for future lookups
+        update_data = {
+            'picture':        picture,
+            'google_id':      google_id,  # CRITICAL: Always save google_id
+            'email':          email_lower,  # Ensure email is set
+            'last_login_at':  datetime.now(timezone.utc),
+        }
+        
+        # Only update display_name if not already set
+        if not user.get('display_name'):
+            update_data['display_name'] = name
+        
+        users_c.update_one({'_id': user['_id']}, {'$set': update_data})
+        print(f'[GOOGLE AUTH] Updated existing user {username} with google_id={google_id}')
         
         # Verify user_data exists for this user
         existing_data = data_c.find_one({'user_id': uid})
@@ -540,7 +581,7 @@ def google_auth(req: GoogleAuthReq):
             })
     else:
         # New user — derive username from email
-        print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}')
+        print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}, google_id: {google_id}')
         base = email_lower.split('@')[0]
         base = ''.join(c for c in base if c.isalnum() or c == '_')[:20] or 'user'
         username = base
@@ -556,13 +597,14 @@ def google_auth(req: GoogleAuthReq):
             'display_name':  display,
             'email':         email_lower,
             'picture':       picture,
-            'google_id':     google_id,
+            'google_id':     google_id,  # CRITICAL: Save google_id for future lookups
             'auth_provider': 'google',
             'theme':         theme,
             'created_at':    datetime.now(timezone.utc),
+            'last_login_at': datetime.now(timezone.utc),
         })
         uid = str(ins.inserted_id)
-        print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}')
+        print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}, google_id={google_id}')
         
         # Create initial user_data document
         data_c.insert_one({
@@ -602,6 +644,7 @@ def google_auth(req: GoogleAuthReq):
             'picture':     picture,
             'theme':       theme,
             'authProvider': 'google',
+            'googleId':    google_id,  # Return google_id for debugging
         }
     }
 
@@ -619,6 +662,298 @@ def save_data(req: DataReq, cu: dict = Depends(get_current_user)):
         upsert=True,
     )
     return {'ok': True}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ ADMIN PANEL ENDPOINTS ════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD_HASH = hash_pw('@dm1n')  # Password: @dm1n
+
+def get_admin_user(cu: dict = Depends(get_current_user)):
+    """Dependency that verifies the user is an admin."""
+    if cu.get('username') != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail='Admin access required')
+    return cu
+
+# Create admin user on startup if not exists
+def ensure_admin_exists():
+    admin = users_c.find_one({'username': ADMIN_USERNAME})
+    if not admin:
+        print('[ADMIN] Creating admin user...')
+        users_c.insert_one({
+            'username': ADMIN_USERNAME,
+            'display_name': 'Administrador',
+            'password_hash': ADMIN_PASSWORD_HASH,
+            'is_admin': True,
+            'created_at': datetime.now(timezone.utc),
+        })
+        print('[ADMIN] Admin user created: admin/@dm1n')
+    else:
+        # Ensure admin has is_admin flag
+        if not admin.get('is_admin'):
+            users_c.update_one({'username': ADMIN_USERNAME}, {'$set': {'is_admin': True}})
+
+ensure_admin_exists()
+
+@app.get('/api/admin/stats')
+def admin_get_stats(cu: dict = Depends(get_admin_user)):
+    """Get platform statistics for admin dashboard."""
+    from bson import ObjectId
+    
+    # Total users (excluding admin)
+    total_users = users_c.count_documents({'username': {'$ne': ADMIN_USERNAME}})
+    
+    # Active users (logged in last 7 days)
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    active_users = users_c.count_documents({
+        'username': {'$ne': ADMIN_USERNAME},
+        'last_login_at': {'$gte': week_ago}
+    })
+    
+    # Users created today
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    new_users_today = users_c.count_documents({
+        'username': {'$ne': ADMIN_USERNAME},
+        'created_at': {'$gte': today_start}
+    })
+    
+    # Users by auth provider
+    google_users = users_c.count_documents({'auth_provider': 'google'})
+    password_users = total_users - google_users
+    
+    # Disabled users
+    disabled_users = users_c.count_documents({'disabled': True})
+    
+    # Total habits across all users
+    pipeline = [
+        {'$project': {'habits_count': {'$size': {'$ifNull': ['$data.habits', []]}}}},
+        {'$group': {'_id': None, 'total': {'$sum': '$habits_count'}}}
+    ]
+    habits_result = list(data_c.aggregate(pipeline))
+    total_habits = habits_result[0]['total'] if habits_result else 0
+    
+    # Total events across all users
+    pipeline = [
+        {'$project': {'events_count': {'$size': {'$ifNull': ['$data.events', []]}}}},
+        {'$group': {'_id': None, 'total': {'$sum': '$events_count'}}}
+    ]
+    events_result = list(data_c.aggregate(pipeline))
+    total_events = events_result[0]['total'] if events_result else 0
+    
+    # Daily login counts for last 7 days
+    daily_logins = []
+    for i in range(7):
+        day_start = (datetime.now(timezone.utc) - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        count = users_c.count_documents({
+            'username': {'$ne': ADMIN_USERNAME},
+            'last_login_at': {'$gte': day_start, '$lt': day_end}
+        })
+        daily_logins.append({
+            'date': day_start.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    
+    return {
+        'total_users': total_users,
+        'active_users': active_users,
+        'new_users_today': new_users_today,
+        'google_users': google_users,
+        'password_users': password_users,
+        'disabled_users': disabled_users,
+        'total_habits': total_habits,
+        'total_events': total_events,
+        'daily_logins': list(reversed(daily_logins)),
+    }
+
+@app.get('/api/admin/users')
+def admin_get_users(
+    cu: dict = Depends(get_admin_user),
+    skip: int = 0,
+    limit: int = 50,
+    search: str = None,
+    filter_type: str = None  # 'google', 'password', 'disabled'
+):
+    """Get list of all users with their stats."""
+    from bson import ObjectId
+    
+    query = {'username': {'$ne': ADMIN_USERNAME}}
+    
+    if search:
+        query['$or'] = [
+            {'username': {'$regex': search, '$options': 'i'}},
+            {'email': {'$regex': search, '$options': 'i'}},
+            {'display_name': {'$regex': search, '$options': 'i'}},
+        ]
+    
+    if filter_type == 'google':
+        query['auth_provider'] = 'google'
+    elif filter_type == 'password':
+        query['password_hash'] = {'$exists': True}
+        query['auth_provider'] = {'$ne': 'google'}
+    elif filter_type == 'disabled':
+        query['disabled'] = True
+    
+    # Get users
+    users_cursor = users_c.find(query, {
+        '_id': 1, 'username': 1, 'display_name': 1, 'email': 1, 
+        'picture': 1, 'auth_provider': 1, 'google_id': 1,
+        'created_at': 1, 'last_login_at': 1, 'disabled': 1,
+        'disabled_features': 1
+    }).sort('created_at', -1).skip(skip).limit(limit)
+    
+    users_list = []
+    for u in users_cursor:
+        uid = str(u['_id'])
+        
+        # Get user data stats
+        user_data = data_c.find_one({'user_id': uid}, {'_id': 0, 'data': 1})
+        data = user_data.get('data', {}) if user_data else {}
+        
+        users_list.append({
+            'id': uid,
+            'username': u.get('username'),
+            'displayName': u.get('display_name'),
+            'email': u.get('email'),
+            'picture': u.get('picture'),
+            'authProvider': u.get('auth_provider', 'password'),
+            'googleId': u.get('google_id'),
+            'createdAt': u.get('created_at').isoformat() if u.get('created_at') else None,
+            'lastLoginAt': u.get('last_login_at').isoformat() if u.get('last_login_at') else None,
+            'disabled': u.get('disabled', False),
+            'disabledFeatures': u.get('disabled_features', []),
+            'stats': {
+                'habits': len(data.get('habits', [])),
+                'events': len(data.get('events', [])),
+                'totalXP': data.get('profile', {}).get('totalXP', 0),
+                'achievements': len(data.get('achievements', [])),
+            }
+        })
+    
+    total = users_c.count_documents(query)
+    
+    return {
+        'users': users_list,
+        'total': total,
+        'skip': skip,
+        'limit': limit,
+    }
+
+class AdminUserAction(BaseModel):
+    user_id: str
+    action: str  # 'disable', 'enable', 'reset_password', 'toggle_feature'
+    new_password: str = None
+    feature: str = None
+
+@app.post('/api/admin/user/action')
+def admin_user_action(req: AdminUserAction, cu: dict = Depends(get_admin_user)):
+    """Perform admin action on a user."""
+    from bson import ObjectId
+    
+    try:
+        user = users_c.find_one({'_id': ObjectId(req.user_id)})
+    except:
+        raise HTTPException(status_code=400, detail='Invalid user ID')
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    if user.get('username') == ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail='Cannot modify admin user')
+    
+    if req.action == 'disable':
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled': True, 'disabled_at': datetime.now(timezone.utc)}}
+        )
+        return {'ok': True, 'message': f'User {user["username"]} disabled'}
+    
+    elif req.action == 'enable':
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled': False}, '$unset': {'disabled_at': ''}}
+        )
+        return {'ok': True, 'message': f'User {user["username"]} enabled'}
+    
+    elif req.action == 'reset_password':
+        if not req.new_password:
+            raise HTTPException(status_code=400, detail='New password required')
+        
+        is_valid, error = validate_password(req.new_password)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error)
+        
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'password_hash': hash_pw(req.new_password)}}
+        )
+        return {'ok': True, 'message': f'Password reset for {user["username"]}'}
+    
+    elif req.action == 'toggle_feature':
+        if not req.feature:
+            raise HTTPException(status_code=400, detail='Feature name required')
+        
+        current_features = user.get('disabled_features', [])
+        
+        if req.feature in current_features:
+            # Enable feature
+            current_features.remove(req.feature)
+            message = f'Feature {req.feature} enabled for {user["username"]}'
+        else:
+            # Disable feature
+            current_features.append(req.feature)
+            message = f'Feature {req.feature} disabled for {user["username"]}'
+        
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled_features': current_features}}
+        )
+        return {'ok': True, 'message': message, 'disabledFeatures': current_features}
+    
+    else:
+        raise HTTPException(status_code=400, detail=f'Unknown action: {req.action}')
+
+@app.get('/api/admin/user/{user_id}')
+def admin_get_user_detail(user_id: str, cu: dict = Depends(get_admin_user)):
+    """Get detailed info for a specific user."""
+    from bson import ObjectId
+    
+    try:
+        user = users_c.find_one({'_id': ObjectId(user_id)})
+    except:
+        raise HTTPException(status_code=400, detail='Invalid user ID')
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    uid = str(user['_id'])
+    user_data = data_c.find_one({'user_id': uid}, {'_id': 0, 'data': 1, 'updated_at': 1})
+    data = user_data.get('data', {}) if user_data else {}
+    
+    return {
+        'user': {
+            'id': uid,
+            'username': user.get('username'),
+            'displayName': user.get('display_name'),
+            'email': user.get('email'),
+            'picture': user.get('picture'),
+            'authProvider': user.get('auth_provider', 'password'),
+            'googleId': user.get('google_id'),
+            'createdAt': user.get('created_at').isoformat() if user.get('created_at') else None,
+            'lastLoginAt': user.get('last_login_at').isoformat() if user.get('last_login_at') else None,
+            'disabled': user.get('disabled', False),
+            'disabledFeatures': user.get('disabled_features', []),
+        },
+        'data': {
+            'habits': data.get('habits', []),
+            'events': data.get('events', []),
+            'profile': data.get('profile', {}),
+            'settings': data.get('settings', {}),
+            'achievements': data.get('achievements', []),
+            'lastUpdated': user_data.get('updated_at').isoformat() if user_data and user_data.get('updated_at') else None,
+        }
+    }
 
 # ── Friends Collection ──────────────────────────────────────────────────────────
 friends_c = db['friends']

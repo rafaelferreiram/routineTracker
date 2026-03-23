@@ -92,6 +92,15 @@
 - App now renders correctly on all modern mobile devices (iPhone 14 Pro, etc.)
 - 100% test pass rate (iteration 11)
 
+### 2026-03-23 - Onboarding & PWA Install Fixes (COMPLETED)
+- Fixed onboarding showing multiple times: now saves `onboardingCompleted` to database settings (synced across devices)
+- Added `synced` state to wait for server data before checking onboarding
+- Created native-style PWA install prompt (`PWAInstallPrompt.jsx`) - appears automatically after onboarding
+- Simple Yes/No prompt: "Adicionar à Tela Inicial?" with "Sim, instalar" / "Agora não" buttons
+- iOS-specific instructions shown for Safari users
+- Simplified onboarding from 9 slides to 7 focused slides
+- Added install slide with platform-specific instructions
+
 ### 2026-03-23 - Data Sync & Account Diagnosis System
 - Created `/api/sync/import` endpoint for cross-environment data synchronization
 - Created `/api/sync/setup-password` endpoint for adding password to Google-only accounts

@@ -141,55 +141,43 @@ const SLIDES = [
     id: 'welcome',
     tag: 'Bem-vindo',
     title: 'Sua jornada começa aqui',
-    description: 'Vamos mostrar como usar o RoutineTracker em poucos passos.',
+    description: 'O RoutineTracker ajuda você a criar e manter hábitos, acompanhar seu progresso e atingir seus objetivos.',
   },
   {
     id: 'add-habit',
     tag: 'Passo 1',
-    title: 'Adicione seus hábitos',
-    description: 'Toque no botão + para criar um novo hábito. Escolha emoji, nome, categoria e frequência.',
+    title: 'Crie seus hábitos',
+    description: 'Toque no + para adicionar um hábito. Defina emoji, nome, categoria e frequência (diário, dias específicos, etc).',
   },
   {
     id: 'complete-habit',
     tag: 'Passo 2', 
-    title: 'Marque como feito',
-    description: 'Toque no círculo para marcar o hábito como completo. Você ganha XP e mantém seu streak!',
-  },
-  {
-    id: 'view-stats',
-    tag: 'Passo 3',
-    title: 'Acompanhe seu progresso',
-    description: 'Na aba Stats, veja gráficos do seu desempenho ao longo do tempo.',
-  },
-  {
-    id: 'events',
-    tag: 'Passo 4',
-    title: 'Agende eventos',
-    description: 'Adicione viagens, compromissos ou metas futuras na aba Events.',
+    title: 'Marque e ganhe XP',
+    description: 'Complete hábitos para ganhar XP e subir de nível. Mantenha streaks para bônus extras!',
   },
   {
     id: 'ai-assistant',
-    tag: 'Novidade',
-    title: 'Conheça o TARS',
-    description: 'Seu assistente IA pessoal! Fale por voz e ele responde por voz. Digite texto e ele responde por texto.',
+    tag: 'TARS',
+    title: 'Seu assistente pessoal',
+    description: 'O TARS pode criar hábitos, planejar viagens e responder perguntas. Fale por voz ou digite!',
   },
   {
-    id: 'medals',
-    tag: 'Passo 5',
-    title: 'Conquiste medalhas',
-    description: 'Complete desafios para desbloquear medalhas. São 30 conquistas no total!',
+    id: 'events',
+    tag: 'Eventos',
+    title: 'Planeje viagens e metas',
+    description: 'Adicione eventos futuros como viagens, compromissos ou metas. O TARS ajuda a montar roteiros!',
   },
   {
-    id: 'tips',
-    tag: 'Dicas',
-    title: 'Aproveite ao máximo',
-    description: 'Personalize cores em Customize. Adicione amigos em Friends. Instale o app na home!',
+    id: 'install',
+    tag: 'Instalar',
+    title: 'Adicione à tela inicial',
+    description: 'Instale o app para acesso rápido. Funciona offline e parece um app nativo!',
   },
   {
     id: 'ready',
     tag: 'Pronto!',
-    title: 'Agora é com você',
-    description: 'Comece criando seu primeiro hábito. Consistência é a chave do sucesso!',
+    title: 'Vamos começar?',
+    description: 'Crie seu primeiro hábito e comece sua jornada. Consistência é a chave!',
   },
 ];
 
@@ -363,6 +351,76 @@ function TipsVisual() {
   );
 }
 
+function InstallVisual() {
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  return (
+    <div className="space-y-4">
+      {/* App icon preview */}
+      <div className="flex justify-center">
+        <div 
+          className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg"
+          style={{ 
+            background: '#1a1a1a', 
+            border: '1px solid #2a2a2a',
+            boxShadow: '0 8px 32px rgba(34, 197, 94, 0.2)'
+          }}
+        >
+          <img 
+            src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" 
+            alt="App Icon" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+      
+      {/* Installation steps */}
+      <div className="rounded-xl p-4" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
+        {isIOS ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">1</span>
+              <span className="text-white text-sm">Toque em <span className="text-[#22c55e]">Compartilhar</span> (↑)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">2</span>
+              <span className="text-white text-sm">"Adicionar à Tela de Início"</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">3</span>
+              <span className="text-white text-sm">Toque em <span className="text-[#22c55e]">Adicionar</span></span>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📲</span>
+              <span className="text-white text-sm">Após o tutorial, você verá um botão para instalar</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <span className="text-white text-sm">Basta tocar em "Sim" e pronto!</span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Benefits */}
+      <div className="flex gap-2 justify-center">
+        <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#22c55e15', color: '#22c55e', border: '1px solid #22c55e30' }}>
+          Offline
+        </span>
+        <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#3b82f615', color: '#3b82f6', border: '1px solid #3b82f630' }}>
+          Rápido
+        </span>
+        <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#f59e0b15', color: '#f59e0b', border: '1px solid #f59e0b30' }}>
+          Notificações
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ReadyVisual() {
   return (
     <div className="relative w-24 h-24 mx-auto">
@@ -412,6 +470,7 @@ export default function OnboardingCarousel({ onComplete }) {
       case 'ai-assistant': return <AIAssistantVisual />;
       case 'medals': return <MedalsVisual />;
       case 'tips': return <TipsVisual />;
+      case 'install': return <InstallVisual />;
       case 'ready': return <ReadyVisual />;
       default: return null;
     }

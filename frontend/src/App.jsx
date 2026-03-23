@@ -36,6 +36,7 @@ import CustomizePanel from './components/CustomizePanel.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import FriendsPanel from './components/FriendsPanel.jsx';
 import OnboardingCarousel from './components/OnboardingCarousel.jsx';
+import PWAInstallPrompt from './components/PWAInstallPrompt.jsx';
 
 const ONBOARDING_KEY = 'routinetracker_onboarding_complete';
 
@@ -43,20 +44,40 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const { confetti, levelUpPending, clearLevelUp, accentColor, settings, updateSettings, synced } = useHabits();
   const { currentUser } = useAuth();
 
   // Check if onboarding should be shown (first time user)
+  // Wait for data to be synced from server before deciding
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem(ONBOARDING_KEY);
-    if (!hasSeenOnboarding) {
+    // Don't check until data is synced from server
+    if (!synced) return;
+    
+    // Check database setting first (synced across devices)
+    const onboardingDone = settings?.onboardingCompleted;
+    // Also check localStorage as backup
+    const localOnboardingDone = localStorage.getItem(ONBOARDING_KEY);
+    
+    if (!onboardingDone && !localOnboardingDone) {
       setShowOnboarding(true);
     }
-  }, []);
+  }, [synced, settings?.onboardingCompleted]);
 
   const handleOnboardingComplete = () => {
+    // Save to localStorage (immediate, works offline)
     localStorage.setItem(ONBOARDING_KEY, 'true');
+    // Save to database settings (syncs across devices)
+    updateSettings({ onboardingCompleted: true });
     setShowOnboarding(false);
+    
+    // After onboarding, show PWA install prompt if not installed
+    setTimeout(() => {
+      const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (!isInstalled) {
+        setShowInstallPrompt(true);
+      }
+    }, 500);
   };
 
   const handleShowOnboarding = () => {
@@ -121,6 +142,7 @@ function AppContent() {
         />
       )}
       {showExport && <ExportImport onClose={() => setShowExport(false)} />}
+      {showInstallPrompt && <PWAInstallPrompt onClose={() => setShowInstallPrompt(false)} />}
     </div>
   );
 }

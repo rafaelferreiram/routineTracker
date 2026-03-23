@@ -26,9 +26,9 @@ JWT_ALG    = 'HS256'
 JWT_DAYS   = 90
 # Use user's OpenAI key or fallback to Emergent LLM Key
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-46676Cb71D8D39eA36')
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # Google Maps API Key
-GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyDLQT29DB2Lt7yxkCTzEG5LCYk4V8zOB14')
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')

@@ -3,6 +3,7 @@ import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getLevelColor } from '../utils/gamification.js';
+import { LanguageSelectorMenu } from './LanguageSelector.jsx';
 import AIChat from './AIChat.jsx';
 
 const NAV_KEYS = [
@@ -228,6 +229,11 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
               <span>⊞</span><span>{t('nav.backup')}</span>
             </button>
           )}
+          {/* Language */}
+          <div className="mt-3 flex items-center justify-between px-1">
+            <span className="text-[#4b5563] text-xs">{t('settings.language')}</span>
+            <LanguageSelectorMenu />
+          </div>
         </div>
       </aside>
 
@@ -525,9 +531,16 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
               )}
             </div>
 
-            {/* Sign out footer */}
-            <div className="flex-shrink-0 p-4 border-t"
+            {/* Language + Sign out footer */}
+            <div className="flex-shrink-0 p-4 border-t space-y-3"
               style={{ borderColor: 'var(--bg-border,#1f1f1f)', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+              
+              {/* Language selector row */}
+              <div className="flex items-center justify-between">
+                <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">{t('settings.language')}</span>
+                <LanguageSelectorMenu />
+              </div>
+
               <button data-testid="menu-signout-btn"
                 onClick={() => { setShowMenu(false); logout(); }}
                 className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-all active:scale-[0.98]"

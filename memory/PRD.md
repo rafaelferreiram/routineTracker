@@ -83,6 +83,29 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - PWA Responsiveness for iPhones (COMPLETED)
+- Added `viewport-fit=cover` to index.html meta tag
+- Implemented CSS safe area variables (`--sat`, `--sab`, `--sal`, `--sar`)
+- Created `.main-content-safe` class with dynamic padding for mobile and desktop
+- Updated mobile header with `env(safe-area-inset-top)` for notch/Dynamic Island
+- Updated mobile bottom nav with `max(env(safe-area-inset-bottom), 8px)` for home indicator
+- App now renders correctly on all modern mobile devices (iPhone 14 Pro, etc.)
+- 100% test pass rate (iteration 11)
+
+### 2026-03-23 - Data Sync & Account Diagnosis System
+- Created `/api/sync/import` endpoint for cross-environment data synchronization
+- Created `/api/sync/setup-password` endpoint for adding password to Google-only accounts
+- Created `/api/sync/diagnose` endpoint for diagnosing account issues by email
+- Script `sync_to_production.py` for pushing data from preview to production
+- Script `diagnose_production.py` for diagnosing production account state
+- Security hardening: Rate limiting on auth endpoints, password strength validation
+
+### 2026-03-23 - Security Audit & Documentation
+- Performed security audit (`SECURITY_AUDIT.md`)
+- Implemented rate limiting on /api/auth/* endpoints (10 login attempts/min, 5 register attempts/min)
+- Updated README.md with professional documentation
+- Resolved Git merge conflicts for PR integration
+
 ### 2026-03-23 - Google Maps Places Integration
 - New PlaceSearch.jsx component for searching real-world places
 - Google Maps JavaScript API + Places API integration
@@ -217,15 +240,15 @@
 - Email verification with Resend (pending API key)
 
 ## Next Tasks
-1. Push notifications for daily habit reminders (P1)
-2. Test Google Login in production with real Google account
+1. ⚠️ **VERIFICAÇÃO USUÁRIO**: Google Login em produção (diagnóstico necessário)
+2. Push notifications for daily habit reminders (P1)
 3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_10.json` - Latest (19/19 tests - Full TARS + Google Places Integration)
-- `/app/test_reports/iteration_9.json` - Previous (6/6 tests - Google Maps PlaceSearch Integration)
+- `/app/test_reports/iteration_11.json` - Latest (10/10 tests - PWA Responsiveness for iPhones)
+- `/app/test_reports/iteration_10.json` - Previous (19/19 tests - Full TARS + Google Places Integration)
+- `/app/test_reports/iteration_9.json` - Earlier (6/6 tests - Google Maps PlaceSearch Integration)
 - `/app/test_reports/iteration_8.json` - Earlier (8/8 tests - TARS Function Calling - P0 Bug Fixed)
-- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests)
 
 ## 3rd Party Integrations
 - **MongoDB Atlas**: Production database
@@ -239,7 +262,9 @@
 - **Emergent-managed Google Auth**: Social login (workaround active)
 
 ## Known Issues
-- Google Login: Use o preview URL ou faça deploy para produção
+- **Google Login em Produção (P0)**: Usuário reporta que Google Login em `routine-tracker.com` mostra conta vazia. Código atualizado foi deployed, cache limpo, mas problema persiste. 
+  - **Diagnóstico necessário**: Executar `python diagnose_production.py` ou acessar `https://routine-tracker.com/api/sync/diagnose?email=ferreira.rafah@gmail.com&secret=routine_sync_2026_secret`
+  - **Possíveis causas**: Base de produção não tem o usuário com este email, ou o endpoint `/api/sync/diagnose` não foi deployed
 - Google Maps API deprecation warnings (PlacesService deprecated March 2025, but still functional)
 
 ## Deploy Checklist

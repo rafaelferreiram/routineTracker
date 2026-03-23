@@ -239,6 +239,88 @@ def sync_setup_password(req: SyncDataReq):
         'username': user['username']
     }
 
+
+@app.get('/api/sync/diagnose')
+def sync_diagnose(email: str, secret: str):
+    """Diagnose account issues for an email. Protected by secret."""
+    if secret != SYNC_SECRET:
+        raise HTTPException(status_code=403, detail='Invalid sync secret')
+    
+    import re
+    email_lower = email.lower().strip()
+    
+    results = {
+        'email_searched': email_lower,
+        'users_found': [],
+        'user_data_found': [],
+    }
+    
+    # Search for users with this email (multiple strategies)
+    users_exact = list(users_c.find({'email': email_lower}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1, 'google_id': 1, 'created_at': 1}))
+    users_regex = list(users_c.find({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1, 'google_id': 1, 'created_at': 1}))
+    
+    # Combine and dedupe
+    seen_ids = set()
+    for u in users_exact + users_regex:
+        uid = str(u['_id'])
+        if uid not in seen_ids:
+            seen_ids.add(uid)
+            results['users_found'].append({
+                'id': uid,
+                'username': u.get('username'),
+                'email': u.get('email'),
+                'auth_provider': u.get('auth_provider', 'password'),
+                'google_id': u.get('google_id'),
+                'created_at': str(u.get('created_at', 'unknown'))
+            })
+    
+    # Also search by username (email prefix)
+    email_prefix = email_lower.split('@')[0]
+    users_by_username = list(users_c.find({'username': email_prefix}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1}))
+    for u in users_by_username:
+        uid = str(u['_id'])
+        if uid not in seen_ids:
+            seen_ids.add(uid)
+            results['users_found'].append({
+                'id': uid,
+                'username': u.get('username'),
+                'email': u.get('email', 'NOT SET'),
+                'auth_provider': u.get('auth_provider', 'password'),
+                'note': 'Found by username match'
+            })
+    
+    # Get user_data for each found user
+    for user_info in results['users_found']:
+        uid = user_info['id']
+        data_doc = data_c.find_one({'user_id': uid})
+        if data_doc:
+            data = data_doc.get('data', {})
+            results['user_data_found'].append({
+                'user_id': uid,
+                'username': user_info['username'],
+                'habits_count': len(data.get('habits', [])),
+                'events_count': len(data.get('events', [])),
+                'total_xp': data.get('profile', {}).get('totalXP', 0),
+                'synced_at': str(data_doc.get('synced_at', 'never'))
+            })
+    
+    # Summary
+    results['summary'] = {
+        'total_users_found': len(results['users_found']),
+        'total_data_docs': len(results['user_data_found']),
+        'recommendation': ''
+    }
+    
+    if len(results['users_found']) == 0:
+        results['summary']['recommendation'] = 'No user found with this email. The user needs to register first or sync data using /api/sync/import with user_info.'
+    elif len(results['users_found']) == 1:
+        results['summary']['recommendation'] = 'Single user found. Google login should work if email matches exactly.'
+    else:
+        results['summary']['recommendation'] = f'Multiple users found ({len(results["users_found"])}). This may cause issues. Consider merging accounts or deleting duplicates.'
+    
+    return results
+
+
 @app.post('/api/auth/login')
 def login(req: AuthReq, request: Request):
     # Rate limit login attempts

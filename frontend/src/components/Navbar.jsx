@@ -7,15 +7,16 @@ const ALL_NAV = [
   { id: 'today',        label: 'Today',     icon: '🏠', section: 'main' },
   { id: 'habits',       label: 'Habits',    icon: '✅', section: 'main' },
   { id: 'stats',        label: 'Stats',     icon: '📊', section: 'main' },
-  { id: 'journal',      label: 'Journal',   icon: '📖', section: 'main' },
-  { id: 'achievements', label: 'Medals',    icon: '🏅', section: 'more' },
+  { id: 'journal',      label: 'Journal',   icon: '📖', section: 'more' },
+  { id: 'achievements', label: 'Medals',    icon: '🏅', section: 'main' },
   { id: 'events',       label: 'Events',    icon: '✈️',  section: 'more' },
   { id: 'friends',      label: 'Friends',   icon: '👥', section: 'more' },
   { id: 'customize',    label: 'Customize', icon: '🎨', section: 'more' },
-  { id: 'profile',      label: 'Profile',   icon: null,  section: 'more' },
+  { id: 'profile',      label: 'Profile',   icon: null,  section: 'bottom' },  // Special - shows avatar
 ];
 
-const BOTTOM_TABS = ALL_NAV.filter(n => n.section === 'main');
+// Bottom tabs: Today, Habits, Stats, Medals, Profile (like Instagram)
+const BOTTOM_TABS = ['today', 'habits', 'stats', 'achievements', 'profile'];
 
 // Avatar component - uses Google photo or initial as fallback
 function Avatar({ picture, initial, size = 36, levelColor, accentColor, className = '' }) {
@@ -234,7 +235,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
       </header>
 
       {/* ════════════════════════════════════════════════════════════
-          MOBILE BOTTOM TAB BAR — 4 tabs, clean & spacious
+          MOBILE BOTTOM TAB BAR — Instagram-style: Today, Habits, Stats, Medals, Profile
       ════════════════════════════════════════════════════════════ */}
       <nav data-testid="mobile-bottom-nav"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
@@ -246,26 +247,44 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
-        <div className="flex items-stretch" style={{ height: 66 }}>
-          {BOTTOM_TABS.map(item => {
-            const isActive = activeTab === item.id;
+        <div className="flex items-stretch" style={{ height: 56 }}>
+          {BOTTOM_TABS.map(tabId => {
+            const item = ALL_NAV.find(n => n.id === tabId);
+            const isActive = activeTab === tabId;
+            const isProfile = tabId === 'profile';
+            
             return (
-              <button key={item.id}
-                data-testid={`mobile-nav-${item.id}`}
-                onClick={() => setActiveTab(item.id)}
-                className="flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 active:scale-90 relative"
+              <button key={tabId}
+                data-testid={`mobile-nav-${tabId}`}
+                onClick={() => setActiveTab(tabId)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
               >
-                {/* Active indicator line */}
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full"
-                    style={{ background: accentColor }} />
+                {isProfile ? (
+                  // Profile tab shows user avatar (Instagram-style)
+                  <div 
+                    className="rounded-full overflow-hidden flex items-center justify-center"
+                    style={{ 
+                      width: 28, 
+                      height: 28,
+                      border: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
+                      background: picture ? 'transparent' : `${levelColor || accentColor}22`,
+                    }}
+                  >
+                    {picture ? (
+                      <img src={picture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-xs font-bold" style={{ color: levelColor || accentColor }}>{initial}</span>
+                    )}
+                  </div>
+                ) : (
+                  // Regular tabs with icons
+                  <span className={`text-[22px] leading-none transition-all duration-200 ${isActive ? '' : 'opacity-40 grayscale'}`}>
+                    {item?.icon}
+                  </span>
                 )}
-                <span className={`text-[26px] leading-none transition-all duration-200 ${isActive ? 'scale-110' : 'scale-100 opacity-50'}`}>
-                  {item.icon}
-                </span>
-                <span className="text-[11px] font-semibold leading-none"
-                  style={{ color: isActive ? accentColor : '#374151' }}>
-                  {item.label}
+                <span className="text-[10px] font-medium leading-none"
+                  style={{ color: isActive ? 'var(--text-primary, #fff)' : 'var(--text-subtle, #4b5563)' }}>
+                  {item?.label}
                 </span>
               </button>
             );

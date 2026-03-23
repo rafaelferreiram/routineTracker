@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { getTodayString } from '../utils/dateUtils.js';
+import EventItinerary from './EventItinerary.jsx';
 
 const EVENT_EMOJIS = ['✈️','🥊','🎉','🎂','💼','🏋️','🥋','🎓','🏀','⚽','🎵','🎤','🏆','🌍','🍽️','❤️','🙏','📅','🎯','🚀','🏖️','🎭','🎬','🤝','💡'];
 const EVENT_COLORS = ['#22c55e','#3b82f6','#f87171','#fbbf24','#a78bfa','#f97316','#ec4899','#06b6d4','#84cc16','#e879f9'];
@@ -478,6 +479,7 @@ export default function EventsPanel() {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [reviewingEvent, setReviewingEvent] = useState(null);
+  const [itineraryEvent, setItineraryEvent] = useState(null);
   const today = getTodayString();
 
   const { upcoming, past } = useMemo(() => {
@@ -494,6 +496,13 @@ export default function EventsPanel() {
   const handleAdd = (data) => { addEvent(data); setShowAdd(false); };
   const handleUpdate = (data) => { updateEvent({ id: editingId, ...data }); setEditingId(null); };
   const handleSaveReview = (review) => { updateEvent({ id: reviewingEvent.id, review }); setReviewingEvent(null); };
+  const handleSaveItinerary = (data) => { updateEvent({ id: itineraryEvent.id, ...data }); setItineraryEvent(null); };
+
+  // Check if event is multi-day (period)
+  const isMultiDayEvent = (event) => {
+    if (!event.endDate || event.endDate === event.date) return false;
+    return getDaysBetween(event.date, event.endDate) > 1;
+  };
 
   return (
     <div className="space-y-6">
@@ -538,41 +547,69 @@ export default function EventsPanel() {
               const days = daysUntil(event.date);
               const isToday = event.date <= today && (event.endDate || event.date) >= today;
               const eventDays = getDaysBetween(event.date, event.endDate || event.date);
+              const isMultiDay = isMultiDayEvent(event);
+              const hasItinerary = event.itinerary && event.itinerary.length > 0;
               
               return editingId === event.id ? (
                 <EventForm key={event.id} initial={event} onSave={handleUpdate} onCancel={() => setEditingId(null)} />
               ) : (
                 <div key={event.id}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl border group"
+                  className="rounded-2xl border overflow-hidden"
                   style={{
                     background: isToday ? `${event.color}10` : 'var(--bg-card)',
                     borderColor: isToday ? `${event.color}40` : 'var(--bg-border)',
                   }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
-                    style={{ background: `${event.color}15`, border: `1.5px solid ${event.color}30` }}>
-                    {event.emoji}
+                  <div className="flex items-center gap-3 p-3.5 group">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
+                      style={{ background: `${event.color}15`, border: `1.5px solid ${event.color}30` }}>
+                      {event.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium text-sm truncate">{event.title}</p>
+                      <p className="text-[#6b7280] text-xs">
+                        {formatShortDate(event.date)}
+                        {eventDays > 1 && ` — ${formatShortDate(event.endDate)}`}
+                        {eventDays > 1 && <span className="text-[#4b5563]"> · {eventDays}d</span>}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm" style={{ color: isToday ? event.color : days <= 7 ? '#fbbf24' : '#6b7280' }}>
+                        {isToday ? 'Agora' : days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : `${days}d`}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                      <button onClick={() => setEditingId(event.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-white text-xs"
+                        style={{ background: 'var(--bg-border)' }}>✏</button>
+                      <button onClick={() => deleteEvent(event.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-red-400 text-xs"
+                        style={{ background: 'var(--bg-border)' }}>✕</button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-sm truncate">{event.title}</p>
-                    <p className="text-[#6b7280] text-xs">
-                      {formatShortDate(event.date)}
-                      {eventDays > 1 && ` — ${formatShortDate(event.endDate)}`}
-                      {eventDays > 1 && <span className="text-[#4b5563]"> · {eventDays}d</span>}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-sm" style={{ color: isToday ? event.color : days <= 7 ? '#fbbf24' : '#6b7280' }}>
-                      {isToday ? 'Agora' : days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : `${days}d`}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                    <button onClick={() => setEditingId(event.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-white text-xs"
-                      style={{ background: 'var(--bg-border)' }}>✏</button>
-                    <button onClick={() => deleteEvent(event.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-red-400 text-xs"
-                      style={{ background: 'var(--bg-border)' }}>✕</button>
-                  </div>
+                  
+                  {/* Itinerary button for multi-day events */}
+                  {isMultiDay && (
+                    <button 
+                      onClick={() => setItineraryEvent(event)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 border-t text-left transition-colors hover:bg-white/5"
+                      style={{ borderColor: 'var(--bg-border)' }}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">📋</span>
+                        <span className="text-sm text-[#9ca3af]">
+                          {hasItinerary ? 'Ver Roteiro' : 'Planejar Roteiro'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasItinerary && (
+                          <span className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: `${event.color}20`, color: event.color }}>
+                            {event.itinerary.reduce((sum, d) => sum + (d.activities?.length || 0), 0)} atividades
+                          </span>
+                        )}
+                        <span className="text-xs" style={{ color: event.color }}>→</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -619,6 +656,15 @@ export default function EventsPanel() {
           event={reviewingEvent} 
           onSave={handleSaveReview} 
           onClose={() => setReviewingEvent(null)} 
+        />
+      )}
+
+      {/* Itinerary Modal */}
+      {itineraryEvent && (
+        <EventItinerary
+          event={itineraryEvent}
+          onSave={handleSaveItinerary}
+          onClose={() => setItineraryEvent(null)}
         />
       )}
     </div>

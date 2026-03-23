@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -6,10 +6,12 @@ from pymongo import MongoClient
 import bcrypt
 from jose import jwt, JWTError
 from datetime import datetime, timezone, timedelta
-from typing import Any, Optional
+from typing import Any, Optional, List
 import os
 import requests as http_req
 from dotenv import load_dotenv
+import asyncio
+import io
 
 load_dotenv()
 
@@ -19,6 +21,9 @@ DB_NAME    = os.environ.get('DB_NAME')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'routinequest_secret_2026')
 JWT_ALG    = 'HS256'
 JWT_DAYS   = 90
+# Use user's OpenAI key or fallback to Emergent LLM Key
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-46676Cb71D8D39eA36')
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')
@@ -584,3 +589,147 @@ def seed_users():
             print(f'[seed] User exists: {username}')
 
 seed_users()
+
+# ── AI Itinerary Routes ────────────────────────────────────────────────────────
+
+class ItineraryRequest(BaseModel):
+    event_title: str
+    start_date: str
+    end_date: str
+    user_message: str
+    current_itinerary: Optional[List[dict]] = None
+
+class TranscribeResponse(BaseModel):
+    text: str
+
+@app.post('/api/ai/itinerary')
+async def generate_itinerary(req: ItineraryRequest, cu: dict = Depends(get_current_user)):
+    """Use GPT to generate or update an event itinerary based on user input."""
+    # Use Emergent LLM Key (works with OpenAI models)
+    api_key = EMERGENT_LLM_KEY
+    if not api_key:
+        raise HTTPException(status_code=500, detail='AI API key not configured')
+    
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    
+    # Calculate event days
+    from datetime import datetime as dt
+    start = dt.strptime(req.start_date, '%Y-%m-%d')
+    end = dt.strptime(req.end_date, '%Y-%m-%d')
+    num_days = (end - start).days + 1
+    
+    # Build day labels
+    day_labels = []
+    current = start
+    for i in range(num_days):
+        day_labels.append(current.strftime('%Y-%m-%d'))
+        current += timedelta(days=1)
+    
+    # Format current itinerary if exists
+    current_itinerary_text = ""
+    if req.current_itinerary and len(req.current_itinerary) > 0:
+        current_itinerary_text = "\n\nRoteiro atual:\n"
+        for day_data in req.current_itinerary:
+            current_itinerary_text += f"\n{day_data.get('date', '')}:\n"
+            for activity in day_data.get('activities', []):
+                current_itinerary_text += f"  - {activity.get('time', '')} {activity.get('title', '')}\n"
+    
+    system_prompt = f"""Você é um assistente de planejamento de viagens e eventos. 
+O usuário está planejando: "{req.event_title}"
+Período: {req.start_date} até {req.end_date} ({num_days} dias)
+Datas disponíveis: {', '.join(day_labels)}
+
+{current_itinerary_text}
+
+Quando o usuário mencionar atividades que quer fazer, organize-as nos dias disponíveis de forma lógica.
+SEMPRE responda em JSON válido com a seguinte estrutura:
+{{
+  "message": "Sua resposta amigável ao usuário",
+  "itinerary": [
+    {{
+      "date": "YYYY-MM-DD",
+      "activities": [
+        {{"time": "10:00", "title": "Nome da atividade", "notes": "Detalhes opcionais"}}
+      ]
+    }}
+  ]
+}}
+
+Se o usuário fizer perguntas ou comentários que não são sobre adicionar atividades, apenas responda na chave "message" e mantenha o itinerary atual ou vazio.
+Seja criativo com horários realistas. Responda SEMPRE em português brasileiro."""
+
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"itinerary_{cu['sub']}_{req.event_title}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-4o")
+        
+        user_msg = UserMessage(text=req.user_message)
+        response = await chat.send_message(user_msg)
+        
+        # Try to parse JSON response
+        import json
+        try:
+            # Clean response - sometimes GPT adds markdown code blocks
+            clean_response = response.strip()
+            if clean_response.startswith('```'):
+                clean_response = clean_response.split('```')[1]
+                if clean_response.startswith('json'):
+                    clean_response = clean_response[4:]
+            if clean_response.endswith('```'):
+                clean_response = clean_response[:-3]
+            
+            parsed = json.loads(clean_response.strip())
+            return {
+                'success': True,
+                'message': parsed.get('message', ''),
+                'itinerary': parsed.get('itinerary', [])
+            }
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return raw message
+            return {
+                'success': True,
+                'message': response,
+                'itinerary': req.current_itinerary or []
+            }
+            
+    except Exception as e:
+        print(f'[AI Itinerary] Error: {e}')
+        raise HTTPException(status_code=500, detail=f'AI error: {str(e)}')
+
+@app.post('/api/ai/transcribe')
+async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_current_user)):
+    """Transcribe audio using OpenAI Whisper."""
+    # Use Emergent LLM Key (works with Whisper)
+    api_key = EMERGENT_LLM_KEY
+    if not api_key:
+        raise HTTPException(status_code=500, detail='AI API key not configured')
+    
+    from emergentintegrations.llm.openai import OpenAISpeechToText
+    
+    # Validate file type
+    allowed_types = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/m4a', 'audio/ogg']
+    if file.content_type and not any(t in file.content_type for t in ['audio', 'video/webm']):
+        raise HTTPException(status_code=400, detail=f'Invalid file type: {file.content_type}. Allowed: mp3, wav, webm, m4a')
+    
+    try:
+        stt = OpenAISpeechToText(api_key=api_key)
+        
+        # Read file content
+        content = await file.read()
+        audio_file = io.BytesIO(content)
+        audio_file.name = file.filename or 'audio.webm'
+        
+        response = await stt.transcribe(
+            file=audio_file,
+            model="whisper-1",
+            response_format="json",
+            language="pt"  # Portuguese
+        )
+        
+        return {'success': True, 'text': response.text}
+        
+    except Exception as e:
+        print(f'[AI Transcribe] Error: {e}')
+        raise HTTPException(status_code=500, detail=f'Transcription error: {str(e)}')

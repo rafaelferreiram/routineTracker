@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
 import { getLevelColor } from '../utils/gamification.js';
@@ -66,6 +66,51 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
   const [editingName, setEditingName] = useState(false);
   const [nameInput,   setNameInput]   = useState(profile?.name || '');
   const [showMenu,    setShowMenu]    = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Capture the beforeinstallprompt event for PWA install
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setIsInstalled(true);
+    }
+
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    
+    // Listen for successful install
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    });
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setInstallPrompt(null);
+    } else {
+      // Show manual instructions for iOS or when prompt not available
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert('Para instalar no iPhone/iPad:\n\n1. Toque no ícone de compartilhar (↑)\n2. Role para baixo e toque em "Adicionar à Tela de Início"\n3. Toque em "Adicionar"');
+      } else {
+        alert('Para instalar:\n\n1. Abra o menu do navegador (⋮)\n2. Toque em "Instalar app" ou "Adicionar à tela inicial"');
+      }
+    }
+    setShowMenu(false);
+  };
 
   const handleNameSave = () => {
     if (nameInput.trim()) updateProfile({ name: nameInput.trim() });
@@ -394,6 +439,29 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
                       ⊞
                     </div>
                     <span className="font-semibold text-[15px]">Backup & Restore</span>
+                  </button>
+                </>
+              )}
+
+              {/* Install App - PWA */}
+              {!isInstalled && (
+                <>
+                  <div className="mx-5 my-3 border-t" style={{ borderColor: 'var(--bg-border,#1f1f1f)' }} />
+                  <button 
+                    onClick={handleInstallClick}
+                    data-testid="install-app-btn"
+                    className="w-full flex items-center gap-3.5 px-4 py-3 transition-all active:opacity-60"
+                  >
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
+                      style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}40` }}>
+                      📲
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="font-semibold text-[15px] block" style={{ color: accentColor }}>
+                        Instalar App
+                      </span>
+                      <span className="text-[11px] text-[#6b7280]">Adicionar à tela inicial</span>
+                    </div>
                   </button>
                 </>
               )}

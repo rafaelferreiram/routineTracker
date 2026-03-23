@@ -936,68 +936,6 @@
         "createdAt": "2026-03-01"
       },
       {
-        "id": "event_nyc_2026",
-        "title": "Viagem NYC",
-        "date": "2026-04-17",
-        "endDate": "2026-04-27",
-        "emoji": "✈️",
-        "color": "#22c55e",
-        "note": "Viagem de trabalho e férias",
-        "createdAt": "2026-03-23T00:00:00Z",
-        "itinerary": [
-          {
-            "date": "2025-04-17",
-            "activities": [
-              {
-                "time": "10:00",
-                "title": "Visita ao Empire State Building",
-                "notes": "Observação deslumbrante da cidade de Nova York - não esqueça a câmera!"
-              }
-            ]
-          },
-          {
-            "date": "2026-04-17",
-            "activities": [
-              {
-                "time": "08:00",
-                "title": "Café da manhã no hotel",
-                "notes": ""
-              }
-            ]
-          },
-          {
-            "date": "2026-04-18",
-            "activities": [
-              {
-                "time": "14:00",
-                "title": "Visita ao Empire State Building",
-                "notes": "Localização: 20 W 34th St, New York, NY 10118, USA"
-              },
-              {
-                "time": "20:00",
-                "title": "Jantar no Peter Luger Steakhouse",
-                "notes": "Morada: 178 Broadway, Brooklyn, NY 11211, Reserva recomendada."
-              }
-            ]
-          },
-          {
-            "date": "2026-04-19",
-            "activities": [
-              {
-                "time": "15:00",
-                "title": "Visita ao MoMA",
-                "notes": "Endereço: 11 W 53rd St, New York, NY 10019, EUA. Aproveite a visita para ver obras icônicas e explorar novas exposições!"
-              },
-              {
-                "time": "19:00",
-                "title": "Jantar no IT Italian Trattoria",
-                "notes": "Restaurante italiano com pratos tradicionais e ambiente acolhedor. Certifique-se de fazer uma reserva!"
-              }
-            ]
-          }
-        ]
-      },
-      {
         "id": "event_ufc",
         "title": "UFC White House",
         "emoji": "🥊",
@@ -1015,6 +953,66 @@
         "note": "",
         "color": "#22c55e",
         "createdAt": "2026-03-23T13:08:34.994044+00:00"
+      },
+      {
+        "id": "event_5c3dc4d6",
+        "title": "Trip to NYC",
+        "emoji": "🗽",
+        "date": "2026-04-17",
+        "endDate": "2026-04-20",
+        "note": "New York City, USA",
+        "color": "#3b82f6",
+        "itinerary": [],
+        "photos": {},
+        "memories": {}
+      },
+      {
+        "id": "event_6a0ff47e",
+        "title": "Trip to Orlando",
+        "emoji": "🌴",
+        "date": "2026-04-20",
+        "endDate": "2026-04-28",
+        "note": "Orlando, Florida, USA",
+        "color": "#f97316",
+        "itinerary": [],
+        "photos": {},
+        "memories": {}
+      },
+      {
+        "id": "event_1f3d1bfb",
+        "title": "Disney Parks",
+        "emoji": "🏰",
+        "date": "2026-04-21",
+        "endDate": "2026-04-23",
+        "note": "Walt Disney World, Orlando",
+        "color": "#ec4899",
+        "itinerary": [],
+        "photos": {},
+        "memories": {}
+      },
+      {
+        "id": "event_45597211",
+        "title": "Trip to Miami",
+        "emoji": "🏖️",
+        "date": "2026-04-25",
+        "endDate": "2026-04-25",
+        "note": "Miami Beach, Florida",
+        "color": "#06b6d4",
+        "itinerary": [],
+        "photos": {},
+        "memories": {}
+      },
+      {
+        "id": "event_da3e31e2",
+        "title": "Universal Parks",
+        "emoji": "🎢",
+        "date": "2026-04-26",
+        "endDate": "2026-04-27",
+        "note": "Universal Studios, Orlando",
+        "color": "#8b5cf6",
+        "itinerary": [],
+        "photos": {},
+        "memories": {}
       }
     ],
     "moods": {},

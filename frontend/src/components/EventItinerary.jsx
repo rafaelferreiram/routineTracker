@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import PlaceSearch from './PlaceSearch';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -37,13 +38,21 @@ export default function EventItinerary({ event, onSave, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [activeDay, setActiveDay] = useState(null);
-  const [editingActivity, setEditingActivity] = useState(null);
+  const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary', 'search', 'chat'
+  const [searchLocation, setSearchLocation] = useState(event.note || event.title);
   
   const messagesEndRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   
   const eventDays = getDateRange(event.date, event.endDate || event.date);
+  
+  // Auto-expand first day if no day is active
+  useEffect(() => {
+    if (!activeDay && eventDays.length > 0) {
+      setActiveDay(eventDays[0]);
+    }
+  }, [eventDays]);
   
   // Scroll to bottom of messages
   useEffect(() => {
@@ -166,14 +175,14 @@ export default function EventItinerary({ event, onSave, onClose }) {
     }
   };
 
-  // Add activity manually
+  // Add activity manually or from place search
   const addActivity = (date, activity) => {
     setItinerary(prev => {
       const existing = prev.find(d => d.date === date);
       if (existing) {
         return prev.map(d => 
           d.date === date 
-            ? { ...d, activities: [...d.activities, activity] }
+            ? { ...d, activities: [...d.activities, activity].sort((a, b) => (a.time || '').localeCompare(b.time || '')) }
             : d
         );
       } else {
@@ -193,6 +202,19 @@ export default function EventItinerary({ event, onSave, onClose }) {
     );
   };
 
+  // Handle place added from search
+  const handlePlaceAdded = (activity) => {
+    if (activeDay) {
+      addActivity(activeDay, activity);
+      // Show success feedback
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `✅ Adicionei "${activity.title}" ao roteiro de ${formatShortDate(activeDay)} às ${activity.time}!` 
+      }]);
+      setActiveTab('itinerary');
+    }
+  };
+
   // Handle save
   const handleSave = () => {
     onSave({ itinerary });
@@ -205,7 +227,6 @@ export default function EventItinerary({ event, onSave, onClose }) {
       return;
     }
 
-    // ICS format helper functions
     const formatICSDate = (dateStr, timeStr) => {
       const [year, month, day] = dateStr.split('-');
       const [hour, minute] = (timeStr || '09:00').split(':');
@@ -219,16 +240,13 @@ export default function EventItinerary({ event, onSave, onClose }) {
       });
     };
 
-    // Generate TL;DR for each day
     const getDayTLDR = (dayData) => {
       const activities = dayData.activities || [];
       if (activities.length === 0) return '';
-      
       const activityNames = activities.map(a => a.title).join(', ');
       return `TL;DR: ${activityNames}`;
     };
 
-    // Build ICS content
     let icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -238,7 +256,6 @@ export default function EventItinerary({ event, onSave, onClose }) {
       `X-WR-CALNAME:${escapeICS(event.title)} - Roteiro`,
     ];
 
-    // Add each activity as a separate event
     itinerary.forEach(dayData => {
       const dayDate = dayData.date;
       const dayTLDR = getDayTLDR(dayData);
@@ -249,8 +266,6 @@ export default function EventItinerary({ event, onSave, onClose }) {
       (dayData.activities || []).forEach((activity, idx) => {
         const startTime = activity.time || '09:00';
         const [hours, minutes] = startTime.split(':').map(Number);
-        
-        // Event duration: 1 hour by default
         const endHour = hours + 1;
         const endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
@@ -277,7 +292,7 @@ export default function EventItinerary({ event, onSave, onClose }) {
           `DTEND:${formatICSDate(dayDate, endTime)}`,
           `SUMMARY:${escapeICS(activity.title)} - ${escapeICS(event.title)}`,
           `DESCRIPTION:${description}`,
-          `LOCATION:${escapeICS(event.note || '')}`,
+          `LOCATION:${escapeICS(activity.notes || event.note || '')}`,
           'STATUS:CONFIRMED',
           'END:VEVENT'
         );
@@ -286,7 +301,6 @@ export default function EventItinerary({ event, onSave, onClose }) {
 
     icsContent.push('END:VCALENDAR');
 
-    // Create and download file
     const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -301,11 +315,18 @@ export default function EventItinerary({ event, onSave, onClose }) {
   // Count total activities
   const totalActivities = itinerary.reduce((sum, d) => sum + (d.activities?.length || 0), 0);
 
+  // Tab buttons
+  const tabs = [
+    { id: 'itinerary', label: 'Roteiro', icon: '📋' },
+    { id: 'search', label: 'Buscar Lugares', icon: '🗺️' },
+    { id: 'chat', label: 'Assistente IA', icon: '🤖' }
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" data-testid="event-itinerary-modal">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl h-[90vh] sm:h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border overflow-hidden"
+      <div className="relative w-full max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl border overflow-hidden"
         style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}>
         
         {/* Header */}
@@ -318,17 +339,48 @@ export default function EventItinerary({ event, onSave, onClose }) {
               {formatShortDate(event.date)} — {formatShortDate(event.endDate)} · {eventDays.length} dias
             </p>
           </div>
-          <button onClick={onClose} className="text-[#6b7280] hover:text-white p-2">✕</button>
+          <button onClick={onClose} className="text-[#6b7280] hover:text-white p-2" data-testid="close-itinerary-button">✕</button>
         </div>
 
-        {/* Content - Two columns on desktop */}
+        {/* Tab Navigation - Mobile only */}
+        <div className="lg:hidden flex-shrink-0 border-b" style={{ borderColor: 'var(--bg-border)' }}>
+          <div className="flex">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-3 text-center text-xs font-medium transition-colors ${
+                  activeTab === tab.id ? 'border-b-2' : 'text-[#6b7280]'
+                }`}
+                style={{ 
+                  borderColor: activeTab === tab.id ? event.color : 'transparent',
+                  color: activeTab === tab.id ? event.color : undefined
+                }}
+                data-testid={`tab-${tab.id}`}
+              >
+                <span className="text-base">{tab.icon}</span>
+                <span className="block mt-0.5">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content - Three columns on desktop */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           
           {/* Left: Itinerary by day */}
-          <div className="lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r overflow-hidden"
+          <div className={`lg:w-1/3 flex flex-col border-b lg:border-b-0 lg:border-r overflow-hidden ${
+            activeTab !== 'itinerary' ? 'hidden lg:flex' : 'flex'
+          }`}
             style={{ borderColor: 'var(--bg-border)' }}>
-            <div className="p-3 border-b" style={{ borderColor: 'var(--bg-border)' }}>
+            <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--bg-border)' }}>
               <p className="text-[#4b5563] text-xs font-medium uppercase tracking-wider">Roteiro</p>
+              {totalActivities > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: `${event.color}20`, color: event.color }}>
+                  {totalActivities} atividades
+                </span>
+              )}
             </div>
             
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -338,7 +390,11 @@ export default function EventItinerary({ event, onSave, onClose }) {
                 
                 return (
                   <div key={day} className="rounded-xl overflow-hidden"
-                    style={{ background: 'var(--bg-inner)', border: '1px solid var(--bg-border)' }}>
+                    style={{ 
+                      background: 'var(--bg-inner)', 
+                      border: `1px solid ${isActive ? event.color : 'var(--bg-border)'}` 
+                    }}
+                    data-testid={`day-${day}`}>
                     
                     <button 
                       onClick={() => setActiveDay(isActive ? null : day)}
@@ -372,12 +428,18 @@ export default function EventItinerary({ event, onSave, onClose }) {
                               <div className="flex-1 min-w-0">
                                 <p className="text-white text-sm">{activity.title}</p>
                                 {activity.notes && (
-                                  <p className="text-[#4b5563] text-xs mt-0.5">{activity.notes}</p>
+                                  <p className="text-[#4b5563] text-xs mt-0.5 truncate">{activity.notes}</p>
+                                )}
+                                {activity.rating && (
+                                  <p className="text-yellow-400 text-xs mt-0.5">
+                                    {'★'.repeat(Math.floor(activity.rating))} {activity.rating.toFixed(1)}
+                                  </p>
                                 )}
                               </div>
                               <button 
                                 onClick={() => removeActivity(day, i)}
-                                className="text-[#4b5563] hover:text-red-400 text-xs opacity-0 group-hover:opacity-100">
+                                className="text-[#4b5563] hover:text-red-400 text-xs opacity-0 group-hover:opacity-100"
+                                data-testid={`remove-activity-${i}`}>
                                 ✕
                               </button>
                             </div>
@@ -394,7 +456,8 @@ export default function EventItinerary({ event, onSave, onClose }) {
                             }
                           }}
                           className="w-full py-2 text-xs text-[#4b5563] hover:text-white border border-dashed rounded-lg"
-                          style={{ borderColor: 'var(--bg-border)' }}>
+                          style={{ borderColor: 'var(--bg-border)' }}
+                          data-testid="add-activity-manual">
                           + Adicionar manualmente
                         </button>
                       </div>
@@ -405,11 +468,47 @@ export default function EventItinerary({ event, onSave, onClose }) {
             </div>
           </div>
 
+          {/* Middle: Place Search */}
+          <div className={`lg:w-1/3 flex flex-col border-b lg:border-b-0 lg:border-r overflow-hidden ${
+            activeTab !== 'search' ? 'hidden lg:flex' : 'flex'
+          }`}
+            style={{ borderColor: 'var(--bg-border)' }}>
+            <div className="p-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--bg-border)' }}>
+              <span className="text-lg">🗺️</span>
+              <p className="text-[#4b5563] text-xs font-medium uppercase tracking-wider">Buscar Lugares</p>
+            </div>
+            
+            {/* Location Input */}
+            <div className="p-3 border-b" style={{ borderColor: 'var(--bg-border)' }}>
+              <label className="text-[#6b7280] text-xs mb-1.5 block">Localização da busca:</label>
+              <input
+                type="text"
+                value={searchLocation}
+                onChange={e => setSearchLocation(e.target.value)}
+                placeholder="Ex: Times Square, NYC"
+                className="w-full bg-transparent text-white placeholder-[#4b5563] rounded-xl px-4 py-2.5 outline-none border text-sm"
+                style={{ borderColor: 'var(--bg-border)' }}
+                data-testid="search-location-input"
+              />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-3">
+              <PlaceSearch
+                location={searchLocation}
+                onAddToItinerary={handlePlaceAdded}
+                selectedDate={activeDay}
+                accentColor={event.color}
+              />
+            </div>
+          </div>
+
           {/* Right: AI Chat */}
-          <div className="lg:w-1/2 flex flex-col flex-1 lg:flex-initial overflow-hidden">
+          <div className={`lg:w-1/3 flex flex-col flex-1 lg:flex-initial overflow-hidden ${
+            activeTab !== 'chat' ? 'hidden lg:flex' : 'flex'
+          }`}>
             <div className="p-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--bg-border)' }}>
               <span className="text-lg">🤖</span>
-              <p className="text-[#4b5563] text-xs font-medium uppercase tracking-wider">Assistente AI</p>
+              <p className="text-[#4b5563] text-xs font-medium uppercase tracking-wider">Assistente IA</p>
             </div>
             
             {/* Messages */}
@@ -458,7 +557,8 @@ export default function EventItinerary({ event, onSave, onClose }) {
                   style={{ 
                     background: isRecording ? '#ef4444' : 'var(--bg-inner)',
                     border: '1px solid var(--bg-border)'
-                  }}>
+                  }}
+                  data-testid="voice-record-button">
                   <span className="text-lg">{isRecording ? '⏹' : '🎤'}</span>
                 </button>
                 
@@ -471,13 +571,15 @@ export default function EventItinerary({ event, onSave, onClose }) {
                   disabled={isLoading || isRecording}
                   className="flex-1 bg-transparent text-white placeholder-[#4b5563] rounded-xl px-4 py-2.5 outline-none border text-sm"
                   style={{ borderColor: 'var(--bg-border)' }}
+                  data-testid="ai-chat-input"
                 />
                 
                 <button
                   onClick={() => sendMessage(inputText)}
                   disabled={isLoading || !inputText.trim()}
                   className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
-                  style={{ background: event.color }}>
+                  style={{ background: event.color }}
+                  data-testid="send-message-button">
                   <span className="text-lg">➤</span>
                 </button>
               </div>
@@ -496,7 +598,8 @@ export default function EventItinerary({ event, onSave, onClose }) {
             <button 
               onClick={generateICS}
               className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 border transition-colors hover:bg-white/5"
-              style={{ borderColor: 'var(--bg-border)', color: 'var(--text-primary, #e5e7eb)' }}>
+              style={{ borderColor: 'var(--bg-border)', color: 'var(--text-primary, #e5e7eb)' }}
+              data-testid="export-calendar-button">
               <span>📅</span>
               <span>Adicionar ao Calendário</span>
               <span className="text-xs text-[#6b7280]">({totalActivities} atividades)</span>
@@ -506,12 +609,14 @@ export default function EventItinerary({ event, onSave, onClose }) {
           <div className="flex gap-3">
             <button onClick={onClose}
               className="flex-1 py-3 rounded-xl text-[#6b7280] text-sm font-medium border"
-              style={{ borderColor: 'var(--bg-border)' }}>
+              style={{ borderColor: 'var(--bg-border)' }}
+              data-testid="cancel-button">
               Fechar
             </button>
             <button onClick={handleSave}
               className="flex-1 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: event.color, color: '#000' }}>
+              style={{ background: event.color, color: '#000' }}
+              data-testid="save-itinerary-button">
               Salvar Roteiro
             </button>
           </div>

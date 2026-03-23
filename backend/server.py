@@ -21,7 +21,7 @@ JWT_ALG    = 'HS256'
 JWT_DAYS   = 90
 
 # ── App ────────────────────────────────────────────────────────────────────────
-app = FastAPI(title='RoutineQuest API')
+app = FastAPI(title='RoutineTracker API')
 
 app.add_middleware(
     CORSMiddleware,
@@ -77,7 +77,7 @@ class DataReq(BaseModel):
 # ── Auth Routes ────────────────────────────────────────────────────────────────
 @app.get('/api/health')
 def health():
-    return {'status': 'ok', 'service': 'RoutineQuest API'}
+    return {'status': 'ok', 'service': 'RoutineTracker API'}
 
 @app.post('/api/auth/login')
 def login(req: AuthReq):

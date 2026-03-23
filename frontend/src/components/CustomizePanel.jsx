@@ -43,7 +43,7 @@ export default function CustomizePanel({ onExport }) {
   const { profile, settings, accentColor, updateSettings, updateProfile, habits, addHabit, updateHabit, deleteHabit } = useHabits();
   const { currentUser, logout } = useAuth();
 
-  const appName = settings.appName || 'RoutineQuest';
+  const appName = settings.appName || 'RoutineTracker';
   const appIcon = settings.appIcon || '⚡';
 
   const [nameInput, setNameInput] = useState(profile.name || 'Rafael');
@@ -124,7 +124,7 @@ export default function CustomizePanel({ onExport }) {
       {/* Header */}
       <div>
         <h2 className="text-white font-bold text-2xl">Customize</h2>
-        <p className="text-[#6b7280] text-sm mt-1">Make RoutineQuest yours</p>
+        <p className="text-[#6b7280] text-sm mt-1">Make RoutineTracker yours</p>
       </div>
 
       {/* ── Appearance ── */}

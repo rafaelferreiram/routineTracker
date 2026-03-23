@@ -1,8 +1,6 @@
 import { useState } from 'react';
 
 export default function LandingPage({ onGetStarted }) {
-  const [currentSlide, setCurrentSlide] = useState(0);
-
   const features = [
     {
       icon: '✅',
@@ -42,12 +40,17 @@ export default function LandingPage({ onGetStarted }) {
     }
   ];
 
-  const screenshots = [
-    { title: 'Dashboard', desc: 'See your daily progress at a glance', emoji: '🏠' },
-    { title: 'Habits', desc: 'Organize habits by categories', emoji: '📋' },
-    { title: 'Stats', desc: 'Track your growth over time', emoji: '📈' },
-    { title: 'Achievements', desc: 'Earn medals for milestones', emoji: '🏅' },
+  // Dummy chart data for 7 days
+  const chartData = [
+    { day: 'Mon', value: 75 },
+    { day: 'Tue', value: 85 },
+    { day: 'Wed', value: 60 },
+    { day: 'Thu', value: 90 },
+    { day: 'Fri', value: 80 },
+    { day: 'Sat', value: 95 },
+    { day: 'Sun', value: 70 },
   ];
+  const maxValue = Math.max(...chartData.map(d => d.value));
 
   return (
     <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
@@ -61,7 +64,7 @@ export default function LandingPage({ onGetStarted }) {
         <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚡</span>
-            <span className="font-bold text-xl tracking-tight">RoutineQuest</span>
+            <span className="font-bold text-xl tracking-tight">RoutineTracker</span>
           </div>
           <button
             onClick={onGetStarted}
@@ -149,10 +152,10 @@ export default function LandingPage({ onGetStarted }) {
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-[#22c55e22] flex items-center justify-center text-[#22c55e] font-bold text-sm">R</div>
+                      <div className="w-9 h-9 rounded-full bg-[#3b82f622] flex items-center justify-center text-[#3b82f6] font-bold text-sm">A</div>
                       <div>
-                        <p className="text-white text-sm font-semibold">Rafael</p>
-                        <p className="text-[#22c55e] text-xs">Lv.10 · 3,685 XP</p>
+                        <p className="text-white text-sm font-semibold">Alex</p>
+                        <p className="text-[#22c55e] text-xs">Lv.8 · 2,450 XP</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -162,24 +165,47 @@ export default function LandingPage({ onGetStarted }) {
                   </div>
 
                   {/* Progress bar */}
-                  <div className="h-2 bg-[#1f1f1f] rounded-full mb-5 overflow-hidden">
+                  <div className="h-2 bg-[#1f1f1f] rounded-full mb-4 overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] rounded-full" style={{ width: '85%' }} />
+                  </div>
+
+                  {/* Mini Chart */}
+                  <div className="mb-4 p-3 rounded-xl bg-[#111] border border-[#1f1f1f]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[#6b7280] text-xs font-medium">Weekly Progress</span>
+                      <span className="text-[#22c55e] text-xs font-bold">+12%</span>
+                    </div>
+                    <div className="flex items-end justify-between gap-1 h-12">
+                      {chartData.map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div 
+                            className="w-full rounded-t transition-all"
+                            style={{ 
+                              height: `${(d.value / maxValue) * 100}%`,
+                              background: i === chartData.length - 1 ? '#22c55e' : '#22c55e55',
+                              minHeight: '4px'
+                            }} 
+                          />
+                          <span className="text-[8px] text-[#4b5563]">{d.day[0]}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Habit cards */}
                   <div className="space-y-2">
                     {[
-                      { emoji: '🙏', name: 'Pray', streak: 6, done: true },
-                      { emoji: '🥋', name: 'Jiu Jitsu', streak: 2, done: true },
-                      { emoji: '📖', name: 'Read time', streak: 3, done: false },
-                      { emoji: '💧', name: 'Drink Water', streak: 5, done: true },
+                      { emoji: '🏃', name: 'Morning Run', streak: 12, done: true },
+                      { emoji: '📚', name: 'Read 30min', streak: 8, done: true },
+                      { emoji: '🧘', name: 'Meditate', streak: 5, done: false },
+                      { emoji: '💧', name: 'Drink Water', streak: 21, done: true },
                     ].map((h, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#111] border border-[#1f1f1f]">
-                        <span className="text-lg">{h.emoji}</span>
-                        <span className="flex-1 text-sm text-white">{h.name}</span>
-                        <span className="text-xs text-[#f97316] mr-2">🔥{h.streak}</span>
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${h.done ? 'bg-[#22c55e]' : 'bg-[#1f1f1f]'}`}>
-                          {h.done && <span className="text-black text-xs">✓</span>}
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a]">
+                        <span className="text-base">{h.emoji}</span>
+                        <span className="flex-1 text-xs text-white">{h.name}</span>
+                        <span className="text-[10px] text-[#f97316] mr-1">🔥{h.streak}</span>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${h.done ? 'bg-[#22c55e]' : 'bg-[#1f1f1f]'}`}>
+                          {h.done && <span className="text-black text-[10px]">✓</span>}
                         </div>
                       </div>
                     ))}
@@ -187,10 +213,10 @@ export default function LandingPage({ onGetStarted }) {
                 </div>
 
                 {/* Bottom nav */}
-                <div className="flex items-center justify-around py-4 border-t border-[#1f1f1f] mt-3">
+                <div className="flex items-center justify-around py-3 border-t border-[#1f1f1f] mt-2">
                   {['🏠', '✅', '📊', '📖'].map((icon, i) => (
-                    <div key={i} className={`p-2 rounded-xl ${i === 0 ? 'bg-[#22c55e22]' : ''}`}>
-                      <span className={`text-lg ${i === 0 ? '' : 'opacity-50'}`}>{icon}</span>
+                    <div key={i} className={`p-1.5 rounded-lg ${i === 0 ? 'bg-[#22c55e22]' : ''}`}>
+                      <span className={`text-sm ${i === 0 ? '' : 'opacity-50'}`}>{icon}</span>
                     </div>
                   ))}
                 </div>
@@ -230,8 +256,50 @@ export default function LandingPage({ onGetStarted }) {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* Stats/Chart Section */}
       <section className="py-20 px-6 bg-[#0a0a0a]">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Track your growth</h2>
+            <p className="text-[#6b7280] text-lg">Beautiful charts to visualize your progress</p>
+          </div>
+
+          {/* Large chart preview */}
+          <div className="rounded-2xl border border-[#1f1f1f] bg-[#111] p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-white font-bold text-lg">Weekly Completion Rate</h3>
+                <p className="text-[#6b7280] text-sm">Last 7 days performance</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[#22c55e] font-bold text-2xl">79%</p>
+                <p className="text-[#6b7280] text-xs">avg completion</p>
+              </div>
+            </div>
+            
+            {/* Chart bars */}
+            <div className="flex items-end justify-between gap-2 sm:gap-4 h-40 sm:h-48">
+              {chartData.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <span className="text-white text-xs font-medium">{d.value}%</span>
+                  <div 
+                    className="w-full rounded-t-lg transition-all hover:opacity-80"
+                    style={{ 
+                      height: `${(d.value / 100) * 100}%`,
+                      background: `linear-gradient(to top, #22c55e, #22c55e${Math.round(d.value * 0.7).toString(16).padStart(2, '0')})`,
+                      minHeight: '20px'
+                    }} 
+                  />
+                  <span className="text-[#6b7280] text-xs">{d.day}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">How it works</h2>
@@ -258,7 +326,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* Testimonial/Social proof */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 bg-[#0a0a0a]">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a855f715] border border-[#a855f730] mb-8">
             <span className="text-[#a855f7]">🏆</span>
@@ -320,10 +388,10 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
-            <span className="font-semibold">RoutineQuest</span>
+            <span className="font-semibold">RoutineTracker</span>
           </div>
           <p className="text-[#4b5563] text-sm">
-            © 2026 RoutineQuest. Level up your life.
+            © 2026 RoutineTracker. Level up your life.
           </p>
         </div>
       </footer>

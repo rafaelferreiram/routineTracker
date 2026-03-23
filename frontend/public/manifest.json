@@ -1,6 +1,6 @@
 {
-  "name": "RoutineQuest",
-  "short_name": "RoutineQuest",
+  "name": "RoutineTracker",
+  "short_name": "RoutineTracker",
   "description": "Track your daily habits and level up your life",
   "start_url": "/",
   "display": "standalone",

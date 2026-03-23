@@ -94,7 +94,7 @@ export default function LoginScreen({ onBack }) {
       {/* Logo */}
       <div className="mb-8 text-center">
         <div className="text-5xl mb-3">⚡</div>
-        <h1 className="text-white font-bold text-2xl tracking-tight">RoutineQuest</h1>
+        <h1 className="text-white font-bold text-2xl tracking-tight">RoutineTracker</h1>
         <p className="text-[#4b5563] text-sm mt-1">Track your habits. Level up your life.</p>
       </div>
 

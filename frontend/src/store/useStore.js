@@ -445,7 +445,7 @@ function getInitialState(username, defaultTheme = {}) {
         parsed.settings = {
           theme: 'dark',
           accentColor: '#22c55e',
-          appName: 'RoutineQuest',
+          appName: 'RoutineTracker',
           appIcon: '⚡',
           categories: DEFAULT_CATEGORIES,
           ...parsed.settings,

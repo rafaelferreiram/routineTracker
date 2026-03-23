@@ -605,10 +605,10 @@ class TranscribeResponse(BaseModel):
 @app.post('/api/ai/itinerary')
 async def generate_itinerary(req: ItineraryRequest, cu: dict = Depends(get_current_user)):
     """Use GPT to generate or update an event itinerary based on user input."""
-    # Use Emergent LLM Key (works with OpenAI models)
-    api_key = EMERGENT_LLM_KEY
+    # Use user's OpenAI API key
+    api_key = OPENAI_API_KEY
     if not api_key:
-        raise HTTPException(status_code=500, detail='AI API key not configured')
+        raise HTTPException(status_code=500, detail='OpenAI API key not configured')
     
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     
@@ -701,10 +701,10 @@ Seja criativo com horários realistas. Responda SEMPRE em português brasileiro.
 @app.post('/api/ai/transcribe')
 async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_current_user)):
     """Transcribe audio using OpenAI Whisper."""
-    # Use Emergent LLM Key (works with Whisper)
-    api_key = EMERGENT_LLM_KEY
+    # Use user's OpenAI API key
+    api_key = OPENAI_API_KEY
     if not api_key:
-        raise HTTPException(status_code=500, detail='AI API key not configured')
+        raise HTTPException(status_code=500, detail='OpenAI API key not configured')
     
     from emergentintegrations.llm.openai import OpenAISpeechToText
     

@@ -310,18 +310,18 @@ function AIAssistantVisual() {
       {/* TARS button mockup */}
       <div className="flex justify-center mt-4">
         <div 
-          className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg animate-bounce overflow-hidden"
+          className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg animate-bounce overflow-hidden"
           style={{ 
-            background: 'linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
-            border: '2px solid #3b3b4f',
+            background: '#ffffff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            border: '2px solid #e5e7eb',
             animationDuration: '2s'
           }}
         >
           <img src="/tars-icon.png" alt="TARS" className="w-14 h-14 object-contain" />
         </div>
       </div>
-      <p className="text-center text-[#9ca3af] text-xs font-medium mt-2">Toque no TARS na barra inferior</p>
+      <p className="text-center text-[#374151] text-xs font-medium mt-2">Toque no TARS na barra inferior</p>
     </div>
   );
 }

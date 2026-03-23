@@ -171,8 +171,8 @@ export default function AIChat({ isOpen, onClose }) {
         {/* Header */}
         <div className="flex-shrink-0 p-4 border-b flex items-center gap-3"
           style={{ borderColor: 'var(--bg-border)' }}>
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%)', border: '2px solid #3b3b4f' }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden"
+            style={{ background: '#ffffff', border: '2px solid #e5e7eb' }}>
             <img src="/tars-icon.png" alt="TARS" className="w-10 h-10 object-contain" />
           </div>
           <div className="flex-1">

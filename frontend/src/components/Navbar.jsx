@@ -310,16 +310,16 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                   className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
                 >
                   <div 
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center -mt-4 shadow-lg overflow-hidden"
+                    className="w-12 h-12 rounded-full flex items-center justify-center -mt-4 shadow-lg overflow-hidden"
                     style={{ 
-                      background: 'linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%)',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
-                      border: '2px solid #3b3b4f'
+                      background: '#ffffff',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                      border: '2px solid #e5e7eb'
                     }}
                   >
                     <img src="/tars-icon.png" alt="TARS" className="w-10 h-10 object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium leading-none" style={{ color: '#9ca3af' }}>
+                  <span className="text-[10px] font-medium leading-none" style={{ color: '#374151' }}>
                     TARS
                   </span>
                 </button>

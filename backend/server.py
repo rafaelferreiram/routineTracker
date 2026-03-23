@@ -605,12 +605,8 @@ class TranscribeResponse(BaseModel):
 @app.post('/api/ai/itinerary')
 async def generate_itinerary(req: ItineraryRequest, cu: dict = Depends(get_current_user)):
     """Use GPT to generate or update an event itinerary based on user input."""
-    # Use user's OpenAI API key
-    api_key = OPENAI_API_KEY
-    if not api_key:
-        raise HTTPException(status_code=500, detail='OpenAI API key not configured')
-    
     from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import json
     
     # Calculate event days
     from datetime import datetime as dt
@@ -658,7 +654,8 @@ SEMPRE responda em JSON válido com a seguinte estrutura:
 Se o usuário fizer perguntas ou comentários que não são sobre adicionar atividades, apenas responda na chave "message" e mantenha o itinerary atual ou vazio.
 Seja criativo com horários realistas. Responda SEMPRE em português brasileiro."""
 
-    try:
+    async def call_ai(api_key: str) -> dict:
+        """Helper to call AI with given API key."""
         chat = LlmChat(
             api_key=api_key,
             session_id=f"itinerary_{cu['sub']}_{req.event_title}",
@@ -669,9 +666,7 @@ Seja criativo com horários realistas. Responda SEMPRE em português brasileiro.
         response = await chat.send_message(user_msg)
         
         # Try to parse JSON response
-        import json
         try:
-            # Clean response - sometimes GPT adds markdown code blocks
             clean_response = response.strip()
             if clean_response.startswith('```'):
                 clean_response = clean_response.split('```')[1]
@@ -687,25 +682,38 @@ Seja criativo com horários realistas. Responda SEMPRE em português brasileiro.
                 'itinerary': parsed.get('itinerary', [])
             }
         except json.JSONDecodeError:
-            # If JSON parsing fails, return raw message
             return {
                 'success': True,
                 'message': response,
                 'itinerary': req.current_itinerary or []
             }
+
+    # Try user's API key first, fallback to Emergent LLM Key if quota exceeded
+    try:
+        if OPENAI_API_KEY:
+            return await call_ai(OPENAI_API_KEY)
+        elif EMERGENT_LLM_KEY:
+            return await call_ai(EMERGENT_LLM_KEY)
+        else:
+            raise HTTPException(status_code=500, detail='No AI API key configured')
             
     except Exception as e:
+        error_msg = str(e).lower()
+        # Check if it's a quota/rate limit error
+        if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
+            print(f'[AI Itinerary] User API key quota exceeded, falling back to Emergent LLM Key')
+            try:
+                return await call_ai(EMERGENT_LLM_KEY)
+            except Exception as fallback_error:
+                print(f'[AI Itinerary] Fallback also failed: {fallback_error}')
+                raise HTTPException(status_code=500, detail=f'AI error: {str(fallback_error)}')
+        
         print(f'[AI Itinerary] Error: {e}')
         raise HTTPException(status_code=500, detail=f'AI error: {str(e)}')
 
 @app.post('/api/ai/transcribe')
 async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_current_user)):
     """Transcribe audio using OpenAI Whisper."""
-    # Use user's OpenAI API key
-    api_key = OPENAI_API_KEY
-    if not api_key:
-        raise HTTPException(status_code=500, detail='OpenAI API key not configured')
-    
     from emergentintegrations.llm.openai import OpenAISpeechToText
     
     # Validate file type
@@ -713,11 +721,12 @@ async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_
     if file.content_type and not any(t in file.content_type for t in ['audio', 'video/webm']):
         raise HTTPException(status_code=400, detail=f'Invalid file type: {file.content_type}. Allowed: mp3, wav, webm, m4a')
     
-    try:
+    # Read file content once
+    content = await file.read()
+    
+    async def call_whisper(api_key: str) -> dict:
+        """Helper to call Whisper with given API key."""
         stt = OpenAISpeechToText(api_key=api_key)
-        
-        # Read file content
-        content = await file.read()
         audio_file = io.BytesIO(content)
         audio_file.name = file.filename or 'audio.webm'
         
@@ -725,11 +734,29 @@ async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_
             file=audio_file,
             model="whisper-1",
             response_format="json",
-            language="pt"  # Portuguese
+            language="pt"
         )
-        
         return {'success': True, 'text': response.text}
-        
+    
+    # Try user's API key first, fallback to Emergent LLM Key if quota exceeded
+    try:
+        if OPENAI_API_KEY:
+            return await call_whisper(OPENAI_API_KEY)
+        elif EMERGENT_LLM_KEY:
+            return await call_whisper(EMERGENT_LLM_KEY)
+        else:
+            raise HTTPException(status_code=500, detail='No AI API key configured')
+            
     except Exception as e:
+        error_msg = str(e).lower()
+        # Check if it's a quota/rate limit error
+        if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
+            print(f'[AI Transcribe] User API key quota exceeded, falling back to Emergent LLM Key')
+            try:
+                return await call_whisper(EMERGENT_LLM_KEY)
+            except Exception as fallback_error:
+                print(f'[AI Transcribe] Fallback also failed: {fallback_error}')
+                raise HTTPException(status_code=500, detail=f'Transcription error: {str(fallback_error)}')
+        
         print(f'[AI Transcribe] Error: {e}')
         raise HTTPException(status_code=500, detail=f'Transcription error: {str(e)}')

@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, validator, EmailStr
 from pymongo import MongoClient
 import bcrypt
 from jose import jwt, JWTError
@@ -12,13 +12,16 @@ import requests as http_req
 from dotenv import load_dotenv
 import asyncio
 import io
+import re
+from collections import defaultdict
+import time
 
 load_dotenv()
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 MONGO_URL  = os.environ.get('MONGO_URL')
 DB_NAME    = os.environ.get('DB_NAME')
-JWT_SECRET = os.environ.get('JWT_SECRET', 'routinequest_secret_2026')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'change_this_in_production_' + os.urandom(16).hex())
 JWT_ALG    = 'HS256'
 JWT_DAYS   = 90
 # Use user's OpenAI key or fallback to Emergent LLM Key
@@ -30,12 +33,14 @@ GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyDLQT29DB2Lt7y
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')
 
+# CORS configuration - more restrictive for production
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ['*'] else ['*'],
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allow_headers=['Authorization', 'Content-Type', 'X-Requested-With'],
 )
 
 # ── Database ───────────────────────────────────────────────────────────────────
@@ -50,6 +55,24 @@ data_c.create_index('user_id')
 # ── Security ───────────────────────────────────────────────────────────────────
 bearer = HTTPBearer()
 
+# Simple in-memory rate limiter
+rate_limit_store = defaultdict(list)
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX_REQUESTS = 30  # max requests per window for auth endpoints
+
+def check_rate_limit(ip: str, endpoint: str = 'default', max_requests: int = RATE_LIMIT_MAX_REQUESTS):
+    """Simple rate limiting by IP address."""
+    key = f"{ip}:{endpoint}"
+    now = time.time()
+    
+    # Clean old entries
+    rate_limit_store[key] = [t for t in rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
+    
+    if len(rate_limit_store[key]) >= max_requests:
+        raise HTTPException(status_code=429, detail='Too many requests. Please try again later.')
+    
+    rate_limit_store[key].append(now)
+
 def hash_pw(pw: str) -> str:
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -61,14 +84,29 @@ def make_token(uid: str, username: str) -> str:
         'sub': uid,
         'username': username,
         'exp': datetime.now(timezone.utc) + timedelta(days=JWT_DAYS),
+        'iat': datetime.now(timezone.utc),  # Issued at
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
 def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> dict:
     try:
-        return jwt.decode(creds.credentials, JWT_SECRET, algorithms=[JWT_ALG])
+        payload = jwt.decode(creds.credentials, JWT_SECRET, algorithms=[JWT_ALG])
+        # Validate required fields
+        if not payload.get('sub') or not payload.get('username'):
+            raise HTTPException(status_code=401, detail='Invalid token payload')
+        return payload
     except JWTError:
         raise HTTPException(status_code=401, detail='Invalid or expired token')
+
+# Input sanitization helper
+def sanitize_string(s: str, max_length: int = 1000) -> str:
+    """Sanitize string input to prevent injection attacks."""
+    if not s:
+        return ''
+    # Remove null bytes and control characters
+    s = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
+    # Trim to max length
+    return s[:max_length].strip()
 
 # ── Pydantic Models ─────────────────────────────────────────────────────────────
 class AuthReq(BaseModel):
@@ -99,8 +137,12 @@ def health():
     return {'status': 'ok', 'service': 'RoutineTracker API'}
 
 @app.post('/api/auth/login')
-def login(req: AuthReq):
-    username = req.username.lower().strip()
+def login(req: AuthReq, request: Request):
+    # Rate limit login attempts
+    client_ip = request.client.host if request.client else 'unknown'
+    check_rate_limit(client_ip, 'login', max_requests=10)  # 10 attempts per minute
+    
+    username = sanitize_string(req.username.lower(), 50)
     user = users_c.find_one({'username': username})
     if not user:
         raise HTTPException(status_code=400, detail='User not found')
@@ -120,10 +162,17 @@ def login(req: AuthReq):
     }
 
 @app.post('/api/auth/login-email')
-def login_email(req: EmailLoginReq):
+def login_email(req: EmailLoginReq, request: Request):
     """Login using email instead of username."""
-    import re
-    email = req.email.lower().strip()
+    # Rate limit login attempts
+    client_ip = request.client.host if request.client else 'unknown'
+    check_rate_limit(client_ip, 'login', max_requests=10)  # 10 attempts per minute
+    
+    email = sanitize_string(req.email.lower(), 100)
+    
+    # Validate email format
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        raise HTTPException(status_code=400, detail='Email inválido')
     
     # Find user by email
     user = users_c.find_one({'email': email})
@@ -145,7 +194,7 @@ def login_email(req: EmailLoginReq):
         'user': {
             'id': str(user['_id']),
             'username': user['username'],
-            'displayName': user['display_name'],
+            'displayName': user.get('display_name', user['username']),
             'email': user.get('email', ''),
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
@@ -166,10 +215,14 @@ def validate_password(password: str) -> tuple[bool, str]:
     return True, ''
 
 @app.post('/api/auth/register')
-def register(req: AuthReq):
-    username = req.username.lower().strip()
-    display  = req.username.strip()
-    password = req.password.strip()
+def register(req: AuthReq, request: Request):
+    # Rate limit registration attempts
+    client_ip = request.client.host if request.client else 'unknown'
+    check_rate_limit(client_ip, 'register', max_requests=5)  # 5 attempts per minute
+    
+    username = sanitize_string(req.username.lower(), 20)
+    display  = sanitize_string(req.username, 20)
+    password = req.password  # Don't sanitize password, just validate
     
     if not username or not password:
         raise HTTPException(status_code=400, detail='Username and password are required')

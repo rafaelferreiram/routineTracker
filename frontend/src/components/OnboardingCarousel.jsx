@@ -168,6 +168,12 @@ const SLIDES = [
     description: 'Adicione viagens, compromissos ou metas futuras na aba Events.',
   },
   {
+    id: 'ai-assistant',
+    tag: 'Novidade',
+    title: 'Conheça o Roti',
+    description: 'Seu assistente IA pessoal! Fale por voz e ele responde por voz. Digite texto e ele responde por texto.',
+  },
+  {
     id: 'medals',
     tag: 'Passo 5',
     title: 'Conquiste medalhas',
@@ -278,6 +284,47 @@ function EventsVisual() {
   );
 }
 
+function AIAssistantVisual() {
+  return (
+    <div className="space-y-3 relative">
+      {/* Chat bubbles mockup */}
+      <div className="flex justify-end">
+        <div className="max-w-[75%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm"
+          style={{ background: '#22c55e', color: '#000' }}>
+          <div className="flex items-center gap-1">
+            <span className="text-xs">🎤</span>
+            <span>Como melhorar minha rotina?</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-start">
+        <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm"
+          style={{ background: '#1a1a1a', color: '#e5e7eb' }}>
+          <div className="flex items-start gap-2">
+            <span className="text-xs">🔊</span>
+            <span>Comece com 3 hábitos simples e aumente gradualmente...</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* AI button mockup */}
+      <div className="flex justify-center mt-4">
+        <div 
+          className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg animate-bounce"
+          style={{ 
+            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+            boxShadow: '0 4px 20px rgba(34, 197, 94, 0.5)',
+            animationDuration: '2s'
+          }}
+        >
+          <span className="text-2xl">🤖</span>
+        </div>
+      </div>
+      <p className="text-center text-[#6b7280] text-xs">Toque no Roti na barra inferior</p>
+    </div>
+  );
+}
+
 function MedalsVisual() {
   return (
     <div className="space-y-3">
@@ -361,6 +408,7 @@ export default function OnboardingCarousel({ onComplete }) {
       case 'complete-habit': return <CompleteHabitVisual />;
       case 'view-stats': return <StatsVisual />;
       case 'events': return <EventsVisual />;
+      case 'ai-assistant': return <AIAssistantVisual />;
       case 'medals': return <MedalsVisual />;
       case 'tips': return <TipsVisual />;
       case 'ready': return <ReadyVisual />;

@@ -760,3 +760,100 @@ async def transcribe_audio(file: UploadFile = File(...), cu: dict = Depends(get_
         
         print(f'[AI Transcribe] Error: {e}')
         raise HTTPException(status_code=500, detail=f'Transcription error: {str(e)}')
+
+
+# ── AI Chat (General Assistant) ────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_history: Optional[List[dict]] = None
+
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "nova"
+
+@app.post('/api/ai/chat')
+async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
+    """General AI chat assistant."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import json
+    
+    system_prompt = """Você é um assistente pessoal amigável e útil chamado "Roti" do app RoutineTracker.
+Você ajuda os usuários com:
+- Dicas de produtividade e hábitos
+- Planejamento de rotinas e eventos
+- Motivação e bem-estar
+- Qualquer dúvida geral
+
+Seja conciso, amigável e responda SEMPRE em português brasileiro.
+Use emojis ocasionalmente para tornar a conversa mais agradável."""
+
+    async def call_chat(api_key: str) -> dict:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"chat_{cu['sub']}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-4o")
+        
+        user_msg = UserMessage(text=req.message)
+        response = await chat.send_message(user_msg)
+        return {'success': True, 'message': response}
+
+    try:
+        if OPENAI_API_KEY:
+            return await call_chat(OPENAI_API_KEY)
+        elif EMERGENT_LLM_KEY:
+            return await call_chat(EMERGENT_LLM_KEY)
+        else:
+            raise HTTPException(status_code=500, detail='No AI API key configured')
+            
+    except Exception as e:
+        error_msg = str(e).lower()
+        if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
+            print(f'[AI Chat] User API key quota exceeded, falling back to Emergent LLM Key')
+            try:
+                return await call_chat(EMERGENT_LLM_KEY)
+            except Exception as fallback_error:
+                raise HTTPException(status_code=500, detail=f'AI error: {str(fallback_error)}')
+        
+        print(f'[AI Chat] Error: {e}')
+        raise HTTPException(status_code=500, detail=f'AI error: {str(e)}')
+
+@app.post('/api/ai/speak')
+async def ai_speak(req: TTSRequest, cu: dict = Depends(get_current_user)):
+    """Convert text to speech using OpenAI TTS."""
+    from emergentintegrations.llm.openai import OpenAITextToSpeech
+    from fastapi.responses import Response
+    
+    async def call_tts(api_key: str) -> bytes:
+        tts = OpenAITextToSpeech(api_key=api_key)
+        audio_bytes = await tts.generate_speech(
+            text=req.text,
+            model="tts-1",
+            voice=req.voice,
+            response_format="mp3"
+        )
+        return audio_bytes
+
+    try:
+        if OPENAI_API_KEY:
+            audio = await call_tts(OPENAI_API_KEY)
+        elif EMERGENT_LLM_KEY:
+            audio = await call_tts(EMERGENT_LLM_KEY)
+        else:
+            raise HTTPException(status_code=500, detail='No AI API key configured')
+        
+        return Response(content=audio, media_type="audio/mpeg")
+            
+    except Exception as e:
+        error_msg = str(e).lower()
+        if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
+            print(f'[AI TTS] User API key quota exceeded, falling back to Emergent LLM Key')
+            try:
+                audio = await call_tts(EMERGENT_LLM_KEY)
+                return Response(content=audio, media_type="audio/mpeg")
+            except Exception as fallback_error:
+                raise HTTPException(status_code=500, detail=f'TTS error: {str(fallback_error)}')
+        
+        print(f'[AI TTS] Error: {e}')
+        raise HTTPException(status_code=500, detail=f'TTS error: {str(e)}')

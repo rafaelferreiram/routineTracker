@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
 import { getLevelColor } from '../utils/gamification.js';
+import AIChat from './AIChat.jsx';
 
 const ALL_NAV = [
   { id: 'today',        label: 'Today',     icon: '🏠', section: 'main' },
@@ -15,8 +16,8 @@ const ALL_NAV = [
   { id: 'profile',      label: 'Profile',   icon: null,  section: 'bottom' },  // Special - shows avatar
 ];
 
-// Bottom tabs: Today, Habits, Stats, Medals, Profile (like Instagram)
-const BOTTOM_TABS = ['today', 'habits', 'stats', 'achievements', 'profile'];
+// Bottom tabs: Today, Habits, AI, Medals, Profile (like Instagram with AI in center)
+const BOTTOM_TABS = ['today', 'habits', 'ai', 'achievements', 'profile'];
 
 // Avatar component - uses Google photo or initial as fallback
 function Avatar({ picture, initial, size = 36, levelColor, accentColor, className = '' }) {
@@ -68,6 +69,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
   const [showMenu,    setShowMenu]    = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Capture the beforeinstallprompt event for PWA install
   useEffect(() => {
@@ -297,6 +299,31 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
             const item = ALL_NAV.find(n => n.id === tabId);
             const isActive = activeTab === tabId;
             const isProfile = tabId === 'profile';
+            const isAI = tabId === 'ai';
+            
+            // AI button in center - special style
+            if (isAI) {
+              return (
+                <button key={tabId}
+                  data-testid="mobile-nav-ai"
+                  onClick={() => setShowAIChat(true)}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
+                >
+                  <div 
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center -mt-4 shadow-lg"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)'
+                    }}
+                  >
+                    <span className="text-xl">🤖</span>
+                  </div>
+                  <span className="text-[10px] font-medium leading-none" style={{ color: '#22c55e' }}>
+                    Roti
+                  </span>
+                </button>
+              );
+            }
             
             return (
               <button key={tabId}
@@ -503,6 +530,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
           </div>
         </div>
       )}
+
+      {/* AI Chat Modal */}
+      <AIChat isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
     </>
   );
 }

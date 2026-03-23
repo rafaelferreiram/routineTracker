@@ -83,6 +83,15 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - Roti AI Assistant (Chat Global)
+- New AIChat.jsx component for general AI conversation
+- Added 🤖 Roti button to mobile bottom navigation bar (center position, highlighted)
+- Voice-to-voice: user speaks → Whisper transcribes → GPT responds → TTS speaks back
+- Text-to-text: user types → GPT responds with text
+- Backend endpoints: /api/ai/chat (general chat), /api/ai/speak (TTS)
+- Updated onboarding carousel with new "Conheça o Roti" slide
+- Fallback system: tries user's OpenAI key first, falls back to Emergent LLM Key on quota errors
+
 ### 2026-03-23 - Event Itinerary with AI Assistant
 - New EventItinerary.jsx component for planning multi-day event itineraries
 - AI chat assistant (GPT-4o via Emergent LLM Key) that organizes activities into event days

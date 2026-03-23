@@ -23,3 +23,7 @@ npm-debug.log*
 
 # Claude memory (local context)
 .claude/
+-e 
+# Environment files
+*.env
+*.env.*

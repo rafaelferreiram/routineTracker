@@ -92,6 +92,16 @@
 - App now renders correctly on all modern mobile devices (iPhone 14 Pro, etc.)
 - 100% test pass rate (iteration 11)
 
+### 2026-03-23 - Admin Dashboard Redesign (COMPLETED)
+- Admin agora tem interface COMPLETAMENTE separada - sem hábitos, tracker ou funcionalidades de usuário
+- Layout minimalista e moderno com 3 seções: Visão Geral, Usuários, Segurança
+- Visão Geral: Cards de estatísticas, gráficos de crescimento, hábitos populares, engajamento
+- Usuários: Lista com busca/filtro, indicadores de funcionalidades habilitadas/desabilitadas
+- Modal de usuário com toggle visual claro para cada funcionalidade (👁 Ativo / 🚫 Bloqueado)
+- 5 funcionalidades gerenciáveis: Hábitos, Eventos, TARS, Amigos, Mapas
+- Totalmente responsivo para PWA (testado em iPhone 14 Pro viewport)
+- Header com botões de refresh e logout
+
 ### 2026-03-23 - DDoS Protection & Security System (COMPLETED)
 - Global HTTP middleware for DDoS protection (blocks >100 req/min)
 - Enhanced rate limiting with violation tracking (30 req/60s per endpoint)

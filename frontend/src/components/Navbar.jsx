@@ -14,7 +14,6 @@ const ALL_NAV = [
   { id: 'friends',      label: 'Friends',   icon: '👥', section: 'more' },
   { id: 'customize',    label: 'Customize', icon: '🎨', section: 'more' },
   { id: 'profile',      label: 'Profile',   icon: null,  section: 'bottom' },  // Special - shows avatar
-  { id: 'admin',        label: 'Admin',     icon: '🛡️', section: 'admin' },  // Admin only
 ];
 
 // Bottom tabs: Today, Habits, AI, Medals, Profile (like Instagram with AI in center)
@@ -184,22 +183,17 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
 
         {/* Nav items */}
         <nav className="flex flex-col gap-0.5 flex-1">
-          {ALL_NAV.filter(item => {
-            // Admin tab only visible to admins
-            if (item.section === 'admin') return currentUser?.isAdmin;
-            return true;
-          }).map(item => {
+          {ALL_NAV.map(item => {
             const isActive  = activeTab === item.id;
             const isProfile = item.id === 'profile';
-            const isAdmin   = item.id === 'admin';
             return (
               <button key={item.id}
                 data-testid={`desktop-nav-${item.id}`}
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 text-left w-full ${
                   isActive ? 'text-white' : 'text-[#6b7280] hover:text-[#9ca3af] hover:bg-white/[0.03]'
-                } ${isAdmin ? 'border border-yellow-500/30' : ''}`}
-                style={isActive ? { background: isAdmin ? 'rgba(234,179,8,0.1)' : 'rgba(255,255,255,0.06)' } : {}}
+                }`}
+                style={isActive ? { background: 'rgba(255,255,255,0.06)' } : {}}
               >
                 {isProfile ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
@@ -210,7 +204,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                   <span className="text-base w-5 text-center leading-none">{item.icon}</span>
                 )}
                 <span className="font-medium">{item.label}</span>
-                {isActive && <div className="ml-auto w-1 h-4 rounded-full" style={{ background: isAdmin ? '#eab308' : accentColor }} />}
+                {isActive && <div className="ml-auto w-1 h-4 rounded-full" style={{ background: accentColor }} />}
               </button>
             );
           })}
@@ -464,34 +458,6 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                   </button>
                 );
               })}
-
-              {/* Admin section - only for admins */}
-              {currentUser?.isAdmin && (
-                <>
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-5 pt-4 pb-1.5 text-yellow-500">Admin</p>
-                  {ALL_NAV.filter(n => n.section === 'admin').map(item => {
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button key={item.id}
-                        data-testid={`menu-nav-${item.id}`}
-                        onClick={() => go(item.id)}
-                        className="w-full flex items-center gap-3.5 px-4 py-3 transition-all active:opacity-60"
-                        style={isActive ? { background: 'rgba(234,179,8,0.1)' } : {}}
-                      >
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-                          style={{ background: isActive ? 'rgba(234,179,8,0.18)' : 'var(--bg-main,#0a0a0a)', border: `1px solid ${isActive ? 'rgba(234,179,8,0.4)' : 'var(--bg-border,#1f1f1f)'}` }}>
-                          {item.icon}
-                        </div>
-                        <span className="font-semibold text-[15px] flex-1 text-left"
-                          style={{ color: isActive ? '#eab308' : '#e5e7eb' }}>
-                          {item.label}
-                        </span>
-                        {isActive && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#eab308' }} />}
-                      </button>
-                    );
-                  })}
-                </>
-              )}
 
               {/* Backup */}
               {onExport && (

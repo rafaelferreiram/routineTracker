@@ -5,7 +5,7 @@ import pytest
 import requests
 import time
 
-BASE_URL = "https://ai-itinerary-8.preview.emergentagent.com"
+BASE_URL = "https://tracker-mobile-test.preview.emergentagent.com"
 
 class TestProfileEndpoints:
     """Profile management endpoint tests"""

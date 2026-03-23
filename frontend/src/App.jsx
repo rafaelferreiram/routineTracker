@@ -101,8 +101,8 @@ function AppContent() {
         />
 
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
-          {/* Mobile header is now rendered inside Navbar — just add top padding */}
-          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl pt-[74px] lg:pt-6 pb-28 lg:pb-8">
+          {/* Mobile: respects safe areas for notch/Dynamic Island and home indicator */}
+          <div className="px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto lg:max-w-3xl main-content-safe">
             <div key={activeTab} className="animate-fade-in">
               {renderContent()}
             </div>

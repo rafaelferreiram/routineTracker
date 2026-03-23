@@ -15,7 +15,7 @@ import time
 import json
 
 # Use preview endpoint for testing
-BASE_URL = os.environ.get('preview_endpoint', 'https://ai-itinerary-8.preview.emergentagent.com')
+BASE_URL = os.environ.get('preview_endpoint', 'https://tracker-mobile-test.preview.emergentagent.com')
 
 # Test credentials
 TEST_EMAIL = "ferreira.rafah@gmail.com"

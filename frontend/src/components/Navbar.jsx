@@ -287,11 +287,14 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
       <nav data-testid="mobile-bottom-nav"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
         style={{
-          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
+          background: 'var(--bg-nav, rgba(8,8,8,0.98))',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderColor: 'var(--bg-border, #1f1f1f)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          /* Safe area for iPhone home indicator and Dynamic Island */
+          paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
         }}
       >
         <div className="flex items-stretch" style={{ height: 56 }}>

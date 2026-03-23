@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── CSS Variables for Safe Areas ────────────────────────────────────── */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  
+  /* Minimum bottom padding for home indicator */
+  --bottom-nav-height: 72px;
+  --bottom-safe: max(var(--sab), 8px);
+}
+
 /* ── Global Reset / Base ────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -13,6 +25,8 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  /* Prevent overscroll bounce on iOS */
+  overscroll-behavior: none;
 }
 
 body {
@@ -20,15 +34,73 @@ body {
   background: var(--bg-main, #080808);
   color: var(--text-primary, #E2E8F0);
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Safe area padding for notch/Dynamic Island */
+  padding-top: var(--sat);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* ── PWA Standalone Mode Adjustments ─────────────────────────────────── */
+@media all and (display-mode: standalone) {
+  body {
+    /* Extra padding when running as installed PWA */
+    padding-top: var(--sat);
+  }
+  
+  /* Ensure content doesn't go under notch */
+  .app-header {
+    padding-top: calc(var(--sat) + 8px);
+  }
+}
+
+/* ── Safe Area Utilities ─────────────────────────────────────────────── */
+.safe-top {
+  padding-top: var(--sat);
+}
+
+.safe-bottom {
+  padding-bottom: var(--sab);
+}
+
+.safe-x {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+.safe-all {
+  padding: var(--sat) var(--sar) var(--sab) var(--sal);
+}
+
+/* Bottom navigation safe area */
+.bottom-nav-safe {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--bottom-safe));
+}
+
+/* Main content area - respects safe areas on mobile */
+.main-content-safe {
+  /* Mobile: header (58px) + safe top + spacing */
+  padding-top: calc(58px + var(--sat) + 16px);
+  /* Mobile: bottom nav (56px) + safe bottom + spacing */
+  padding-bottom: calc(56px + var(--bottom-safe) + 24px);
+}
+
+@media (min-width: 1024px) {
+  .main-content-safe {
+    /* Desktop: no fixed header/nav, normal padding */
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
 }
 
 /* ── Scrollbar Styling ──────────────────────────────────────────────── */

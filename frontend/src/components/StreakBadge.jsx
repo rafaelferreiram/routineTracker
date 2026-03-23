@@ -10,12 +10,12 @@ export default function StreakBadge({ streak = 0, size = 'md', showLabel = true,
   const s = sizeMap[size] || sizeMap.md;
 
   const getStreakStyle = (streak) => {
-    if (streak === 0) return { bg: 'bg-slate-700/50', border: 'border-slate-600', glow: '', fire: '💤', textColor: 'text-slate-400' };
-    if (streak < 3) return { bg: 'bg-orange-900/30', border: 'border-orange-600/50', glow: '', fire: '🔥', textColor: 'text-orange-300' };
-    if (streak < 7) return { bg: 'bg-orange-800/40', border: 'border-orange-500', glow: '0 0 12px rgba(249,115,22,0.4)', fire: '🔥', textColor: 'text-orange-400' };
-    if (streak < 14) return { bg: 'bg-amber-800/40', border: 'border-amber-500', glow: '0 0 16px rgba(245,158,11,0.5)', fire: '🔥', textColor: 'text-amber-400' };
-    if (streak < 30) return { bg: 'bg-yellow-800/40', border: 'border-yellow-400', glow: '0 0 20px rgba(234,179,8,0.6)', fire: '⚡', textColor: 'text-yellow-300' };
-    return { bg: 'bg-purple-800/40', border: 'border-purple-400', glow: '0 0 24px rgba(167,139,250,0.7)', fire: '👑', textColor: 'text-purple-300' };
+    if (streak === 0) return { bg: 'bg-slate-700/50', border: 'border-slate-600', glow: '', fire: '💤', textColor: 'text-slate-400', animate: false };
+    if (streak < 3) return { bg: 'bg-orange-900/30', border: 'border-orange-600/50', glow: '', fire: '🔥', textColor: 'text-orange-300', animate: true };
+    if (streak < 7) return { bg: 'bg-orange-800/40', border: 'border-orange-500', glow: '0 0 12px rgba(249,115,22,0.4)', fire: '🔥', textColor: 'text-orange-400', animate: true };
+    if (streak < 14) return { bg: 'bg-amber-800/40', border: 'border-amber-500', glow: '0 0 16px rgba(245,158,11,0.5)', fire: '🔥', textColor: 'text-amber-400', animate: true };
+    if (streak < 30) return { bg: 'bg-yellow-800/40', border: 'border-yellow-400', glow: '0 0 20px rgba(234,179,8,0.6)', fire: '⚡', textColor: 'text-yellow-300', animate: true };
+    return { bg: 'bg-purple-800/40', border: 'border-purple-400', glow: '0 0 24px rgba(167,139,250,0.7)', fire: '👑', textColor: 'text-purple-300', animate: true };
   };
 
   const style = getStreakStyle(streak);
@@ -23,11 +23,11 @@ export default function StreakBadge({ streak = 0, size = 'md', showLabel = true,
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div
-        className={`${s.outer} rounded-2xl flex items-center justify-center border-2 ${style.bg} ${style.border} flex-shrink-0`}
+        className={`${s.outer} rounded-2xl flex items-center justify-center border-2 ${style.bg} ${style.border} flex-shrink-0 ${style.animate ? 'fire-animation' : ''}`}
         style={{ boxShadow: style.glow }}
       >
         {streak > 0 ? (
-          <span>{style.fire}</span>
+          <span className={style.animate ? 'fire-bounce' : ''}>{style.fire}</span>
         ) : (
           <span className="text-slate-500">{style.fire}</span>
         )}
@@ -48,7 +48,7 @@ export default function StreakBadge({ streak = 0, size = 'md', showLabel = true,
 }
 
 /**
- * Compact inline streak indicator
+ * Compact inline streak indicator with fire animation
  */
 export function StreakPill({ streak = 0, className = '' }) {
   if (streak === 0) return null;
@@ -71,10 +71,10 @@ export function StreakPill({ streak = 0, className = '' }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getColor(streak)} ${className}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border fire-animation ${getColor(streak)} ${className}`}
       style={{ boxShadow: getGlow(streak) }}
     >
-      🔥 {streak}
+      <span className="fire-bounce streak-fire">🔥</span> {streak}
     </span>
   );
 }

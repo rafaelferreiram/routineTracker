@@ -83,24 +83,23 @@
 
 ## What's Been Implemented
 
-### 2026-03-23 - TARS AI Assistant (formerly Roti)
+### 2026-03-23 - TARS AI Assistant with Custom Icon
 - Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
-- New monolith-style icon inspired by TARS robot design
-- Dark space-themed colors (navy blue gradient)
+- Custom TARS robot icon from user-provided image (/public/tars-icon.png)
+- Dark space-themed button in navbar
 - Personality includes "Humor: 75%" setting (movie reference)
 - AIChat.jsx component for general AI conversation
-- Added TARS button to mobile bottom navigation bar (center position, highlighted)
-- Voice-to-voice: user speaks → Whisper transcribes → GPT responds → TTS speaks back
-- Text-to-text: user types → GPT responds with text
-- **System Actions via Function Calling:**
-  - Create habits (name, emoji, frequency, category)
-  - Edit habits (change name, emoji, or frequency)
-  - Create events (single-day or period)
-- Real-time weather data via Open-Meteo API (free, no key needed)
-- General knowledge assistant (not limited to RoutineTracker topics)
-- Backend endpoints: /api/ai/chat (with function calling), /api/ai/speak (TTS)
-- Updated onboarding carousel with "Conheça o TARS" slide
-- Fallback system: tries user's OpenAI key first, falls back to Emergent LLM Key on quota errors
+- Voice-to-voice and text-to-text interaction
+- System Actions: create/edit habits, create events
+- Real-time weather via Open-Meteo API
+- OpenAI fallback to Emergent LLM Key
+
+### 2026-03-23 - Fire Animation for Streaks
+- Added CSS keyframe animations for fire effect (fireFlicker, fireGlow, fireBounce)
+- StreakBadge.jsx updated with fire-animation class
+- StreakPill component shows animated fire emoji with glow effect
+- Streaks 2+ days get flickering fire animation
+- Progressive glow intensity based on streak length (3d, 7d, 14d, 30d+)
 
 ### 2026-03-23 - Event Itinerary with AI Assistant
 - New EventItinerary.jsx component for planning multi-day event itineraries

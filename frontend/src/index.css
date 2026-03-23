@@ -495,3 +495,63 @@ html[data-theme="forest"] .animate-slide-in-right {
   background: var(--bg-card) !important;
 }
 
+
+
+/* ── Fire Animation for Streaks ────────────────────────────────────────── */
+@keyframes fireFlicker {
+  0%, 100% { 
+    transform: scaleY(1) scaleX(1);
+    filter: brightness(1);
+  }
+  25% { 
+    transform: scaleY(1.1) scaleX(0.95);
+    filter: brightness(1.2);
+  }
+  50% { 
+    transform: scaleY(0.95) scaleX(1.05);
+    filter: brightness(0.9);
+  }
+  75% { 
+    transform: scaleY(1.05) scaleX(0.98);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes fireGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(251, 146, 60, 0.5), 0 0 16px rgba(251, 146, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.7), 0 0 24px rgba(251, 146, 60, 0.4);
+  }
+}
+
+@keyframes fireBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.fire-animation {
+  animation: fireFlicker 0.5s ease-in-out infinite, fireGlow 1s ease-in-out infinite;
+}
+
+.fire-bounce {
+  animation: fireBounce 0.6s ease-in-out infinite;
+}
+
+/* Fire emoji container */
+.streak-fire {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.streak-fire::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: fireGlow 1s ease-in-out infinite;
+  z-index: -1;
+}

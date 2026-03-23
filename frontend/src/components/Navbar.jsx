@@ -310,26 +310,16 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                   className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
                 >
                   <div 
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center -mt-4 shadow-lg"
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center -mt-4 shadow-lg overflow-hidden"
                     style={{ 
-                      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                      boxShadow: '0 4px 15px rgba(22, 33, 62, 0.6)',
-                      border: '1px solid #0f3460'
+                      background: 'linear-gradient(135deg, #2a2a3a 0%, #1a1a2e 100%)',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
+                      border: '2px solid #3b3b4f'
                     }}
                   >
-                    {/* TARS monolith icon */}
-                    <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                      <rect x="2" y="1" width="16" height="22" rx="1" fill="#e0e0e0" stroke="#9ca3af" strokeWidth="0.5"/>
-                      <rect x="4" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
-                      <rect x="11" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
-                      <rect x="4" y="8" width="12" height="1" fill="#6b7280"/>
-                      <rect x="4" y="11" width="12" height="1" fill="#6b7280"/>
-                      <rect x="4" y="14" width="12" height="1" fill="#6b7280"/>
-                      <rect x="4" y="17" width="5" height="4" rx="0.5" fill="#22c55e" className="animate-pulse"/>
-                      <rect x="11" y="17" width="5" height="4" rx="0.5" fill="#22c55e" style={{animationDelay: '0.5s'}} className="animate-pulse"/>
-                    </svg>
+                    <img src="/tars-icon.png" alt="TARS" className="w-10 h-10 object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium leading-none" style={{ color: '#3b82f6' }}>
+                  <span className="text-[10px] font-medium leading-none" style={{ color: '#9ca3af' }}>
                     TARS
                   </span>
                 </button>

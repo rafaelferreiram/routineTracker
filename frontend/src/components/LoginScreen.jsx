@@ -214,6 +214,19 @@ export default function LoginScreen() {
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   className="w-full px-4 py-3.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-base outline-none placeholder-[#374151] focus:border-[#374151] transition-colors"
                 />
+                {mode === 'signup' && (
+                  <div className="mt-2 space-y-1">
+                    <p className={`text-xs flex items-center gap-1.5 ${password.length >= 6 ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{password.length >= 6 ? '✓' : '○'}</span> Mínimo 6 caracteres
+                    </p>
+                    <p className={`text-xs flex items-center gap-1.5 ${/[a-zA-Z]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{/[a-zA-Z]/.test(password) ? '✓' : '○'}</span> Pelo menos uma letra
+                    </p>
+                    <p className={`text-xs flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{/[0-9]/.test(password) ? '✓' : '○'}</span> Pelo menos um número
+                    </p>
+                  </div>
+                )}
               </div>
 
               {error && (

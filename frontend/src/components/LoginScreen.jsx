@@ -1,19 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../store/useAuth.js';
 
 export default function LoginScreen() {
   const { login, signup, users, loginWithGoogle, startGoogleLogin } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState('');
+  const hasProcessedOAuth = useRef(false);
 
   // Handle Google OAuth callback (session_id in URL hash)
   useEffect(() => {
+    // Prevent double processing in StrictMode
+    if (hasProcessedOAuth.current) return;
+    
     const hash = window.location.hash;
     if (hash.includes('session_id=')) {
+      hasProcessedOAuth.current = true;
       const sessionId = hash.split('session_id=')[1]?.split('&')[0];
       if (sessionId) {
         setGoogleLoading(true);
-        window.location.hash = ''; // Clear hash
-        loginWithGoogle(sessionId).finally(() => setGoogleLoading(false));
+        setGoogleError('');
+        window.history.replaceState(null, '', window.location.pathname); // Clear hash cleanly
+        loginWithGoogle(sessionId)
+          .then(result => {
+            if (result.error) {
+              setGoogleError(result.error);
+            }
+          })
+          .finally(() => setGoogleLoading(false));
       }
     }
   }, [loginWithGoogle]);
@@ -254,6 +267,14 @@ export default function LoginScreen() {
             <span className="px-3 text-[#4b5563] text-xs">or</span>
             <div className="flex-grow border-t border-[#1f1f1f]"></div>
           </div>
+          
+          {googleError && (
+            <p data-testid="google-error"
+              className="text-[#f87171] text-xs bg-[#f871711a] border border-[#f8717133] rounded-xl px-3 py-2.5 mb-3">
+              {googleError}
+            </p>
+          )}
+          
           <button
             data-testid="google-signin-btn"
             onClick={startGoogleLogin}
@@ -263,7 +284,7 @@ export default function LoginScreen() {
             {googleLoading ? (
               <>
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Signing in with Google...
+                Entrando com Google...
               </>
             ) : (
               <>
@@ -273,7 +294,7 @@ export default function LoginScreen() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Continue with Google
+                Entrar com Google
               </>
             )}
           </button>

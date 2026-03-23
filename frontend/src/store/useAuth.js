@@ -111,9 +111,10 @@ export function AuthProvider({ children }) {
   }
 
   function startGoogleLogin() {
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     // Redirect to Emergent Google Auth
-    const redirectUri = encodeURIComponent(window.location.origin);
-    window.location.href = `https://auth.emergentagent.com/oauth/google?redirect_uri=${redirectUri}`;
+    const redirectUrl = window.location.origin;
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   }
 
   return createElement(

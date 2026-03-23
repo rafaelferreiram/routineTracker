@@ -83,6 +83,23 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - Google Maps Places Integration
+- New PlaceSearch.jsx component for searching real-world places
+- Google Maps JavaScript API + Places API integration
+- Features:
+  - Search by location (e.g., "Times Square, NYC")
+  - Filter by type: Restaurantes, Cafés, Atrações, Museus, Parques, Shopping, Hotéis, Bares
+  - Results show photos, ratings (stars), price levels ($-$$$$), and open/closed status
+  - Interactive mini-map with dark theme and place markers
+  - "Ver no Maps" button opens Google Maps in new tab
+  - "Adicionar ao Roteiro" with time picker modal
+- EventItinerary.jsx updated to 3-column layout:
+  - Left: Roteiro (day-by-day activities)
+  - Middle: Buscar Lugares (Google Maps search)
+  - Right: Assistente IA (chat)
+- Mobile-friendly with tab navigation for each section
+- API key stored in environment variable (VITE_GOOGLE_MAPS_API_KEY)
+
 ### 2026-03-23 - TARS AI Assistant with Function Calling (P0 Bug Fixed)
 - Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
 - Custom TARS robot icon from user-provided image (/public/tars-icon.png)
@@ -204,7 +221,18 @@
 3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_8.json` - Latest (8/8 tests - TARS Function Calling - P0 Bug Fixed)
-- `/app/test_reports/iteration_7.json` - Previous (8 backend + 9 frontend tests - Event Itinerary with AI)
+- `/app/test_reports/iteration_9.json` - Latest (6/6 tests - Google Maps PlaceSearch Integration)
+- `/app/test_reports/iteration_8.json` - Previous (8/8 tests - TARS Function Calling - P0 Bug Fixed)
+- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests - Event Itinerary with AI)
 - `/app/test_reports/iteration_6.json` - Earlier (7/7 frontend features - Events with photos per day)
-- `/app/test_reports/iteration_5.json` - Earlier (37 backend, 8 frontend tests passed)
+
+## 3rd Party Integrations
+- **MongoDB Atlas**: Production database
+- **OpenAI GPT-4o**: AI chat, function calling
+- **OpenAI Whisper**: Speech-to-text
+- **OpenAI TTS**: Text-to-speech
+- **Open-Meteo API**: Real-time weather (no API key)
+- **Google Maps JavaScript API**: Place search, maps
+- **Google Places API**: Search restaurants, attractions, etc.
+- **Emergent-managed Google Auth**: Social login (workaround active)
+

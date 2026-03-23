@@ -92,6 +92,9 @@
 - Manual activity addition with time and title
 - Itinerary data persisted in event.itinerary array
 - Backend endpoints: /api/ai/itinerary and /api/ai/transcribe
+- **Calendar Export**: Download .ics file with each activity as separate event
+  - Each event includes TL;DR summary of the day's activities in description
+  - Works with iPhone Calendar, Google Calendar, Outlook, and any iCalendar-compatible app
 
 ### 2026-03-23 - Event Memories with Photos per Day
 - Enhanced EventsPanel.jsx with support for single-day and multi-day (period) events

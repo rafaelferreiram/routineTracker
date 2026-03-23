@@ -198,6 +198,109 @@ export default function EventItinerary({ event, onSave, onClose }) {
     onSave({ itinerary });
   };
 
+  // Generate ICS file for calendar export
+  const generateICS = () => {
+    if (!itinerary || itinerary.length === 0) {
+      alert('Adicione atividades ao roteiro antes de exportar!');
+      return;
+    }
+
+    // ICS format helper functions
+    const formatICSDate = (dateStr, timeStr) => {
+      const [year, month, day] = dateStr.split('-');
+      const [hour, minute] = (timeStr || '09:00').split(':');
+      return `${year}${month}${day}T${hour}${minute}00`;
+    };
+
+    const escapeICS = (text) => {
+      return (text || '').replace(/[\\;,\n]/g, (match) => {
+        if (match === '\n') return '\\n';
+        return '\\' + match;
+      });
+    };
+
+    // Generate TL;DR for each day
+    const getDayTLDR = (dayData) => {
+      const activities = dayData.activities || [];
+      if (activities.length === 0) return '';
+      
+      const activityNames = activities.map(a => a.title).join(', ');
+      return `TL;DR: ${activityNames}`;
+    };
+
+    // Build ICS content
+    let icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//RoutineTracker//Roteiro//PT',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      `X-WR-CALNAME:${escapeICS(event.title)} - Roteiro`,
+    ];
+
+    // Add each activity as a separate event
+    itinerary.forEach(dayData => {
+      const dayDate = dayData.date;
+      const dayTLDR = getDayTLDR(dayData);
+      const dayFormatted = new Date(dayDate + 'T00:00:00').toLocaleDateString('pt-BR', {
+        weekday: 'long', day: 'numeric', month: 'long'
+      });
+
+      (dayData.activities || []).forEach((activity, idx) => {
+        const startTime = activity.time || '09:00';
+        const [hours, minutes] = startTime.split(':').map(Number);
+        
+        // Event duration: 1 hour by default
+        const endHour = hours + 1;
+        const endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+        const description = [
+          `${event.emoji} ${event.title}`,
+          '',
+          `📅 ${dayFormatted}`,
+          '',
+          dayTLDR,
+          '',
+          activity.notes ? `📝 ${activity.notes}` : '',
+          '',
+          '—',
+          'Gerado por RoutineTracker'
+        ].filter(Boolean).join('\\n');
+
+        const uid = `${event.id}-${dayDate}-${idx}@routinetracker`;
+
+        icsContent.push(
+          'BEGIN:VEVENT',
+          `UID:${uid}`,
+          `DTSTAMP:${formatICSDate(new Date().toISOString().split('T')[0], '00:00')}`,
+          `DTSTART:${formatICSDate(dayDate, startTime)}`,
+          `DTEND:${formatICSDate(dayDate, endTime)}`,
+          `SUMMARY:${escapeICS(activity.title)} - ${escapeICS(event.title)}`,
+          `DESCRIPTION:${description}`,
+          `LOCATION:${escapeICS(event.note || '')}`,
+          'STATUS:CONFIRMED',
+          'END:VEVENT'
+        );
+      });
+    });
+
+    icsContent.push('END:VCALENDAR');
+
+    // Create and download file
+    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}_roteiro.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Count total activities
+  const totalActivities = itinerary.reduce((sum, d) => sum + (d.activities?.length || 0), 0);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -387,17 +490,31 @@ export default function EventItinerary({ event, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 p-4 border-t flex gap-3" style={{ borderColor: 'var(--bg-border)' }}>
-          <button onClick={onClose}
-            className="flex-1 py-3 rounded-xl text-[#6b7280] text-sm font-medium border"
-            style={{ borderColor: 'var(--bg-border)' }}>
-            Fechar
-          </button>
-          <button onClick={handleSave}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: event.color, color: '#000' }}>
-            Salvar Roteiro
-          </button>
+        <div className="flex-shrink-0 p-4 border-t space-y-3" style={{ borderColor: 'var(--bg-border)' }}>
+          {/* Export to Calendar */}
+          {totalActivities > 0 && (
+            <button 
+              onClick={generateICS}
+              className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 border transition-colors hover:bg-white/5"
+              style={{ borderColor: 'var(--bg-border)', color: 'var(--text-primary, #e5e7eb)' }}>
+              <span>📅</span>
+              <span>Adicionar ao Calendário</span>
+              <span className="text-xs text-[#6b7280]">({totalActivities} atividades)</span>
+            </button>
+          )}
+          
+          <div className="flex gap-3">
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-xl text-[#6b7280] text-sm font-medium border"
+              style={{ borderColor: 'var(--bg-border)' }}>
+              Fechar
+            </button>
+            <button onClick={handleSave}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold"
+              style={{ background: event.color, color: '#000' }}>
+              Salvar Roteiro
+            </button>
+          </div>
         </div>
       </div>
     </div>

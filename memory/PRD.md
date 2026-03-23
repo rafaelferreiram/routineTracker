@@ -83,9 +83,13 @@
 
 ## What's Been Implemented
 
-### 2026-03-23 - Roti AI Assistant (Chat Global)
-- New AIChat.jsx component for general AI conversation
-- Added 🤖 Roti button to mobile bottom navigation bar (center position, highlighted)
+### 2026-03-23 - TARS AI Assistant (formerly Roti)
+- Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
+- New monolith-style icon inspired by TARS robot design
+- Dark space-themed colors (navy blue gradient)
+- Personality includes "Humor: 75%" setting (movie reference)
+- AIChat.jsx component for general AI conversation
+- Added TARS button to mobile bottom navigation bar (center position, highlighted)
 - Voice-to-voice: user speaks → Whisper transcribes → GPT responds → TTS speaks back
 - Text-to-text: user types → GPT responds with text
 - **System Actions via Function Calling:**
@@ -95,7 +99,7 @@
 - Real-time weather data via Open-Meteo API (free, no key needed)
 - General knowledge assistant (not limited to RoutineTracker topics)
 - Backend endpoints: /api/ai/chat (with function calling), /api/ai/speak (TTS)
-- Updated onboarding carousel with new "Conheça o Roti" slide
+- Updated onboarding carousel with "Conheça o TARS" slide
 - Fallback system: tries user's OpenAI key first, falls back to Emergent LLM Key on quota errors
 
 ### 2026-03-23 - Event Itinerary with AI Assistant

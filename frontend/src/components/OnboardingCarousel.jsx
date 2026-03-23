@@ -170,7 +170,7 @@ const SLIDES = [
   {
     id: 'ai-assistant',
     tag: 'Novidade',
-    title: 'Conheça o Roti',
+    title: 'Conheça o TARS',
     description: 'Seu assistente IA pessoal! Fale por voz e ele responde por voz. Digite texto e ele responde por texto.',
   },
   {
@@ -290,7 +290,7 @@ function AIAssistantVisual() {
       {/* Chat bubbles mockup */}
       <div className="flex justify-end">
         <div className="max-w-[75%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm"
-          style={{ background: '#22c55e', color: '#000' }}>
+          style={{ background: '#3b82f6', color: '#fff' }}>
           <div className="flex items-center gap-1">
             <span className="text-xs">🎤</span>
             <span>Como melhorar minha rotina?</span>
@@ -299,7 +299,7 @@ function AIAssistantVisual() {
       </div>
       <div className="flex justify-start">
         <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm"
-          style={{ background: '#1a1a1a', color: '#e5e7eb' }}>
+          style={{ background: '#1a1a2e', color: '#e5e7eb', border: '1px solid #0f3460' }}>
           <div className="flex items-start gap-2">
             <span className="text-xs">🔊</span>
             <span>Comece com 3 hábitos simples e aumente gradualmente...</span>
@@ -307,20 +307,30 @@ function AIAssistantVisual() {
         </div>
       </div>
       
-      {/* AI button mockup */}
+      {/* TARS button mockup */}
       <div className="flex justify-center mt-4">
         <div 
           className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg animate-bounce"
           style={{ 
-            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-            boxShadow: '0 4px 20px rgba(34, 197, 94, 0.5)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            boxShadow: '0 4px 20px rgba(15, 52, 96, 0.5)',
+            border: '1px solid #0f3460',
             animationDuration: '2s'
           }}
         >
-          <span className="text-2xl">🤖</span>
+          {/* TARS monolith icon */}
+          <svg width="22" height="28" viewBox="0 0 20 24" fill="none">
+            <rect x="2" y="1" width="16" height="22" rx="1" fill="#e0e0e0" stroke="#9ca3af" strokeWidth="0.5"/>
+            <rect x="4" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+            <rect x="11" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+            <rect x="4" y="8" width="12" height="1" fill="#6b7280"/>
+            <rect x="4" y="11" width="12" height="1" fill="#6b7280"/>
+            <rect x="4" y="17" width="5" height="4" rx="0.5" fill="#22c55e"/>
+            <rect x="11" y="17" width="5" height="4" rx="0.5" fill="#22c55e"/>
+          </svg>
         </div>
       </div>
-      <p className="text-center text-[#6b7280] text-xs">Toque no Roti na barra inferior</p>
+      <p className="text-center text-[#3b82f6] text-xs font-medium">Toque no TARS na barra inferior</p>
     </div>
   );
 }

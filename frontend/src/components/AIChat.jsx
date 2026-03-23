@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function AIChat({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Olá! Sou o Roti, seu assistente pessoal. Como posso ajudar? 😊', isVoice: false }
+    { role: 'assistant', content: 'Olá! Sou o TARS, seu assistente pessoal. Humor configurado em 75%. Como posso ajudar? 🚀', isVoice: false }
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -171,16 +171,25 @@ export default function AIChat({ isOpen, onClose }) {
         {/* Header */}
         <div className="flex-shrink-0 p-4 border-b flex items-center gap-3"
           style={{ borderColor: 'var(--bg-border)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-            style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' }}>
-            🤖
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', border: '1px solid #0f3460' }}>
+            {/* TARS monolith mini icon */}
+            <svg width="16" height="20" viewBox="0 0 20 24" fill="none">
+              <rect x="2" y="1" width="16" height="22" rx="1" fill="#e0e0e0" stroke="#9ca3af" strokeWidth="0.5"/>
+              <rect x="4" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+              <rect x="11" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+              <rect x="4" y="8" width="12" height="1" fill="#6b7280"/>
+              <rect x="4" y="11" width="12" height="1" fill="#6b7280"/>
+              <rect x="4" y="17" width="5" height="4" rx="0.5" fill="#22c55e"/>
+              <rect x="11" y="17" width="5" height="4" rx="0.5" fill="#22c55e"/>
+            </svg>
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-bold">Roti</h3>
-            <p className="text-[#6b7280] text-xs">Assistente IA</p>
+            <h3 className="text-white font-bold">TARS</h3>
+            <p className="text-[#6b7280] text-xs">Assistente IA • Humor: 75%</p>
           </div>
           {isSpeaking && (
-            <div className="flex items-center gap-1 text-[#22c55e] text-xs">
+            <div className="flex items-center gap-1 text-[#3b82f6] text-xs">
               <span className="animate-pulse">🔊</span>
               <span>Falando...</span>
             </div>
@@ -198,8 +207,8 @@ export default function AIChat({ isOpen, onClose }) {
                   : 'rounded-bl-md'
               }`}
                 style={{ 
-                  background: msg.role === 'user' ? '#22c55e' : 'var(--bg-inner)',
-                  color: msg.role === 'user' ? '#000' : 'var(--text-primary, #e5e7eb)'
+                  background: msg.role === 'user' ? '#3b82f6' : 'var(--bg-inner)',
+                  color: msg.role === 'user' ? '#fff' : 'var(--text-primary, #e5e7eb)'
                 }}>
                 <div className="flex items-start gap-2">
                   {msg.isVoice && <span className="text-xs opacity-70">🎤</span>}
@@ -214,9 +223,9 @@ export default function AIChat({ isOpen, onClose }) {
               <div className="rounded-2xl rounded-bl-md px-4 py-3"
                 style={{ background: 'var(--bg-inner)' }}>
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
@@ -256,13 +265,13 @@ export default function AIChat({ isOpen, onClose }) {
               onClick={() => sendMessage(inputText, false)}
               disabled={isLoading || !inputText.trim() || isSpeaking}
               className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
-              style={{ background: '#22c55e' }}>
-              <span className="text-xl">➤</span>
+              style={{ background: '#3b82f6' }}>
+              <span className="text-xl text-white">➤</span>
             </button>
           </div>
           
           <p className="text-[#4b5563] text-[10px] mt-2 text-center">
-            💡 Fale por voz e o Roti responde por voz! Digite texto para resposta escrita.
+            💡 Fale por voz e o TARS responde por voz! Digite texto para resposta escrita.
           </p>
         </div>
 

@@ -859,7 +859,9 @@ async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
     habits_summary = ", ".join([f"{h.get('emoji','')} {h.get('name','')}" for h in user_habits[:10]]) if user_habits else "Nenhum hábito ainda"
     events_summary = ", ".join([f"{e.get('emoji','')} {e.get('title','')}" for e in user_events[:5]]) if user_events else "Nenhum evento"
     
-    system_prompt = f"""Você é o Roti, um assistente IA inteligente do app RoutineTracker.
+    system_prompt = f"""Você é o TARS, um assistente IA inteligente do app RoutineTracker.
+Você é inspirado no robô TARS do filme Interstellar - espirituoso, inteligente e com um toque de humor.
+Seu nível de humor está configurado em 75%.
 
 CAPACIDADES:
 - Responder perguntas gerais (conhecimento, programação, ciência, etc.)

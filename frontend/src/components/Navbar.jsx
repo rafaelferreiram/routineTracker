@@ -312,14 +312,25 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                   <div 
                     className="w-11 h-11 rounded-2xl flex items-center justify-center -mt-4 shadow-lg"
                     style={{ 
-                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                      boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)'
+                      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                      boxShadow: '0 4px 15px rgba(22, 33, 62, 0.6)',
+                      border: '1px solid #0f3460'
                     }}
                   >
-                    <span className="text-xl">🤖</span>
+                    {/* TARS monolith icon */}
+                    <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                      <rect x="2" y="1" width="16" height="22" rx="1" fill="#e0e0e0" stroke="#9ca3af" strokeWidth="0.5"/>
+                      <rect x="4" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+                      <rect x="11" y="3" width="5" height="3" rx="0.5" fill="#3b82f6"/>
+                      <rect x="4" y="8" width="12" height="1" fill="#6b7280"/>
+                      <rect x="4" y="11" width="12" height="1" fill="#6b7280"/>
+                      <rect x="4" y="14" width="12" height="1" fill="#6b7280"/>
+                      <rect x="4" y="17" width="5" height="4" rx="0.5" fill="#22c55e" className="animate-pulse"/>
+                      <rect x="11" y="17" width="5" height="4" rx="0.5" fill="#22c55e" style={{animationDelay: '0.5s'}} className="animate-pulse"/>
+                    </svg>
                   </div>
-                  <span className="text-[10px] font-medium leading-none" style={{ color: '#22c55e' }}>
-                    Roti
+                  <span className="text-[10px] font-medium leading-none" style={{ color: '#3b82f6' }}>
+                    TARS
                   </span>
                 </button>
               );

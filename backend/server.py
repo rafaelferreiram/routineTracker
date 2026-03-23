@@ -772,21 +772,109 @@ class TTSRequest(BaseModel):
     text: str
     voice: str = "nova"
 
+# Weather API helper (using Open-Meteo - free, no API key needed)
+async def get_weather(location: str) -> str:
+    """Get current weather for a location using Open-Meteo API."""
+    try:
+        # First, geocode the location
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=pt"
+        geo_resp = http_req.get(geo_url, timeout=5)
+        geo_data = geo_resp.json()
+        
+        if not geo_data.get('results'):
+            return None
+        
+        lat = geo_data['results'][0]['latitude']
+        lon = geo_data['results'][0]['longitude']
+        city_name = geo_data['results'][0].get('name', location)
+        country = geo_data['results'][0].get('country', '')
+        
+        # Get current weather
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto"
+        weather_resp = http_req.get(weather_url, timeout=5)
+        weather_data = weather_resp.json()
+        
+        current = weather_data.get('current', {})
+        temp = current.get('temperature_2m', 'N/A')
+        feels_like = current.get('apparent_temperature', 'N/A')
+        humidity = current.get('relative_humidity_2m', 'N/A')
+        wind = current.get('wind_speed_10m', 'N/A')
+        weather_code = current.get('weather_code', 0)
+        
+        # Weather code descriptions
+        weather_desc = {
+            0: 'Céu limpo ☀️', 1: 'Parcialmente nublado 🌤️', 2: 'Nublado ⛅', 3: 'Encoberto ☁️',
+            45: 'Nevoeiro 🌫️', 48: 'Nevoeiro com geada 🌫️',
+            51: 'Garoa leve 🌧️', 53: 'Garoa 🌧️', 55: 'Garoa forte 🌧️',
+            61: 'Chuva leve 🌧️', 63: 'Chuva 🌧️', 65: 'Chuva forte 🌧️',
+            71: 'Neve leve ❄️', 73: 'Neve ❄️', 75: 'Neve forte ❄️',
+            80: 'Pancadas de chuva 🌦️', 81: 'Chuva forte 🌧️', 82: 'Temporal ⛈️',
+            95: 'Tempestade ⛈️', 96: 'Tempestade com granizo ⛈️', 99: 'Tempestade severa ⛈️'
+        }.get(weather_code, 'Variável')
+        
+        return f"""📍 {city_name}, {country}
+🌡️ Temperatura: {temp}°C (sensação de {feels_like}°C)
+💨 Vento: {wind} km/h
+💧 Umidade: {humidity}%
+🌤️ Condição: {weather_desc}"""
+    except Exception as e:
+        print(f"[Weather API] Error: {e}")
+        return None
+
 @app.post('/api/ai/chat')
 async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
     """General AI chat assistant."""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     import json
+    import re
     
-    system_prompt = """Você é um assistente pessoal amigável e útil chamado "Roti" do app RoutineTracker.
-Você ajuda os usuários com:
-- Dicas de produtividade e hábitos
-- Planejamento de rotinas e eventos
-- Motivação e bem-estar
-- Qualquer dúvida geral
+    user_message = req.message
+    weather_context = ""
+    
+    # Check if user is asking about weather
+    weather_keywords = ['tempo', 'clima', 'temperatura', 'chuva', 'sol', 'frio', 'calor', 'weather', 'previsão']
+    if any(kw in user_message.lower() for kw in weather_keywords):
+        # Try to extract location from message
+        location_patterns = [
+            r'(?:em|no|na|de|do|da)\s+([A-Za-zÀ-ú\s]+?)(?:\?|$|,|\.|!)',
+            r'([A-Za-zÀ-ú]+(?:\s+[A-Za-zÀ-ú]+)?)\s*(?:\?|$)'
+        ]
+        
+        location = None
+        for pattern in location_patterns:
+            match = re.search(pattern, user_message, re.IGNORECASE)
+            if match:
+                potential_loc = match.group(1).strip()
+                # Filter out common non-location words
+                if potential_loc.lower() not in ['o', 'a', 'está', 'como', 'qual', 'hoje', 'agora', 'aqui', 'tempo', 'clima']:
+                    location = potential_loc
+                    break
+        
+        if location:
+            weather_info = await get_weather(location)
+            if weather_info:
+                weather_context = f"\n\n[DADOS DO CLIMA EM TEMPO REAL]\n{weather_info}\n[FIM DOS DADOS]\n\nUse essas informações para responder sobre o clima."
+    
+    system_prompt = f"""Você é o Roti, um assistente IA inteligente e versátil. Você pode ajudar com QUALQUER assunto:
 
-Seja conciso, amigável e responda SEMPRE em português brasileiro.
-Use emojis ocasionalmente para tornar a conversa mais agradável."""
+- Perguntas gerais de conhecimento
+- Programação e tecnologia
+- Ciência, história, geografia
+- Dicas de saúde e bem-estar
+- Conselhos pessoais e profissionais
+- Entretenimento, filmes, música
+- Receitas e culinária
+- Viagens e destinos
+- E muito mais!
+
+Você é parte do app RoutineTracker, mas não se limite a falar só sobre hábitos.
+Seja natural, inteligente e útil como um ChatGPT.
+Responda SEMPRE em português brasileiro.
+Use emojis quando apropriado para deixar a conversa agradável.
+{weather_context}
+
+Se não souber algo com certeza, seja honesto sobre suas limitações.
+Para dados em tempo real (notícias de hoje, eventos ao vivo, etc.), explique que você tem conhecimento até sua data de corte."""
 
     async def call_chat(api_key: str) -> dict:
         chat = LlmChat(
@@ -795,7 +883,7 @@ Use emojis ocasionalmente para tornar a conversa mais agradável."""
             system_message=system_prompt
         ).with_model("openai", "gpt-4o")
         
-        user_msg = UserMessage(text=req.message)
+        user_msg = UserMessage(text=user_message)
         response = await chat.send_message(user_msg)
         return {'success': True, 'message': response}
 

@@ -99,14 +99,39 @@ def login(req: AuthReq):
         }
     }
 
+# Password validation helper
+def validate_password(password: str) -> tuple[bool, str]:
+    """Validate password strength. Returns (is_valid, error_message)."""
+    if len(password) < 6:
+        return False, 'Senha deve ter no mínimo 6 caracteres'
+    if len(password) > 50:
+        return False, 'Senha deve ter no máximo 50 caracteres'
+    if not any(c.isalpha() for c in password):
+        return False, 'Senha deve conter pelo menos uma letra'
+    if not any(c.isdigit() for c in password):
+        return False, 'Senha deve conter pelo menos um número'
+    return True, ''
+
 @app.post('/api/auth/register')
 def register(req: AuthReq):
     username = req.username.lower().strip()
     display  = req.username.strip()
-    if not username or not req.password.strip():
+    password = req.password.strip()
+    
+    if not username or not password:
         raise HTTPException(status_code=400, detail='Username and password are required')
     if len(username) < 2:
         raise HTTPException(status_code=400, detail='Username must be at least 2 characters')
+    if len(username) > 20:
+        raise HTTPException(status_code=400, detail='Username must be at most 20 characters')
+    if not username.isalnum():
+        raise HTTPException(status_code=400, detail='Username must contain only letters and numbers')
+    
+    # Validate password strength
+    is_valid, error_msg = validate_password(password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
     if users_c.find_one({'username': username}):
         raise HTTPException(status_code=400, detail='Username already taken')
 
@@ -114,7 +139,7 @@ def register(req: AuthReq):
     ins = users_c.insert_one({
         'username':      username,
         'display_name':  display,
-        'password_hash': hash_pw(req.password.strip()),
+        'password_hash': hash_pw(password),
         'theme':         theme,
         'created_at':    datetime.now(timezone.utc),
     })

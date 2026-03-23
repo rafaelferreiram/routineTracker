@@ -55,12 +55,25 @@ export default function LandingPage({ onGetStarted }) {
             <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight">RoutineTracker</span>
           </div>
-          <button
-            onClick={onGetStarted}
-            className="px-5 py-2.5 rounded-full text-sm font-semibold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all active:scale-95"
-          >
-            Get Started
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              data-testid="nav-login-btn"
+              onClick={onGetStarted}
+              className="px-4 py-2.5 rounded-full text-sm font-medium text-[#9ca3af] hover:text-white transition-all flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Login
+            </button>
+            <button
+              data-testid="nav-get-started-btn"
+              onClick={onGetStarted}
+              className="px-5 py-2.5 rounded-full text-sm font-semibold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all active:scale-95"
+            >
+              Get Started
+            </button>
+          </div>
         </nav>
 
         {/* Hero content */}

@@ -834,8 +834,9 @@ async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
     
     # Get user's data for context
     user_data_doc = data_c.find_one({'user_id': user_id}, {'_id': 0})
-    user_habits = user_data_doc.get('habits', []) if user_data_doc else []
-    user_events = user_data_doc.get('events', []) if user_data_doc else []
+    user_data = user_data_doc.get('data', {}) if user_data_doc else {}
+    user_habits = user_data.get('habits', []) if user_data else []
+    user_events = user_data.get('events', []) if user_data else []
     
     # Weather context
     weather_context = ""
@@ -857,7 +858,16 @@ async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
     
     # Current habits/events context
     habits_summary = ", ".join([f"{h.get('emoji','')} {h.get('name','')}" for h in user_habits[:10]]) if user_habits else "Nenhum hábito ainda"
-    events_summary = ", ".join([f"{e.get('emoji','')} {e.get('title','')}" for e in user_events[:5]]) if user_events else "Nenhum evento"
+    
+    # Get events with itineraries for context
+    events_with_details = []
+    for e in user_events[:10]:
+        event_info = f"{e.get('emoji','')} {e.get('title','')} ({e.get('date','')} - {e.get('endDate', e.get('date',''))})"
+        if e.get('itinerary'):
+            activities_count = sum(len(day.get('activities', [])) for day in e.get('itinerary', []))
+            event_info += f" [Roteiro: {activities_count} atividades]"
+        events_with_details.append(event_info)
+    events_summary = ", ".join(events_with_details) if events_with_details else "Nenhum evento"
     
     system_prompt = f"""Você é o TARS, um assistente IA inteligente do app RoutineTracker.
 Você é inspirado no robô TARS do filme Interstellar - espirituoso, inteligente e com um toque de humor.
@@ -867,17 +877,27 @@ CAPACIDADES:
 - Responder perguntas gerais (conhecimento, programação, ciência, etc.)
 - CRIAR hábitos para o usuário
 - EDITAR hábitos existentes (nome, emoji, frequência)  
-- CRIAR eventos
+- CRIAR eventos (viagens, compromissos)
+- CRIAR e EDITAR roteiros de eventos (itinerários dia a dia)
+- PESQUISAR e RECOMENDAR lugares (restaurantes, atrações, hotéis)
+- ADICIONAR atividades ao roteiro de eventos existentes
 {weather_context}
 
 HÁBITOS ATUAIS DO USUÁRIO: {habits_summary}
 EVENTOS DO USUÁRIO: {events_summary}
 
 REGRAS PARA AÇÕES:
-- Quando o usuário pedir para criar/adicionar um hábito, use a função create_habit
+- Quando o usuário pedir para criar/adicionar um hábito, use create_habit
 - Quando pedir para editar/mudar um hábito, use edit_habit
 - Quando pedir para criar um evento, use create_event
-- Confirme a ação realizada de forma amigável
+- Quando pedir para adicionar algo ao roteiro de um evento, use add_to_itinerary
+- Quando pedir recomendações de lugares (restaurantes, atrações), use search_places primeiro e depois pergunte se quer adicionar ao roteiro
+- Quando tiver informações suficientes sobre um lugar, use add_to_itinerary para salvar
+
+DICAS DE PESQUISA:
+- Quando o usuário mencionar uma cidade/local e pedir recomendações, use seu conhecimento para sugerir lugares reais e populares
+- Inclua detalhes úteis: nome do lugar, endereço aproximado, tipo de comida, faixa de preço
+- Seja específico e útil com horários e localizações
 
 Responda SEMPRE em português brasileiro. Use emojis."""
 
@@ -932,6 +952,57 @@ Responda SEMPRE em português brasileiro. Use emojis."""
                         "note": {"type": "string", "description": "Nota/descrição do evento (opcional)"}
                     },
                     "required": ["title", "emoji", "date"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_places",
+                "description": "Pesquisa e retorna recomendações de lugares (restaurantes, atrações, hotéis) baseado em localização e preferências",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "Cidade ou bairro (ex: 'Times Square, NYC', 'Paris')"},
+                        "type": {"type": "string", "enum": ["restaurant", "attraction", "hotel", "bar", "cafe", "museum", "park", "shopping"], "description": "Tipo de lugar"},
+                        "cuisine": {"type": "string", "description": "Tipo de culinária para restaurantes (ex: 'italiana', 'japonesa', 'steakhouse')"},
+                        "time_preference": {"type": "string", "description": "Horário preferido (ex: '21:00', 'jantar', 'almoço')"},
+                        "budget": {"type": "string", "enum": ["budget", "moderate", "upscale", "luxury"], "description": "Faixa de preço"},
+                        "special_requirements": {"type": "string", "description": "Requisitos especiais (ex: 'vegetariano', 'vista para cidade', 'romântico')"}
+                    },
+                    "required": ["location", "type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "add_to_itinerary",
+                "description": "Adiciona uma atividade ao roteiro de um evento existente",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_title": {"type": "string", "description": "Título do evento onde adicionar (busca parcial)"},
+                        "date": {"type": "string", "description": "Data da atividade (formato YYYY-MM-DD)"},
+                        "time": {"type": "string", "description": "Horário (formato HH:MM, ex: '21:00')"},
+                        "activity_title": {"type": "string", "description": "Nome/título da atividade"},
+                        "notes": {"type": "string", "description": "Detalhes adicionais (endereço, dicas, etc.)"}
+                    },
+                    "required": ["event_title", "date", "time", "activity_title"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_event_itinerary",
+                "description": "Obtém o roteiro atual de um evento para visualizar ou editar",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_title": {"type": "string", "description": "Título do evento (busca parcial)"}
+                    },
+                    "required": ["event_title"]
                 }
             }
         }
@@ -995,6 +1066,7 @@ Responda SEMPRE em português brasileiro. Use emojis."""
                     "endDate": args.get("end_date", args["date"]),
                     "note": args.get("note", ""),
                     "color": "#22c55e",
+                    "itinerary": [],
                     "createdAt": datetime.now(timezone.utc).isoformat()
                 }
                 # Update the nested data.events array
@@ -1004,6 +1076,135 @@ Responda SEMPRE em português brasileiro. Use emojis."""
                     upsert=True
                 )
                 return f"✅ Evento '{args['title']}' {args.get('emoji', '')} criado para {args['date']}!"
+            
+            elif func_name == "search_places":
+                # This function returns recommendations - GPT will use its knowledge
+                location = args.get("location", "")
+                place_type = args.get("type", "restaurant")
+                cuisine = args.get("cuisine", "")
+                time_pref = args.get("time_preference", "")
+                budget = args.get("budget", "moderate")
+                special = args.get("special_requirements", "")
+                
+                # Build search context for GPT to use
+                search_context = f"""Pesquisando {place_type} em {location}"""
+                if cuisine:
+                    search_context += f", culinária {cuisine}"
+                if time_pref:
+                    search_context += f", para {time_pref}"
+                if budget:
+                    budget_map = {"budget": "econômico", "moderate": "preço médio", "upscale": "sofisticado", "luxury": "luxo"}
+                    search_context += f", {budget_map.get(budget, budget)}"
+                if special:
+                    search_context += f", {special}"
+                
+                return f"🔍 {search_context}. Use seu conhecimento para recomendar lugares reais e populares com nome, endereço aproximado e detalhes úteis."
+            
+            elif func_name == "add_to_itinerary":
+                event_title = args.get("event_title", "").lower()
+                activity_date = args.get("date")
+                activity_time = args.get("time", "12:00")
+                activity_title = args.get("activity_title")
+                activity_notes = args.get("notes", "")
+                
+                # Find the event
+                user_doc = data_c.find_one({"user_id": user_id})
+                if not user_doc:
+                    return "❌ Nenhum dado encontrado"
+                
+                events = user_doc.get("data", {}).get("events", [])
+                found_event = None
+                
+                for e in events:
+                    if event_title in e.get("title", "").lower():
+                        found_event = e
+                        break
+                
+                if not found_event:
+                    return f"❌ Evento '{args.get('event_title')}' não encontrado. Eventos disponíveis: {', '.join([e.get('title','') for e in events])}"
+                
+                event_id = found_event.get("id")
+                
+                # Get or create itinerary
+                itinerary = found_event.get("itinerary", []) or []
+                
+                # Find or create the day entry
+                day_index = -1
+                for i, day in enumerate(itinerary):
+                    if day.get("date") == activity_date:
+                        day_index = i
+                        break
+                
+                new_activity = {
+                    "time": activity_time,
+                    "title": activity_title,
+                    "notes": activity_notes
+                }
+                
+                if day_index == -1:
+                    # Create new day entry
+                    itinerary.append({
+                        "date": activity_date,
+                        "activities": [new_activity]
+                    })
+                else:
+                    # Add to existing day
+                    itinerary[day_index]["activities"].append(new_activity)
+                
+                # Sort itinerary by date
+                itinerary.sort(key=lambda x: x.get("date", ""))
+                
+                # Sort activities within each day by time
+                for day in itinerary:
+                    day["activities"].sort(key=lambda x: x.get("time", "00:00"))
+                
+                # Update the event using array_filters to target the correct event
+                result = data_c.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"data.events.$[evt].itinerary": itinerary}},
+                    array_filters=[{"evt.id": event_id}]
+                )
+                
+                if result.modified_count > 0:
+                    return f"✅ Adicionado ao roteiro de '{found_event.get('title')}': {activity_time} - {activity_title}"
+                else:
+                    # Fallback: try direct index-based update if array_filters fails
+                    for i, e in enumerate(events):
+                        if e.get("id") == event_id:
+                            result = data_c.update_one(
+                                {"user_id": user_id},
+                                {"$set": {f"data.events.{i}.itinerary": itinerary}}
+                            )
+                            if result.modified_count > 0:
+                                return f"✅ Adicionado ao roteiro de '{found_event.get('title')}': {activity_time} - {activity_title}"
+                    return f"⚠️ Atividade preparada mas não foi possível salvar. Tente novamente."
+            
+            elif func_name == "get_event_itinerary":
+                event_title = args.get("event_title", "").lower()
+                
+                user_doc = data_c.find_one({"user_id": user_id})
+                if not user_doc:
+                    return "Nenhum dado encontrado"
+                
+                events = user_doc.get("data", {}).get("events", [])
+                
+                for e in events:
+                    if event_title in e.get("title", "").lower():
+                        itinerary = e.get("itinerary", [])
+                        if not itinerary:
+                            return f"📋 Roteiro de '{e.get('title')}' está vazio. Quer que eu adicione atividades?"
+                        
+                        result = f"📋 Roteiro de '{e.get('title')}' ({e.get('date')} - {e.get('endDate', e.get('date'))}):\n"
+                        for day in itinerary:
+                            result += f"\n📅 {day.get('date')}:\n"
+                            for act in day.get("activities", []):
+                                result += f"  • {act.get('time', '')} - {act.get('title', '')}"
+                                if act.get("notes"):
+                                    result += f" ({act.get('notes')})"
+                                result += "\n"
+                        return result
+                
+                return f"❌ Evento '{args.get('event_title')}' não encontrado"
                 
             return "Função não reconhecida"
         except Exception as e:

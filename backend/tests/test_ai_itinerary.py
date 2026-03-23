@@ -9,7 +9,7 @@ import requests
 import os
 import io
 
-BASE_URL = "https://habit-events-log.preview.emergentagent.com"
+BASE_URL = "https://ai-itinerary-8.preview.emergentagent.com"
 
 class TestAIItinerary:
     """Test AI Itinerary endpoint for event planning"""

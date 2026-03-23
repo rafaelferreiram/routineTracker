@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../store/useAuth.js';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onBack }) {
   const { login, signup, users, loginWithGoogle, startGoogleLogin } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
@@ -77,6 +77,19 @@ export default function LoginScreen() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: '#080808' }}>
+
+      {/* Back button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 flex items-center gap-2 text-[#6b7280] hover:text-white transition-colors px-3 py-2 rounded-xl hover:bg-[#111]"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="text-sm">Back</span>
+        </button>
+      )}
 
       {/* Logo */}
       <div className="mb-8 text-center">

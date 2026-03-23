@@ -74,6 +74,14 @@ class GoogleAuthReq(BaseModel):
 class DataReq(BaseModel):
     data: Any
 
+class ChangePasswordReq(BaseModel):
+    current_password: str
+    new_password: str
+
+class UpdateProfileReq(BaseModel):
+    picture: Optional[str] = None
+    display_name: Optional[str] = None
+
 # ── Auth Routes ────────────────────────────────────────────────────────────────
 @app.get('/api/health')
 def health():
@@ -167,40 +175,59 @@ def google_auth(req: GoogleAuthReq):
             headers={'X-Session-ID': req.session_id},
             timeout=10,
         )
-    except Exception:
+    except Exception as e:
+        print(f'[GOOGLE AUTH] Error reaching auth service: {e}')
         raise HTTPException(status_code=502, detail='Could not reach Google auth service')
 
     if resp.status_code != 200:
+        print(f'[GOOGLE AUTH] Invalid session, status: {resp.status_code}')
         raise HTTPException(status_code=400, detail='Invalid Google session')
 
     g = resp.json()
-    email   = g.get('email', '').lower().strip()
-    name    = g.get('name', email.split('@')[0])
-    picture = g.get('picture', '')
+    google_email = g.get('email', '').strip()
+    email_lower  = google_email.lower()
+    name         = g.get('name', google_email.split('@')[0])
+    picture      = g.get('picture', '')
+    google_id    = g.get('sub', g.get('id', ''))
 
-    if not email:
+    print(f'[GOOGLE AUTH] Google returned: email={google_email}, name={name}, google_id={google_id}')
+
+    if not email_lower:
         raise HTTPException(status_code=400, detail='No email from Google')
 
-    # 2. Find or create user by email
-    user = users_c.find_one({'email': email})
+    # 2. Find existing user by email (case-insensitive search)
+    # First try exact match, then case-insensitive regex
+    import re
+    user = users_c.find_one({'email': email_lower})
+    if not user:
+        # Try case-insensitive search
+        user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
+    
+    print(f'[GOOGLE AUTH] Found user by email: {user is not None}')
+    if user:
+        print(f'[GOOGLE AUTH] Existing user: id={user["_id"]}, username={user["username"]}')
 
     if user:
-        # Existing user — update Google info
+        # Existing user — update Google info but keep their username
         uid      = str(user['_id'])
         username = user['username']
+        display  = user.get('display_name', name)
+        theme    = user.get('theme', {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'})
+        
+        # Update Google-specific fields
         users_c.update_one(
             {'_id': user['_id']},
             {'$set': {
-                'display_name':   name,
                 'picture':        picture,
-                'auth_provider':  'google',
+                'google_id':      google_id,
                 'last_google_at': datetime.now(timezone.utc),
             }}
         )
-        theme = user.get('theme', {'accentColor': '#22c55e'})
+        print(f'[GOOGLE AUTH] Updated existing user {username}')
     else:
         # New user — derive username from email
-        base = email.split('@')[0].lower()
+        print(f'[GOOGLE AUTH] Creating new user for email: {email_lower}')
+        base = email_lower.split('@')[0]
         base = ''.join(c for c in base if c.isalnum() or c == '_')[:20] or 'user'
         username = base
         counter  = 1
@@ -208,17 +235,20 @@ def google_auth(req: GoogleAuthReq):
             username = f'{base}{counter}'
             counter += 1
 
+        display = name
         theme = {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'}
         ins = users_c.insert_one({
             'username':      username,
-            'display_name':  name,
-            'email':         email,
+            'display_name':  display,
+            'email':         email_lower,
             'picture':       picture,
+            'google_id':     google_id,
             'auth_provider': 'google',
             'theme':         theme,
             'created_at':    datetime.now(timezone.utc),
         })
         uid = str(ins.inserted_id)
+        print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}')
 
     token = make_token(uid, username)
     return {
@@ -226,8 +256,8 @@ def google_auth(req: GoogleAuthReq):
         'user': {
             'id':          uid,
             'username':    username,
-            'displayName': name,
-            'email':       email,
+            'displayName': display,
+            'email':       email_lower,
             'picture':     picture,
             'theme':       theme,
             'authProvider': 'google',
@@ -377,6 +407,115 @@ def search_users(q: str, cu: dict = Depends(get_current_user)):
     return {'users': result}
 
 # ── Startup Seed ───────────────────────────────────────────────────────────────
+
+# ── Profile Management ─────────────────────────────────────────────────────────
+@app.post('/api/profile/change-password')
+def change_password(req: ChangePasswordReq, cu: dict = Depends(get_current_user)):
+    """Change user password. Requires current password verification."""
+    from bson import ObjectId
+    
+    uid = cu['sub']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    # Check if user has a password (Google-only users don't)
+    if not user.get('password_hash'):
+        raise HTTPException(status_code=400, detail='Conta Google não possui senha. Use o login do Google.')
+    
+    # Verify current password
+    if not check_pw(req.current_password, user['password_hash']):
+        raise HTTPException(status_code=400, detail='Senha atual incorreta')
+    
+    # Validate new password
+    is_valid, error_msg = validate_password(req.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
+    # Update password
+    users_c.update_one(
+        {'_id': ObjectId(uid)},
+        {'$set': {
+            'password_hash': hash_pw(req.new_password),
+            'password_changed_at': datetime.now(timezone.utc)
+        }}
+    )
+    
+    return {'message': 'Senha alterada com sucesso'}
+
+@app.put('/api/profile')
+def update_profile(req: UpdateProfileReq, cu: dict = Depends(get_current_user)):
+    """Update user profile (picture, display_name)."""
+    from bson import ObjectId
+    
+    uid = cu['sub']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    update_fields = {}
+    
+    if req.picture is not None:
+        update_fields['picture'] = req.picture
+    
+    if req.display_name is not None:
+        display_name = req.display_name.strip()
+        if len(display_name) < 2:
+            raise HTTPException(status_code=400, detail='Nome deve ter pelo menos 2 caracteres')
+        if len(display_name) > 30:
+            raise HTTPException(status_code=400, detail='Nome deve ter no máximo 30 caracteres')
+        update_fields['display_name'] = display_name
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail='Nenhum campo para atualizar')
+    
+    update_fields['updated_at'] = datetime.now(timezone.utc)
+    
+    users_c.update_one(
+        {'_id': ObjectId(uid)},
+        {'$set': update_fields}
+    )
+    
+    # Return updated user info
+    updated_user = users_c.find_one({'_id': ObjectId(uid)})
+    return {
+        'message': 'Perfil atualizado',
+        'user': {
+            'id': uid,
+            'username': updated_user['username'],
+            'displayName': updated_user.get('display_name', updated_user['username']),
+            'picture': updated_user.get('picture', ''),
+            'email': updated_user.get('email', ''),
+            'theme': updated_user.get('theme', {}),
+        }
+    }
+
+@app.get('/api/profile')
+def get_profile(cu: dict = Depends(get_current_user)):
+    """Get current user profile."""
+    from bson import ObjectId
+    
+    uid = cu['sub']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    return {
+        'user': {
+            'id': uid,
+            'username': user['username'],
+            'displayName': user.get('display_name', user['username']),
+            'picture': user.get('picture', ''),
+            'email': user.get('email', ''),
+            'theme': user.get('theme', {}),
+            'hasPassword': bool(user.get('password_hash')),
+            'authProvider': user.get('auth_provider', 'local'),
+        }
+    }
+
 def seed_users():
     """Ensure rafael and gabriela exist in the database."""
     accounts = [

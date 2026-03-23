@@ -3,7 +3,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://social-auth-dev.preview.emergentagent.com"
+BASE_URL = "https://routine-tracker-344.preview.emergentagent.com"
 
 class TestHealth:
     def test_health(self):
@@ -38,7 +38,8 @@ class TestAuth:
 
     def test_register_new_user(self):
         import time
-        username = f"testuser_{int(time.time())}"
+        import random
+        username = f"testuser{int(time.time())}{random.randint(100,999)}"[:20]  # alphanumeric only, max 20 chars
         r = requests.post(f"{BASE_URL}/api/auth/register", json={"username": username, "password": "testpass123"})
         assert r.status_code == 200
         data = r.json()

@@ -93,7 +93,7 @@ export default function LoginScreen({ onBack }) {
 
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="text-5xl mb-3">⚡</div>
+        <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-16 h-16 mx-auto mb-3" />
         <h1 className="text-white font-bold text-2xl tracking-tight">RoutineTracker</h1>
         <p className="text-[#4b5563] text-sm mt-1">Track your habits. Level up your life.</p>
       </div>

@@ -52,7 +52,7 @@ export default function LandingPage({ onGetStarted }) {
         {/* Nav */}
         <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚡</span>
+            <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight">RoutineTracker</span>
           </div>
           <button
@@ -321,7 +321,7 @@ export default function LandingPage({ onGetStarted }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#22c55e] opacity-10 blur-[100px] rounded-full" />
             
             <div className="relative z-10">
-              <span className="text-5xl mb-6 block">⚡</span>
+              <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-14 h-14 mx-auto mb-6" />
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to level up?</h2>
               <p className="text-[#6b7280] text-lg mb-8 max-w-lg mx-auto">
                 Start building habits that stick. Free forever, no credit card required.
@@ -347,7 +347,7 @@ export default function LandingPage({ onGetStarted }) {
       <footer className="py-8 px-6 border-t border-[#1f1f1f]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚡</span>
+            <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-6 h-6" />
             <span className="font-semibold">RoutineTracker</span>
           </div>
           <p className="text-[#4b5563] text-sm">

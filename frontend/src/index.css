@@ -124,6 +124,41 @@ body {
   }
 }
 
+/* ── PWA / Native-feel optimizations ────────────────────────────────── */
+html {
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}
+
+body {
+  /* Disable text selection on interactive elements for native feel */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in specific areas */
+input, textarea, [contenteditable="true"], .selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Smooth momentum scrolling on iOS */
+.overflow-y-auto, .overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent zoom on double tap for buttons */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Fix for iOS bottom safe area in landscape */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+}
+
 /* ── Tab fade-in (page transitions) ─────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }

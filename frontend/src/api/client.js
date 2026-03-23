@@ -29,6 +29,9 @@ export const api = {
   login: (username, password) =>
     apiCall('POST', '/auth/login', { username, password }),
 
+  loginEmail: (email, password) =>
+    apiCall('POST', '/auth/login-email', { email, password }),
+
   register: (username, password) =>
     apiCall('POST', '/auth/register', { username, password }),
 

@@ -68,6 +68,10 @@ class AuthReq(BaseModel):
     username: str
     password: str
 
+class EmailLoginReq(BaseModel):
+    email: str
+    password: str
+
 class GoogleAuthReq(BaseModel):
     session_id: str
 
@@ -95,6 +99,39 @@ def login(req: AuthReq):
         raise HTTPException(status_code=400, detail='User not found')
     if not check_pw(req.password, user['password_hash']):
         raise HTTPException(status_code=400, detail='Wrong password')
+    token = make_token(str(user['_id']), user['username'])
+    return {
+        'token': token,
+        'user': {
+            'id': str(user['_id']),
+            'username': user['username'],
+            'displayName': user['display_name'],
+            'email': user.get('email', ''),
+            'picture': user.get('picture', ''),
+            'theme': user.get('theme', {}),
+        }
+    }
+
+@app.post('/api/auth/login-email')
+def login_email(req: EmailLoginReq):
+    """Login using email instead of username."""
+    import re
+    email = req.email.lower().strip()
+    
+    # Find user by email
+    user = users_c.find_one({'email': email})
+    if not user:
+        user = users_c.find_one({'email': re.compile(f'^{re.escape(email)}$', re.IGNORECASE)})
+    
+    if not user:
+        raise HTTPException(status_code=400, detail='Email não encontrado')
+    
+    if not user.get('password_hash'):
+        raise HTTPException(status_code=400, detail='Esta conta não tem senha. Use o login com Google.')
+    
+    if not check_pw(req.password, user['password_hash']):
+        raise HTTPException(status_code=400, detail='Senha incorreta')
+    
     token = make_token(str(user['_id']), user['username'])
     return {
         'token': token,
@@ -168,6 +205,8 @@ def register(req: AuthReq):
 @app.post('/api/auth/google')
 def google_auth(req: GoogleAuthReq):
     """Exchange Emergent session_id for our JWT. Creates user if first time."""
+    print(f'[GOOGLE AUTH] Received session_id: {req.session_id[:20]}...')
+    
     # 1. Exchange session_id with Emergent Auth (server-side only)
     try:
         resp = http_req.get(
@@ -175,12 +214,13 @@ def google_auth(req: GoogleAuthReq):
             headers={'X-Session-ID': req.session_id},
             timeout=10,
         )
+        print(f'[GOOGLE AUTH] Emergent response status: {resp.status_code}')
     except Exception as e:
         print(f'[GOOGLE AUTH] Error reaching auth service: {e}')
         raise HTTPException(status_code=502, detail='Could not reach Google auth service')
 
     if resp.status_code != 200:
-        print(f'[GOOGLE AUTH] Invalid session, status: {resp.status_code}')
+        print(f'[GOOGLE AUTH] Invalid session, status: {resp.status_code}, body: {resp.text[:200]}')
         raise HTTPException(status_code=400, detail='Invalid Google session')
 
     g = resp.json()
@@ -196,19 +236,25 @@ def google_auth(req: GoogleAuthReq):
         raise HTTPException(status_code=400, detail='No email from Google')
 
     # 2. Find existing user by email (case-insensitive search)
-    # First try exact match, then case-insensitive regex
     import re
-    user = users_c.find_one({'email': email_lower})
-    if not user:
-        # Try case-insensitive search
-        user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
     
-    print(f'[GOOGLE AUTH] Found user by email: {user is not None}')
+    # Try multiple search strategies
+    user = users_c.find_one({'email': email_lower})
+    print(f'[GOOGLE AUTH] Search 1 (exact lowercase): {user is not None}')
+    
+    if not user:
+        user = users_c.find_one({'email': google_email})
+        print(f'[GOOGLE AUTH] Search 2 (exact original): {user is not None}')
+    
+    if not user:
+        # Try case-insensitive regex
+        user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
+        print(f'[GOOGLE AUTH] Search 3 (regex): {user is not None}')
+    
     if user:
-        print(f'[GOOGLE AUTH] Existing user: id={user["_id"]}, username={user["username"]}')
-
-    if user:
-        # Existing user — update Google info but keep their username
+        print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}')
+        
+        # Existing user — update Google info but keep their username and ID
         uid      = str(user['_id'])
         username = user['username']
         display  = user.get('display_name', name)
@@ -223,10 +269,10 @@ def google_auth(req: GoogleAuthReq):
                 'last_google_at': datetime.now(timezone.utc),
             }}
         )
-        print(f'[GOOGLE AUTH] Updated existing user {username}')
+        print(f'[GOOGLE AUTH] Updated existing user {username} with id {uid}')
     else:
         # New user — derive username from email
-        print(f'[GOOGLE AUTH] Creating new user for email: {email_lower}')
+        print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}')
         base = email_lower.split('@')[0]
         base = ''.join(c for c in base if c.isalnum() or c == '_')[:20] or 'user'
         username = base
@@ -251,6 +297,8 @@ def google_auth(req: GoogleAuthReq):
         print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}')
 
     token = make_token(uid, username)
+    print(f'[GOOGLE AUTH] Success! Returning token for user {username} (id={uid})')
+    
     return {
         'token': token,
         'user': {

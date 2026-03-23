@@ -1,35 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../store/useAuth.js';
 
 export default function LoginScreen({ onBack }) {
-  const { login, signup, users, loginWithGoogle, startGoogleLogin } = useAuth();
+  const { login, signup, users, startGoogleLogin } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
-  const hasProcessedOAuth = useRef(false);
 
-  // Handle Google OAuth callback (session_id in URL hash)
-  useEffect(() => {
-    // Prevent double processing in StrictMode
-    if (hasProcessedOAuth.current) return;
-    
-    const hash = window.location.hash;
-    if (hash.includes('session_id=')) {
-      hasProcessedOAuth.current = true;
-      const sessionId = hash.split('session_id=')[1]?.split('&')[0];
-      if (sessionId) {
-        setGoogleLoading(true);
-        setGoogleError('');
-        window.history.replaceState(null, '', window.location.pathname); // Clear hash cleanly
-        loginWithGoogle(sessionId)
-          .then(result => {
-            if (result.error) {
-              setGoogleError(result.error);
-            }
-          })
-          .finally(() => setGoogleLoading(false));
-      }
-    }
-  }, [loginWithGoogle]);
+  // Note: Google OAuth callback is now handled in main.jsx
   const [mode, setMode]               = useState('login');
   const [username, setUsername]       = useState('');
   const [password, setPassword]       = useState('');
@@ -199,17 +176,17 @@ export default function LoginScreen({ onBack }) {
               {!selectedUser && (
                 <div>
                   <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                    Username
+                    {mode === 'signup' ? 'Username' : 'Username ou Email'}
                   </label>
                   <input
                     data-testid="username-input"
                     type="text"
                     value={username}
                     onChange={e => { setUsername(e.target.value); setError(''); }}
-                    placeholder="your username"
+                    placeholder={mode === 'signup' ? 'your username' : 'username ou email@exemplo.com'}
                     autoCapitalize="none"
                     autoCorrect="off"
-                    autoComplete="username"
+                    autoComplete={mode === 'signup' ? 'username' : 'email'}
                     className="w-full px-4 py-3.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-base outline-none placeholder-[#374151] focus:border-[#374151] transition-colors"
                   />
                 </div>

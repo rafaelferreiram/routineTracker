@@ -88,7 +88,13 @@
 - Added 🤖 Roti button to mobile bottom navigation bar (center position, highlighted)
 - Voice-to-voice: user speaks → Whisper transcribes → GPT responds → TTS speaks back
 - Text-to-text: user types → GPT responds with text
-- Backend endpoints: /api/ai/chat (general chat), /api/ai/speak (TTS)
+- **System Actions via Function Calling:**
+  - Create habits (name, emoji, frequency, category)
+  - Edit habits (change name, emoji, or frequency)
+  - Create events (single-day or period)
+- Real-time weather data via Open-Meteo API (free, no key needed)
+- General knowledge assistant (not limited to RoutineTracker topics)
+- Backend endpoints: /api/ai/chat (with function calling), /api/ai/speak (TTS)
 - Updated onboarding carousel with new "Conheça o Roti" slide
 - Fallback system: tries user's OpenAI key first, falls back to Emergent LLM Key on quota errors
 

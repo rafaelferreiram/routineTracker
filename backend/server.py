@@ -823,75 +823,239 @@ async def get_weather(location: str) -> str:
 
 @app.post('/api/ai/chat')
 async def ai_chat(req: ChatRequest, cu: dict = Depends(get_current_user)):
-    """General AI chat assistant."""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    """General AI chat assistant with function calling for system actions."""
     import json
     import re
+    import openai
+    import uuid
     
     user_message = req.message
-    weather_context = ""
+    user_id = cu['sub']
     
-    # Check if user is asking about weather
+    # Get user's data for context
+    user_data_doc = data_c.find_one({'user_id': user_id}, {'_id': 0})
+    user_habits = user_data_doc.get('habits', []) if user_data_doc else []
+    user_events = user_data_doc.get('events', []) if user_data_doc else []
+    
+    # Weather context
+    weather_context = ""
     weather_keywords = ['tempo', 'clima', 'temperatura', 'chuva', 'sol', 'frio', 'calor', 'weather', 'previsão']
     if any(kw in user_message.lower() for kw in weather_keywords):
-        # Try to extract location from message
         location_patterns = [
             r'(?:em|no|na|de|do|da)\s+([A-Za-zÀ-ú\s]+?)(?:\?|$|,|\.|!)',
             r'([A-Za-zÀ-ú]+(?:\s+[A-Za-zÀ-ú]+)?)\s*(?:\?|$)'
         ]
-        
-        location = None
         for pattern in location_patterns:
             match = re.search(pattern, user_message, re.IGNORECASE)
             if match:
                 potential_loc = match.group(1).strip()
-                # Filter out common non-location words
                 if potential_loc.lower() not in ['o', 'a', 'está', 'como', 'qual', 'hoje', 'agora', 'aqui', 'tempo', 'clima']:
-                    location = potential_loc
+                    weather_info = await get_weather(potential_loc)
+                    if weather_info:
+                        weather_context = f"\n\n[CLIMA ATUAL]\n{weather_info}"
                     break
-        
-        if location:
-            weather_info = await get_weather(location)
-            if weather_info:
-                weather_context = f"\n\n[DADOS DO CLIMA EM TEMPO REAL]\n{weather_info}\n[FIM DOS DADOS]\n\nUse essas informações para responder sobre o clima."
     
-    system_prompt = f"""Você é o Roti, um assistente IA inteligente e versátil. Você pode ajudar com QUALQUER assunto:
+    # Current habits/events context
+    habits_summary = ", ".join([f"{h.get('emoji','')} {h.get('name','')}" for h in user_habits[:10]]) if user_habits else "Nenhum hábito ainda"
+    events_summary = ", ".join([f"{e.get('emoji','')} {e.get('title','')}" for e in user_events[:5]]) if user_events else "Nenhum evento"
+    
+    system_prompt = f"""Você é o Roti, um assistente IA inteligente do app RoutineTracker.
 
-- Perguntas gerais de conhecimento
-- Programação e tecnologia
-- Ciência, história, geografia
-- Dicas de saúde e bem-estar
-- Conselhos pessoais e profissionais
-- Entretenimento, filmes, música
-- Receitas e culinária
-- Viagens e destinos
-- E muito mais!
-
-Você é parte do app RoutineTracker, mas não se limite a falar só sobre hábitos.
-Seja natural, inteligente e útil como um ChatGPT.
-Responda SEMPRE em português brasileiro.
-Use emojis quando apropriado para deixar a conversa agradável.
+CAPACIDADES:
+- Responder perguntas gerais (conhecimento, programação, ciência, etc.)
+- CRIAR hábitos para o usuário
+- EDITAR hábitos existentes (nome, emoji, frequência)  
+- CRIAR eventos
 {weather_context}
 
-Se não souber algo com certeza, seja honesto sobre suas limitações.
-Para dados em tempo real (notícias de hoje, eventos ao vivo, etc.), explique que você tem conhecimento até sua data de corte."""
+HÁBITOS ATUAIS DO USUÁRIO: {habits_summary}
+EVENTOS DO USUÁRIO: {events_summary}
 
-    async def call_chat(api_key: str) -> dict:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"chat_{cu['sub']}",
-            system_message=system_prompt
-        ).with_model("openai", "gpt-4o")
+REGRAS PARA AÇÕES:
+- Quando o usuário pedir para criar/adicionar um hábito, use a função create_habit
+- Quando pedir para editar/mudar um hábito, use edit_habit
+- Quando pedir para criar um evento, use create_event
+- Confirme a ação realizada de forma amigável
+
+Responda SEMPRE em português brasileiro. Use emojis."""
+
+    # Define functions for GPT
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "create_habit",
+                "description": "Cria um novo hábito para o usuário",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Nome do hábito"},
+                        "emoji": {"type": "string", "description": "Emoji representativo (1 caractere)"},
+                        "frequency": {"type": "string", "enum": ["daily", "weekly", "custom"], "description": "Frequência do hábito"},
+                        "category": {"type": "string", "description": "Categoria (health, productivity, learning, fitness, mindfulness, social, creativity, finance)"}
+                    },
+                    "required": ["name", "emoji", "frequency"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "edit_habit",
+                "description": "Edita um hábito existente do usuário",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "habit_name": {"type": "string", "description": "Nome atual do hábito a editar"},
+                        "new_name": {"type": "string", "description": "Novo nome (opcional)"},
+                        "new_emoji": {"type": "string", "description": "Novo emoji (opcional)"},
+                        "new_frequency": {"type": "string", "enum": ["daily", "weekly", "custom"], "description": "Nova frequência (opcional)"}
+                    },
+                    "required": ["habit_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_event",
+                "description": "Cria um novo evento/compromisso para o usuário",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "Título do evento"},
+                        "emoji": {"type": "string", "description": "Emoji representativo"},
+                        "date": {"type": "string", "description": "Data de início (formato YYYY-MM-DD)"},
+                        "end_date": {"type": "string", "description": "Data de fim para eventos de período (formato YYYY-MM-DD, opcional)"},
+                        "note": {"type": "string", "description": "Nota/descrição do evento (opcional)"}
+                    },
+                    "required": ["title", "emoji", "date"]
+                }
+            }
+        }
+    ]
+    
+    # Function to execute actions
+    def execute_function(func_name: str, args: dict) -> str:
+        try:
+            if func_name == "create_habit":
+                new_habit = {
+                    "id": f"habit_{uuid.uuid4().hex[:8]}",
+                    "name": args["name"],
+                    "emoji": args.get("emoji", "✅"),
+                    "frequency": args.get("frequency", "daily"),
+                    "category": args.get("category", "productivity"),
+                    "completedDates": [],
+                    "streak": 0,
+                    "bestStreak": 0,
+                    "createdAt": datetime.now(timezone.utc).isoformat()
+                }
+                # Update the nested data.habits array
+                data_c.update_one(
+                    {"user_id": user_id},
+                    {"$push": {"data.habits": new_habit}},
+                    upsert=True
+                )
+                return f"✅ Hábito '{args['name']}' {args.get('emoji', '')} criado com sucesso!"
+                
+            elif func_name == "edit_habit":
+                habit_name = args["habit_name"].lower()
+                # Remove emojis from search term
+                import re as regex
+                habit_name_clean = regex.sub(r'[^\w\s]', '', habit_name).strip()
+                
+                update_fields = {}
+                if args.get("new_name"):
+                    update_fields["data.habits.$.name"] = args["new_name"]
+                if args.get("new_emoji"):
+                    update_fields["data.habits.$.emoji"] = args["new_emoji"]
+                if args.get("new_frequency"):
+                    update_fields["data.habits.$.frequency"] = args["new_frequency"]
+                
+                if update_fields:
+                    # Try to find habit by partial name match
+                    result = data_c.update_one(
+                        {"user_id": user_id, "data.habits.name": {"$regex": habit_name_clean, "$options": "i"}},
+                        {"$set": update_fields}
+                    )
+                    if result.modified_count > 0:
+                        return f"✅ Hábito atualizado com sucesso!"
+                    else:
+                        return f"❌ Não encontrei o hábito '{args['habit_name']}'. Verifique se o nome está correto."
+                return "Nenhuma alteração especificada"
+                
+            elif func_name == "create_event":
+                new_event = {
+                    "id": f"event_{uuid.uuid4().hex[:8]}",
+                    "title": args["title"],
+                    "emoji": args.get("emoji", "📅"),
+                    "date": args["date"],
+                    "endDate": args.get("end_date", args["date"]),
+                    "note": args.get("note", ""),
+                    "color": "#22c55e",
+                    "createdAt": datetime.now(timezone.utc).isoformat()
+                }
+                # Update the nested data.events array
+                data_c.update_one(
+                    {"user_id": user_id},
+                    {"$push": {"data.events": new_event}},
+                    upsert=True
+                )
+                return f"✅ Evento '{args['title']}' {args.get('emoji', '')} criado para {args['date']}!"
+                
+            return "Função não reconhecida"
+        except Exception as e:
+            print(f"[Function Execute] Error: {e}")
+            return f"❌ Erro ao executar ação: {str(e)}"
+    
+    async def call_chat_with_functions(api_key: str) -> dict:
+        client = openai.AsyncOpenAI(api_key=api_key)
         
-        user_msg = UserMessage(text=user_message)
-        response = await chat.send_message(user_msg)
-        return {'success': True, 'message': response}
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+        
+        response = await client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto"
+        )
+        
+        assistant_message = response.choices[0].message
+        
+        # Check if GPT wants to call a function
+        if assistant_message.tool_calls:
+            # Execute all function calls
+            function_results = []
+            for tool_call in assistant_message.tool_calls:
+                func_name = tool_call.function.name
+                func_args = json.loads(tool_call.function.arguments)
+                result = execute_function(func_name, func_args)
+                function_results.append(result)
+                
+                messages.append(assistant_message.model_dump())
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result
+                })
+            
+            # Get final response after function execution
+            final_response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages
+            )
+            return {'success': True, 'message': final_response.choices[0].message.content, 'actions': function_results}
+        
+        return {'success': True, 'message': assistant_message.content}
 
     try:
         if OPENAI_API_KEY:
-            return await call_chat(OPENAI_API_KEY)
+            return await call_chat_with_functions(OPENAI_API_KEY)
         elif EMERGENT_LLM_KEY:
-            return await call_chat(EMERGENT_LLM_KEY)
+            return await call_chat_with_functions(EMERGENT_LLM_KEY)
         else:
             raise HTTPException(status_code=500, detail='No AI API key configured')
             
@@ -900,7 +1064,7 @@ Para dados em tempo real (notícias de hoje, eventos ao vivo, etc.), explique qu
         if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
             print(f'[AI Chat] User API key quota exceeded, falling back to Emergent LLM Key')
             try:
-                return await call_chat(EMERGENT_LLM_KEY)
+                return await call_chat_with_functions(EMERGENT_LLM_KEY)
             except Exception as fallback_error:
                 raise HTTPException(status_code=500, detail=f'AI error: {str(fallback_error)}')
         

@@ -83,6 +83,16 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - Event Itinerary with AI Assistant
+- New EventItinerary.jsx component for planning multi-day event itineraries
+- AI chat assistant (GPT-4o via Emergent LLM Key) that organizes activities into event days
+- Voice input support via OpenAI Whisper for hands-free planning
+- Two-column layout on desktop (itinerary + AI chat), stacked on mobile
+- "Planejar Roteiro" button only appears for multi-day events
+- Manual activity addition with time and title
+- Itinerary data persisted in event.itinerary array
+- Backend endpoints: /api/ai/itinerary and /api/ai/transcribe
+
 ### 2026-03-23 - Event Memories with Photos per Day
 - Enhanced EventsPanel.jsx with support for single-day and multi-day (period) events
 - Event creation form with toggle between "1 dia" and "Período"
@@ -163,5 +173,6 @@
 3. Test Google Login in production with real Google account
 
 ## Test Reports
-- `/app/test_reports/iteration_6.json` - Latest (7/7 frontend features passed - Events with photos per day)
-- `/app/test_reports/iteration_5.json` - Previous (37 backend, 8 frontend tests passed)
+- `/app/test_reports/iteration_7.json` - Latest (8 backend + 9 frontend tests = 100% pass - Event Itinerary with AI)
+- `/app/test_reports/iteration_6.json` - Previous (7/7 frontend features - Events with photos per day)
+- `/app/test_reports/iteration_5.json` - Earlier (37 backend, 8 frontend tests passed)

@@ -49,7 +49,7 @@ function Avatar({ picture, initial, size = 36, levelColor, accentColor, classNam
   );
 }
 
-export default function Navbar({ activeTab, setActiveTab, onExport }) {
+export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboarding }) {
   const {
     profile, achievements, currentLevel,
     completionPercent, todayHabits, completedToday,
@@ -461,6 +461,29 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
                         Instalar App
                       </span>
                       <span className="text-[11px] text-[#6b7280]">Adicionar à tela inicial</span>
+                    </div>
+                  </button>
+                </>
+              )}
+
+              {/* Tutorial / Onboarding */}
+              {onShowOnboarding && (
+                <>
+                  <div className="mx-5 my-3 border-t" style={{ borderColor: 'var(--bg-border,#1f1f1f)' }} />
+                  <button 
+                    onClick={() => { setShowMenu(false); onShowOnboarding(); }}
+                    data-testid="show-tutorial-btn"
+                    className="w-full flex items-center gap-3.5 px-4 py-3 transition-all active:opacity-60"
+                  >
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
+                      style={{ background: 'var(--bg-main,#0a0a0a)', border: '1px solid var(--bg-border,#1f1f1f)' }}>
+                      📖
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="font-semibold text-[15px] block" style={{ color: '#e5e7eb' }}>
+                        Ver Tutorial
+                      </span>
+                      <span className="text-[11px] text-[#6b7280]">Como usar o app</span>
                     </div>
                   </button>
                 </>

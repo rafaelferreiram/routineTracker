@@ -1,0 +1,392 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global Reset / Base ────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg-main, #080808);
+  color: var(--text-primary, #E2E8F0);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scrollbar Styling ──────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--accent-rgb, 34 197 94) / 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--accent-rgb, 34 197 94) / 0.55);
+}
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Custom Utilities ───────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.card {
+  background: var(--bg-card, #111111);
+  border: 1px solid var(--bg-border, #1f1f1f);
+  border-radius: 1.25rem;
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.35);
+}
+
+.glow-green {
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.35);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #A78BFA, #7C3AED);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-green {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-app {
+  background: var(--bg-main, #080808);
+}
+
+/* ── Safe area padding for mobile notch ────────────────────────────── */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Animation: Shimmer ─────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Selection color ────────────────────────────────────────────────── */
+::selection {
+  background: rgba(34, 197, 94, 0.3);
+  color: white;
+}
+
+/* ── Focus visible ──────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.6);
+  outline-offset: 2px;
+}
+
+/* ── Mobile optimizations ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+/* ── PWA / Native-feel optimizations ────────────────────────────────── */
+html {
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}
+
+body {
+  /* Disable text selection on interactive elements for native feel */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in specific areas */
+input, textarea, [contenteditable="true"], .selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Smooth momentum scrolling on iOS */
+.overflow-y-auto, .overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent zoom on double tap for buttons */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Fix for iOS bottom safe area in landscape */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+}
+
+/* ── Tab fade-in (page transitions) ─────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.animate-fade-in {
+  animation: fadeIn 0.18s ease-out both;
+}
+
+/* ── More sheet slide-up ─────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+.animate-slide-up {
+  animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Backdrop fade ───────────────────────────────────────────────────── */
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-backdrop-in {
+  animation: backdropIn 0.2s ease-out both;
+}
+
+/* ── Slide in from right (hamburger drawer) ────────────────────────────── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Touch tap highlight ─────────────────────────────────────────────── */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Line clamp ─────────────────────────────────────────────────────── */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* ── Pulse ring animation ───────────────────────────────────────────── */
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.pulse-ring {
+  animation: pulseRing 1.5s ease-out infinite;
+}
+
+/* ── Gradient border trick ──────────────────────────────────────────── */
+.gradient-border {
+  position: relative;
+  background: transparent;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #22c55e, #7C3AED);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Number ticker animation ────────────────────────────────────────── */
+@keyframes countUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.count-up {
+  animation: countUp 0.5s ease-out;
+}
+
+/* ── Difficulty badge colors ────────────────────────────────────────── */
+.difficulty-easy { color: #4ade80; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); }
+.difficulty-medium { color: #fbbf24; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.25); }
+.difficulty-hard { color: #f87171; background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.25); }
+
+/* ── Level up ceremony ──────────────────────────────────────────────── */
+@keyframes levelUpRays {
+  0% { transform: rotate(0deg) scale(0.8); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: rotate(180deg) scale(1.2); opacity: 0; }
+}
+.level-up-rays {
+  animation: levelUpRays 1.5s ease-out forwards;
+}
+
+/* ── Light theme text overrides ─────────────────────────────────────── */
+html[data-theme="light"],
+html[data-theme="rose"],
+html[data-theme="forest"] {
+  color-scheme: light;
+}
+
+html[data-theme="light"] .text-white,
+html[data-theme="rose"]   .text-white,
+html[data-theme="forest"] .text-white {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] .text-\[\#9ca3af\],
+html[data-theme="rose"]   .text-\[\#9ca3af\],
+html[data-theme="forest"] .text-\[\#9ca3af\] {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] .text-\[\#6b7280\],
+html[data-theme="rose"]   .text-\[\#6b7280\],
+html[data-theme="forest"] .text-\[\#6b7280\] {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] .text-\[\#4b5563\],
+html[data-theme="rose"]   .text-\[\#4b5563\],
+html[data-theme="forest"] .text-\[\#4b5563\] {
+  color: var(--text-subtle) !important;
+}
+
+html[data-theme="light"] .text-\[\#374151\],
+html[data-theme="rose"]   .text-\[\#374151\],
+html[data-theme="forest"] .text-\[\#374151\] {
+  color: var(--text-muted) !important;
+}
+
+html[data-theme="light"] .border-\[\#1f1f1f\],
+html[data-theme="rose"]   .border-\[\#1f1f1f\],
+html[data-theme="forest"] .border-\[\#1f1f1f\] {
+  border-color: var(--bg-border) !important;
+}
+
+html[data-theme="light"] .bg-\[\#111111\],
+html[data-theme="rose"]   .bg-\[\#111111\],
+html[data-theme="forest"] .bg-\[\#111111\] {
+  background: var(--bg-card) !important;
+}
+
+html[data-theme="light"] .bg-\[\#0f0f0f\],
+html[data-theme="rose"]   .bg-\[\#0f0f0f\],
+html[data-theme="forest"] .bg-\[\#0f0f0f\] {
+  background: var(--bg-inner) !important;
+}
+
+html[data-theme="light"] .placeholder-\[\#374151\]::placeholder,
+html[data-theme="rose"]   .placeholder-\[\#374151\]::placeholder,
+html[data-theme="forest"] .placeholder-\[\#374151\]::placeholder {
+  color: var(--text-subtle) !important;
+}
+
+/* ── bg-white/X → subtle dark tint on light themes ─────────────────── */
+html[data-theme="light"] .bg-white\/5,   html[data-theme="rose"] .bg-white\/5,   html[data-theme="forest"] .bg-white\/5   { background-color: rgba(0,0,0,0.04)  !important; }
+html[data-theme="light"] .bg-white\/8,   html[data-theme="rose"] .bg-white\/8,   html[data-theme="forest"] .bg-white\/8   { background-color: rgba(0,0,0,0.05)  !important; }
+html[data-theme="light"] .bg-white\/10,  html[data-theme="rose"] .bg-white\/10,  html[data-theme="forest"] .bg-white\/10  { background-color: rgba(0,0,0,0.06)  !important; }
+html[data-theme="light"] .bg-white\/12,  html[data-theme="rose"] .bg-white\/12,  html[data-theme="forest"] .bg-white\/12  { background-color: rgba(0,0,0,0.07)  !important; }
+html[data-theme="light"] .bg-white\/15,  html[data-theme="rose"] .bg-white\/15,  html[data-theme="forest"] .bg-white\/15  { background-color: rgba(0,0,0,0.08)  !important; }
+html[data-theme="light"] .bg-white\/20,  html[data-theme="rose"] .bg-white\/20,  html[data-theme="forest"] .bg-white\/20  { background-color: rgba(0,0,0,0.10)  !important; }
+html[data-theme="light"] .bg-white\/30,  html[data-theme="rose"] .bg-white\/30,  html[data-theme="forest"] .bg-white\/30  { background-color: rgba(0,0,0,0.12)  !important; }
+
+html[data-theme="light"] .hover\:bg-white\/10:hover,  html[data-theme="rose"] .hover\:bg-white\/10:hover,  html[data-theme="forest"] .hover\:bg-white\/10:hover  { background-color: rgba(0,0,0,0.06)  !important; }
+html[data-theme="light"] .hover\:bg-white\/15:hover,  html[data-theme="rose"] .hover\:bg-white\/15:hover,  html[data-theme="forest"] .hover\:bg-white\/15:hover  { background-color: rgba(0,0,0,0.08)  !important; }
+html[data-theme="light"] .hover\:bg-white\/20:hover,  html[data-theme="rose"] .hover\:bg-white\/20:hover,  html[data-theme="forest"] .hover\:bg-white\/20:hover  { background-color: rgba(0,0,0,0.10)  !important; }
+
+/* ── border-white/X → subtle dark border on light themes ────────────── */
+html[data-theme="light"] .border-white\/5,  html[data-theme="rose"] .border-white\/5,  html[data-theme="forest"] .border-white\/5  { border-color: rgba(0,0,0,0.05)  !important; }
+html[data-theme="light"] .border-white\/8,  html[data-theme="rose"] .border-white\/8,  html[data-theme="forest"] .border-white\/8  { border-color: rgba(0,0,0,0.07)  !important; }
+html[data-theme="light"] .border-white\/10, html[data-theme="rose"] .border-white\/10, html[data-theme="forest"] .border-white\/10 { border-color: rgba(0,0,0,0.08)  !important; }
+html[data-theme="light"] .border-white\/12, html[data-theme="rose"] .border-white\/12, html[data-theme="forest"] .border-white\/12 { border-color: rgba(0,0,0,0.10)  !important; }
+html[data-theme="light"] .border-white\/15, html[data-theme="rose"] .border-white\/15, html[data-theme="forest"] .border-white\/15 { border-color: rgba(0,0,0,0.12)  !important; }
+html[data-theme="light"] .border-white\/20, html[data-theme="rose"] .border-white\/20, html[data-theme="forest"] .border-white\/20 { border-color: rgba(0,0,0,0.14)  !important; }
+html[data-theme="light"] .hover\:border-white\/40:hover, html[data-theme="rose"] .hover\:border-white\/40:hover, html[data-theme="forest"] .hover\:border-white\/40:hover { border-color: rgba(0,0,0,0.25) !important; }
+
+/* ── text-slate-X → theme text vars on light themes ─────────────────── */
+html[data-theme="light"] .text-slate-300, html[data-theme="rose"] .text-slate-300, html[data-theme="forest"] .text-slate-300 { color: var(--text-secondary) !important; }
+html[data-theme="light"] .text-slate-400, html[data-theme="rose"] .text-slate-400, html[data-theme="forest"] .text-slate-400 { color: var(--text-muted)     !important; }
+html[data-theme="light"] .text-slate-500, html[data-theme="rose"] .text-slate-500, html[data-theme="forest"] .text-slate-500 { color: var(--text-subtle)    !important; }
+html[data-theme="light"] .text-slate-600, html[data-theme="rose"] .text-slate-600, html[data-theme="forest"] .text-slate-600 { color: var(--text-subtle)    !important; }
+html[data-theme="light"] .hover\:text-slate-300:hover, html[data-theme="rose"] .hover\:text-slate-300:hover, html[data-theme="forest"] .hover\:text-slate-300:hover { color: var(--text-secondary) !important; }
+
+/* ── Also override for ocean dark-blue theme (different tones) ───────── */
+html[data-theme="ocean"] .bg-\[\#111111\]   { background: var(--bg-card)       !important; }
+html[data-theme="ocean"] .bg-\[\#0f0f0f\]   { background: var(--bg-inner)      !important; }
+html[data-theme="ocean"] .border-\[\#1f1f1f\] { border-color: var(--bg-border) !important; }
+html[data-theme="ocean"] .border-\[\#1a1a1a\] { border-color: var(--bg-inner-border) !important; }
+html[data-theme="ocean"] .bg-\[\#1a1a1a\]   { background: var(--bg-inner-border) !important; }
+
+/* ── bg-[#...] hard-coded dark backgrounds → CSS vars on light themes ── */
+html[data-theme="light"] .bg-\[\#111111\],   html[data-theme="rose"] .bg-\[\#111111\],   html[data-theme="forest"] .bg-\[\#111111\]   { background: var(--bg-card)           !important; }
+html[data-theme="light"] .bg-\[\#0f0f0f\],   html[data-theme="rose"] .bg-\[\#0f0f0f\],   html[data-theme="forest"] .bg-\[\#0f0f0f\]   { background: var(--bg-inner)          !important; }
+html[data-theme="light"] .bg-\[\#1a1a1a\],   html[data-theme="rose"] .bg-\[\#1a1a1a\],   html[data-theme="forest"] .bg-\[\#1a1a1a\]   { background: var(--bg-inner-border)   !important; }
+html[data-theme="light"] .border-\[\#1f1f1f\], html[data-theme="rose"] .border-\[\#1f1f1f\], html[data-theme="forest"] .border-\[\#1f1f1f\] { border-color: var(--bg-border)      !important; }
+html[data-theme="light"] .border-\[\#1a1a1a\], html[data-theme="rose"] .border-\[\#1a1a1a\], html[data-theme="forest"] .border-\[\#1a1a1a\] { border-color: var(--bg-inner-border) !important; }
+html[data-theme="light"] .border-\[\#2a2a2a\], html[data-theme="rose"] .border-\[\#2a2a2a\], html[data-theme="forest"] .border-\[\#2a2a2a\] { border-color: var(--bg-border)      !important; }
+html[data-theme="light"] .bg-\[\#1f1f1f\],   html[data-theme="rose"] .bg-\[\#1f1f1f\],   html[data-theme="forest"] .bg-\[\#1f1f1f\]   { background: var(--bg-border)         !important; }
+html[data-theme="ocean"] .bg-\[\#1f1f1f\]   { background: var(--bg-border) !important; }
+
+/* ── Tailwind opacity-modifier white classes on light/ocean themes ──── */
+html[data-theme="light"] .bg-slate-700\/20, html[data-theme="rose"] .bg-slate-700\/20, html[data-theme="forest"] .bg-slate-700\/20 { background: var(--bg-subtle) !important; }
+html[data-theme="light"] .border-slate-600,  html[data-theme="rose"] .border-slate-600, html[data-theme="forest"] .border-slate-600 { border-color: var(--border-subtle) !important; }
+html[data-theme="light"] .bg-red-900\/30,    html[data-theme="rose"] .bg-red-900\/30,   html[data-theme="forest"] .bg-red-900\/30   { background: rgba(239,68,68,0.12) !important; }
+
+/* ── hover:bg-red-900/30 ──────────────────────────────────────────────── */
+html[data-theme="light"] .hover\:bg-red-900\/30:hover,  html[data-theme="rose"] .hover\:bg-red-900\/30:hover,  html[data-theme="forest"] .hover\:bg-red-900\/30:hover  { background: rgba(239,68,68,0.15) !important; }
+
+/* ── Input/textarea on light themes ──────────────────────────────────── */
+html[data-theme="light"] input,  html[data-theme="rose"] input,  html[data-theme="forest"] input,
+html[data-theme="light"] textarea, html[data-theme="rose"] textarea, html[data-theme="forest"] textarea {
+  color-scheme: light;
+}

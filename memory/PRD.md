@@ -92,6 +92,24 @@
 - App now renders correctly on all modern mobile devices (iPhone 14 Pro, etc.)
 - 100% test pass rate (iteration 11)
 
+### 2026-03-23 - Admin Panel System (COMPLETED)
+- Created admin user (admin/@dm1n) with is_admin flag
+- Backend endpoints: /api/admin/stats, /api/admin/users, /api/admin/user/action, /api/admin/user/{id}
+- Admin can: view all users, disable/enable users, reset passwords, toggle features
+- Admin dashboard shows: total users, active users (7 days), habits count, auth provider breakdown
+- Users list with search and filter (Google/Password/Disabled)
+- User detail modal with stats (XP, habits, events, achievements)
+- Feature toggles: Hábitos, Eventos, TARS, Amigos
+- Non-admin users cannot see Admin tab or access endpoints (403)
+- Disabled users blocked from login (403)
+- 100% test pass rate (20 backend + 10 frontend)
+
+### 2026-03-23 - Google Auth Fix (COMPLETED)
+- Prioritized google_id (sub) as PRIMARY lookup strategy before email
+- Always saves google_id for future lookups
+- Checks if user is disabled before allowing login
+- Improved logging for debugging auth issues
+
 ### 2026-03-23 - Onboarding & PWA Install Fixes (COMPLETED)
 - Fixed onboarding showing multiple times: now saves `onboardingCompleted` to database settings (synced across devices)
 - Added `synced` state to wait for server data before checking onboarding
@@ -254,10 +272,9 @@
 3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_11.json` - Latest (10/10 tests - PWA Responsiveness for iPhones)
-- `/app/test_reports/iteration_10.json` - Previous (19/19 tests - Full TARS + Google Places Integration)
-- `/app/test_reports/iteration_9.json` - Earlier (6/6 tests - Google Maps PlaceSearch Integration)
-- `/app/test_reports/iteration_8.json` - Earlier (8/8 tests - TARS Function Calling - P0 Bug Fixed)
+- `/app/test_reports/iteration_12.json` - Latest (30/30 tests - Admin Panel + Google Auth Fix)
+- `/app/test_reports/iteration_11.json` - Previous (10/10 tests - PWA Responsiveness for iPhones)
+- `/app/test_reports/iteration_10.json` - Earlier (19/19 tests - Full TARS + Google Places Integration)
 
 ## 3rd Party Integrations
 - **MongoDB Atlas**: Production database

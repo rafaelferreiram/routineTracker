@@ -40,4 +40,30 @@ export const api = {
 
   saveData: (data) =>
     apiCall('PUT', '/data', { data }),
+
+  // Profile API
+  getProfile: () =>
+    apiCall('GET', '/profile'),
+
+  updateProfile: (data) =>
+    apiCall('PUT', '/profile', data),
+
+  changePassword: (currentPassword, newPassword) =>
+    apiCall('POST', '/profile/change-password', { 
+      current_password: currentPassword, 
+      new_password: newPassword 
+    }),
+
+  // Friends API
+  getFriends: () =>
+    apiCall('GET', '/friends'),
+
+  addFriend: (username) =>
+    apiCall('POST', '/friends/add', { username }),
+
+  removeFriend: (friendId) =>
+    apiCall('DELETE', `/friends/${friendId}`),
+
+  searchUsers: (query) =>
+    apiCall('GET', `/users/search?q=${encodeURIComponent(query)}`),
 };

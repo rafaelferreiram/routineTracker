@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../store/useAuth.js';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onBack }) {
   const { login, signup, users, loginWithGoogle, startGoogleLogin } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
@@ -78,10 +78,23 @@ export default function LoginScreen() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: '#080808' }}>
 
+      {/* Back button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 flex items-center gap-2 text-[#6b7280] hover:text-white transition-colors px-3 py-2 rounded-xl hover:bg-[#111]"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="text-sm">Back</span>
+        </button>
+      )}
+
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="text-5xl mb-3">⚡</div>
-        <h1 className="text-white font-bold text-2xl tracking-tight">RoutineQuest</h1>
+        <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-16 h-16 mx-auto mb-3" />
+        <h1 className="text-white font-bold text-2xl tracking-tight">RoutineTracker</h1>
         <p className="text-[#4b5563] text-sm mt-1">Track your habits. Level up your life.</p>
       </div>
 
@@ -214,6 +227,19 @@ export default function LoginScreen() {
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   className="w-full px-4 py-3.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-base outline-none placeholder-[#374151] focus:border-[#374151] transition-colors"
                 />
+                {mode === 'signup' && (
+                  <div className="mt-2 space-y-1">
+                    <p className={`text-xs flex items-center gap-1.5 ${password.length >= 6 ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{password.length >= 6 ? '✓' : '○'}</span> Mínimo 6 caracteres
+                    </p>
+                    <p className={`text-xs flex items-center gap-1.5 ${/[a-zA-Z]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{/[a-zA-Z]/.test(password) ? '✓' : '○'}</span> Pelo menos uma letra
+                    </p>
+                    <p className={`text-xs flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
+                      <span>{/[0-9]/.test(password) ? '✓' : '○'}</span> Pelo menos um número
+                    </p>
+                  </div>
+                )}
               </div>
 
               {error && (

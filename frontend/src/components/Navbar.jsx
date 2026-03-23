@@ -59,7 +59,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
   const levelColor = getLevelColor(currentLevel);
   const initial    = (profile?.name || currentUser?.displayName || '?')[0].toUpperCase();
   const picture    = currentUser?.picture || '';
-  const appName    = settings?.appName || 'RoutineQuest';
+  const appName    = settings?.appName || 'RoutineTracker';
   const appIcon    = settings?.appIcon || '⚡';
 
   const [editingName, setEditingName] = useState(false);

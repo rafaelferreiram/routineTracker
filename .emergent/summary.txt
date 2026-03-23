@@ -1,137 +1,152 @@
 <analysis>**original_problem_statement**:
-The initial request was to take an existing frontend application, connect it to a secure database to store user data (logins, routines, achievements), make it accessible online, and ensure it's responsive for both iPhone and desktop use.
+The user wants to build a habit-tracking application named RoutineTracker.
 
-This evolved with subsequent requests:
-1.  **PRODUCT REQUIREMENT 1**: Update the database by importing user data for two users, 'rafael' and 'gabriela', from JSON files provided via a GitHub repository. This was requested multiple times with updated data dumps.
-2.  **PRODUCT REQUIREMENT 2**: Improve the mobile user experience. The user found the bottom navigation bar on mobile to be too crowded and requested a cleaner solution, suggesting a hamburger menu.
-3.  **PRODUCT REQUIREMENT 3**: Add social login capabilities, specifically with Google, in addition to the existing username/password system.
+Initial requests included connecting a frontend to a secure database, storing user data, and ensuring the app is responsive.
 
-**User's preferred language**: **Portuguese**. The user's most recent messages are in Portuguese. The next agent MUST respond in Portuguese.
+**PRODUCT REQUIREMENTS**:
+1.  **Database & Data Import**: Set up a database and import user data for 'rafael' and 'gabriela' from user-provided JSON files. This has been a recurring request to keep the data up-to-date.
+2.  **Mobile UI/UX**: Improve the mobile experience by replacing a crowded navigation bar with a cleaner hamburger menu and bottom tab bar. The app should be responsive and feel like a PWA.
+3.  **Authentication**:
+    *   Implement secure custom authentication (username/password).
+    *   Implement Google Social Login.
+    *   Implement password strength validation (min 6 chars, 1 letter, 1 number) for new user signups.
+4.  **Account Unification**: The user account  (password: ) and the Google account associated with  must be treated as a single, unified account, sharing all data (habits, XP, level, etc.).
+5.  **Friends System**: Implement a feature where users can add friends by searching for their username, rather than showing all users in the database.
+6.  **Landing Page**: Create an attractive, responsive landing page for unauthenticated users to showcase the app's features, including a preview of the application and its charts, using dummy data. The app name should be RoutineTracker.
+
+**User's preferred language**: **Portuguese**. The user communicates primarily in Portuguese. The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-The project is a full-stack application with a React frontend () and a FastAPI backend () connected to a MongoDB database. It supports secure JWT-based authentication for two pre-seeded users ( and ), whose data has been imported from user-provided JSON files. The application's mobile UI has been significantly improved by replacing a crowded 9-item bottom navigation with a cleaner 4-tab bar and a hamburger side-drawer menu for less frequent actions. All previously completed work has been tested and verified.
+The project is a full-stack application named RoutineTracker with a React frontend, a FastAPI backend, and a MongoDB database.
+- **Authentication**: Supports custom JWT login and Google Social Login. Password strength rules are enforced for new registrations.
+- **UI**: The application is responsive, with a dedicated landing page for new users, and a PWA-like experience (manifest.json, meta tags). The logged-in UI features a desktop sidebar and a mobile-friendly layout with a bottom tab bar and a hamburger menu.
+- **Features**: A Friends system allows users to search and add others by username.
+- **Data**: Two main users,  and , exist. The  user account has been linked to the email  in the database and populated with extensive habit data.
 
 **Last working item**:
-*   **Last item agent was working**: Implementing Google Social Login. The agent received an integration playbook, saved it to , and began modifying the necessary backend and frontend files (, , ) to add the Google login route, button, and callback logic.
+*   **Last item agent was working**: Fixing a critical bug where logging in with Google () creates a new, empty user account instead of loading the data for the existing, linked  user. The user reported this after testing on their own device.
 *   **Status**: IN PROGRESS
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: both. The implementation involves both frontend and backend changes. The agent should use the  for comprehensive E2E validation after completing the code changes. The testing plan outlined in  should be followed.
-*   **User Testing Done**: N
+*   **Agent Testing Done**: N (for this specific bug)
+*   **Which testing method agent to use?**: both. The bug is in the account linking logic, which involves the frontend triggering the login and the backend handling the callback.
+*   **User Testing Done**: Y (and it failed, which initiated this bug fix)
 
 **All Pending/In progress Issue list**:
-There are no pending bugs or issues. The work is focused on new feature development.
+*   **Issue 1: Google Login Account Unification Failure (P0)**
+    *   **Description**: When the user logs in with the Google account , the system creates a new, blank user profile instead of loading the data associated with the existing  user, despite the database record showing the email is linked to .
+    *   **Status**: IN PROGRESS
+    *   **Is recurring issue?**: Y
+    *   **Should Test frontend/backend/both after fix?**: both
+    *   **Debugging checklist for current issue**:
+        1.  **Backend ()**: Examine the  endpoint. The logic at  () likely has a flaw. It should robustly find a user by  and, if found, use that existing user's data. If not found, it should create a new one. The current logic might be failing to find the existing user or is incorrectly creating a new one regardless.
+        2.  **Database**: Verify the  collection again to ensure the  document has the  field correctly set and that there isn't another user document with the same email.
+        3.  **Frontend ()**: Review the  function to ensure it correctly sends the  and handles the response from the backend. The frontend seems to be working, but the data it receives is for a new user.
 
 **In progress Task List**:
-*   **Task 1**: Complete Google Social Login Implementation (P0)
-    *   **Where to resume**: The agent has already applied  edits to the key files. The next steps are:
-        1.  Ensure all necessary code changes are in place.
-        2.  Restart the backend and frontend services using backend: stopped
-frontend: ERROR (not running)
-backend: started
-frontend: ERROR (already started) to apply all changes.
-        3.  Thoroughly test the Google Login flow as detailed in . This includes clicking the new Sign in with Google button, verifying the mock authentication process, and ensuring the user is correctly logged in and their data is loaded.
-    *   **What will be achieved with this?**: Users will be able to sign in and sign up using their Google account, providing a more convenient login option.
-    *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: both
-    *   **Blocked on something**: No.
+None. The P0 issue is blocking further development.
 
 **Upcoming and Future Tasks**
+*   **Upcoming Tasks**:
+    *   Allow users to manually upload a profile picture (as an alternative to the Google profile picture). (P1)
+    *   Implement a change/reset password feature. (P1)
 *   **Future Tasks**:
-    *   **Daily Summary Push Notification (P2)**: The agent suggested a feature to send daily push notifications to remind users about their habits. This could be implemented using the Web Push API.
-    *   **Streak Fire Animation (P2)**: The agent suggested adding a satisfying fire animation when a user completes a habit that is on a streak.
+    *   Send daily push notifications to remind users about their habits. (P2)
+    *   Add a fire animation when a user completes a habit on a streak. (P2)
+    *   Add a Remember me option for persistent login sessions. (P2)
 
 **Completed work in this session**
-- **Full Stack Architecture Setup**: Migrated the app from a frontend-only, localStorage-based application to a full-stack architecture with a FastAPI backend and MongoDB database.
-- **Secure Custom Authentication**: Implemented JWT-based login with hashed passwords () for the  and  users.
-- **Database Data Import**: Fetched JSON data dumps from the user's GitHub repository and executed a Python script to populate/update the MongoDB database with detailed user data (profiles, 24 habits, 10 achievements, numeric logs, events, etc.). This was performed twice with updated data.
-- **Mobile UI/UX Overhaul**:
-    - Replaced the cluttered 9-item mobile footer with a clean 4-tab bottom navigation (, , , ).
-    - Implemented a hamburger menu that opens a side drawer for secondary items (, , , , , ).
-    - Added an iPhone-compatible viewport meta tag () for proper safe-area handling.
-- **Comprehensive Testing**: Used the testing agent to validate the backend integration and mobile redesign, achieving 13/13 passing tests. Manually verified API endpoints and UI changes with screenshots.
-- **Documentation**: Created and updated  with the project's progress.
+- **Google Social Login**: Implemented and tested the full flow, although a critical bug in account linking was later discovered.
+- **User Switching Bug Fix**: Corrected an issue on the login screen where users couldn't easily switch between accounts.
+- **Data Import & Account Linking**: Linked  to  in the DB and repeatedly imported/updated habit data from user-provided JSON.
+- **Google Profile Picture**: Integrated the Google profile picture as the user's avatar, visible across the app.
+- **PWA Enhancements**: Made the app PWA-ready by adding  and necessary HTML meta tags.
+- **Friends Feature**: Implemented a full friends system (search by username, add, list, remove).
+- **Landing Page**: Created a comprehensive, responsive landing page with app previews, feature showcases, and a static version of the app's real progress chart.
+- **Branding Change**: Renamed the application from RoutineQuest to RoutineTracker across the entire codebase.
+- **Password Strength Validation**: Added backend and frontend validation for new user passwords.
+- **GitHub PR Validation**: Confirmed the user's PR was successfully merged into the  branch of their GitHub repository.
 
 **Earlier issues found/mentioned but not fixed**
 None.
 
 **Known issue recurrence from previous fork**
-None. This is the first fork.
+*   **Issue**: The unification of the  user and the Google login ().
+*   **Recurrence count**: 3+ times. The agent has run scripts to link the accounts and import data, confirming success with its own tests, but the user's real-world tests continue to fail, indicating the core logic in the application is flawed.
+*   **Status**: IN PROGRESS
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Backend**: FastAPI, Python, MongoDB (with ), JWT authentication (, ).
-*   **Frontend**: React, Vite, Tailwind CSS, Zustand (for state management).
-*   **Authentication**: Dual system with custom JWT (username/password) and Google OAuth 2.0 (via ).
-*   **Data Flow**: The frontend syncs its state from the backend API on login. Subsequent changes are optimistically updated in the UI and then persisted to the backend within 500ms.
+*   **Backend**: FastAPI, MongoDB (), JWT authentication (, ).
+*   **Frontend**: React, Vite, Tailwind CSS, Zustand, React Router (introduced in ).
+*   **Authentication**: Dual system with custom JWT and Emergent-managed Google OAuth 2.0.
+*   **PWA**:  and meta tags for Add to Home Screen functionality.
 
 **key DB schema**
 *   **users**: 
 *   **user_data**: 
 
 **changes in tech stack**
-*   The application was transformed from a frontend-only React app using  for persistence to a full-stack application with a dedicated Python backend and MongoDB database.
+None.
 
 **All files of reference**
-*   : Core backend logic, including all API endpoints for auth and data. Recently modified to add Google auth routes.
-*   : The UI for logging in. Recently modified to add the Sign in with Google button.
-*   : Zustand store managing all authentication state. Recently modified to handle the Google OAuth callback.
-*   : Contains the responsive navigation logic (desktop sidebar, mobile bottom bar, and hamburger menu).
-*   : A critical document containing the step-by-step playbook and testing plan for the Google Auth integration.
-*   : Project requirements and completed tasks document.
+*   : Contains the Google callback logic that needs to be fixed. Also has the new friends endpoints.
+*   : UI for login, which was modified to fix user switching.
+*   : Handles the frontend part of the authentication flow.
+*   : Completely rewritten to support the new add by username feature.
+*   : The new landing page component.
+*   : Modified to handle routing between the landing page and the main app.
 
 **key api endpoints**
-*   : Handles username/password login.
-*   : (New) Initiates the Google OAuth flow.
-*   : (New) Endpoint for Google to redirect to after successful authentication.
-*   : Fetches the currently authenticated user's profile.
-*   : GET and POST endpoint for all user-specific application data (habits, events, etc.).
+*    (POST)
+*    (POST)
+*    (POST)
+*    (GET) - **Suspected location of the P0 bug.**
+*    (GET)
+*    (GET)
+*    (POST)
+*    (POST)
+*    (GET/PUT)
 
 **Critical Info for New Agent**
 *   **MUST reply in Portuguese.**
-*   The immediate task is to finalize the Google Social Login feature. The implementation is already in progress.
-*   The testing for the Google login MUST follow the plan in . The flow is managed by the internal  library, which provides a mocked but realistic OAuth experience.
-*   The application database is up-to-date with the latest data provided by the user. No further data migration is needed at this time.
-*   The mobile navigation has been completely redesigned and tested.
+*   The absolute top priority is fixing the Google Login bug (Issue 1). The user is blocked and has reported this multiple times. Do not proceed to other tasks until this is resolved and verified by the user.
+*   The bug is almost certainly in the backend logic within  at the  endpoint. The code must correctly find an existing user by email and use their data, not create a new user.
 
 **documents and test reports created in this job**
-*   
-*   
+*    (updated)
 *   
 *   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request (Pending)**: Add social login via Google, Apple, Facebook.
-2.  **Clarification**: Use only Google for social login.
-3.  **Request (Done)**: Update DB from a JSON dump and fix the crowded mobile footer with a hamburger menu.
-4.  **Request (Done)**: Fetch data from GitHub and update the database, providing context.
-5.  **Request (Done)**: Improve mobile tabs for a cleaner, smoother phone experience.
-6.  **Information (Done)**: Provided GitHub URLs for data dumps and schema.
-7.  **Information (Done)**: Confirmed the GitHub repository was made public.
-8.  **Request (Done)**: Keep both existing user accounts and their data.
-9.  **Instruction (Done)**: Start the task now.
-10. **Initial Request (Done)**: Connect to DB, add security, make accessible, and ensure responsiveness.
+1.  **Bug Report (LATEST/CURRENT)**: Logged in with Google () on anonymous tab and phone, and the account is empty. Asks to fix it and provides the full JSON data for the  account again. (IN PROGRESS)
+2.  **Clarification**: Confirmed that / and  are the exact same user and should have identical data. (RESOLVED, but the implementation is buggy)
+3.  **Question**: Asked about WhatsApp integration requirements (phone number vs. bot). (ANSWERED)
+4.  **Request**: Use the real app chart on the landing page, not a different-looking one. (DONE)
+5.  **Request**: Show a chart on the landing page, use a dummy name (not rafael), and change the app name from RoutineQuest to RoutineTracker. (DONE)
+6.  **Request**: Create a landing page for new users. (DONE)
+7.  **Request**: Confirm  is linked to  and all data is migrated. Also, change the friends tab to add friends by username. (DONE, but the linking is buggy)
+8.  **Confirmation**: Stated they did the GitHub merge and asked the agent to pull and confirm. (DONE)
+9.  **Request**: Apply a password strength rule and validate that the PR merge was successful. (DONE)
+10. **Bug Report**: Google Social Login failed during user's test. Also asked to fix git conflicts. (RESOLVED, though a new bug was found)
 
 **Project Health Check:**
-*   **Broken**: None.
-*   **Mocked**: The Google Social Login flow is designed to be mocked using the  library, as per the integration playbook.
+*   **Broken**: The account unification logic for Google Sign-In is critically broken.
+*   **Mocked**: The Google Authentication flow uses Emergent's mock auth service for testing.
 
 **3rd Party Integrations**
-*   **Emergent-managed Google Auth**: IN PROGRESS. This integration uses the Emergent LLM Key.
+*   **Emergent-managed Google Auth**: Implemented, but with a critical bug in the application's handling of the callback.
 
 **Testing status**
-*   **Testing agent used after significant changes**: YES (after backend creation and after mobile UI redesign).
+*   **Testing agent used after significant changes**: YES. Multiple times. However, it did not catch the account unification bug that the user found through manual testing.
 *   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**:
-    *   
-    *   
+*   **Test files created**: , .
 *   **Known regressions**: None.
 
 **Credentials to test flow:**
 *   **User 1**:  / 
 *   **User 2**:  / 
-*   **Google Login**: Follow the mock flow triggered by the Sign in with Google button.
+*   **Google Login**: Use the Google login flow. The test email  should log into the  account with all its data. **This is currently failing.**
 
 **What agent forgot to execute**
-The agent has successfully addressed all user requests in the order they were received. The current in-progress task is the most recent request from the user.</analysis>
+The agent failed to create a robust and correctly working implementation for the Google account unification, despite multiple attempts and confirmations. The agent relied on its own scripts and tests which passed, but did not account for the real-world scenario the user tested, leading to a recurring critical bug.</analysis>

@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://social-auth-dev.preview.emergentagent.com"
+BASE_URL = "https://routine-tracker-344.preview.emergentagent.com"
 
 
 class TestHealthEndpoint:
@@ -123,7 +123,7 @@ class TestRegisterEndpoint:
         """Test registering existing username returns 400"""
         response = requests.post(
             f"{BASE_URL}/api/auth/register",
-            json={"username": "rafael", "password": "newpassword"}
+            json={"username": "rafael", "password": "newpass123"}  # Valid password format
         )
         assert response.status_code == 400
         data = response.json()

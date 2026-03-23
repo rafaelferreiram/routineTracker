@@ -445,7 +445,7 @@ function getInitialState(username, defaultTheme = {}) {
         parsed.settings = {
           theme: 'dark',
           accentColor: '#22c55e',
-          appName: 'RoutineQuest',
+          appName: 'RoutineTracker',
           appIcon: '⚡',
           categories: DEFAULT_CATEGORIES,
           ...parsed.settings,
@@ -541,7 +541,7 @@ function getInitialState(username, defaultTheme = {}) {
           { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
         ]
       : [],
-    settings: { theme: defaultTheme.themeId || 'dark', accentColor: defaultTheme.accentColor || '#22c55e', appName: 'RoutineQuest', appIcon: '⚡', categories: DEFAULT_CATEGORIES },
+    settings: { theme: defaultTheme.themeId || 'dark', accentColor: defaultTheme.accentColor || '#22c55e', appName: 'RoutineTracker', appIcon: '⚡', categories: DEFAULT_CATEGORIES },
     moods: {},
     toasts: [],
     confetti: false,

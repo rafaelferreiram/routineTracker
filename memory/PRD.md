@@ -83,16 +83,23 @@
 
 ## What's Been Implemented
 
-### 2026-03-23 - TARS AI Assistant with Custom Icon
+### 2026-03-23 - TARS AI Assistant with Function Calling (P0 Bug Fixed)
 - Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
 - Custom TARS robot icon from user-provided image (/public/tars-icon.png)
 - Dark space-themed button in navbar
 - Personality includes "Humor: 75%" setting (movie reference)
 - AIChat.jsx component for general AI conversation
 - Voice-to-voice and text-to-text interaction
-- System Actions: create/edit habits, create events
+- **System Actions via Function Calling:**
+  - `create_habit` - Create new habits with emoji and frequency
+  - `edit_habit` - Edit existing habits
+  - `create_event` - Create events/trips
+  - `search_places` - Search for restaurants, attractions, etc.
+  - `add_to_itinerary` - Add activities to event itineraries (**BUG FIXED**)
+  - `get_event_itinerary` - View event itineraries
 - Real-time weather via Open-Meteo API
 - OpenAI fallback to Emergent LLM Key
+- **P0 Bug Fix (2026-03-23)**: Fixed MongoDB query in `add_to_itinerary` using `array_filters` to correctly update events in nested arrays. Also fixed user data access path (`data.events` instead of `events`).
 
 ### 2026-03-23 - Fire Animation for Streaks
 - Added CSS keyframe animations for fire effect (fireFlicker, fireGlow, fireBounce)
@@ -171,7 +178,7 @@
 ## Prioritized Backlog
 
 ### P0 (Critical - Blocking)
-- None currently
+- ~~TARS não consegue encontrar eventos existentes para modificá-los~~ ✅ FIXED (array_filters)
 
 ### P1 (High Priority)
 - ~~Password change/reset functionality~~ ✅ DONE
@@ -179,21 +186,25 @@
 - Push notifications for daily reminders
 
 ### P2 (Medium Priority)
-- Fire animation when completing streak habits
+- ~~Fire animation when completing streak habits~~ ✅ DONE
 - "Remember me" persistent login
 - Data export to PDF/CSV
+- TARS conversation memory/history persistence
+- TARS proactive habit analysis and suggestions
 
 ### P3 (Nice to Have)
 - WhatsApp notifications
 - Two-factor authentication
 - Admin dashboard
+- Email verification with Resend (pending API key)
 
 ## Next Tasks
 1. Push notifications for daily habit reminders (P1)
-2. Fire animation when completing streak habits (P2)
-3. Test Google Login in production with real Google account
+2. Test Google Login in production with real Google account
+3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_7.json` - Latest (8 backend + 9 frontend tests = 100% pass - Event Itinerary with AI)
-- `/app/test_reports/iteration_6.json` - Previous (7/7 frontend features - Events with photos per day)
+- `/app/test_reports/iteration_8.json` - Latest (8/8 tests - TARS Function Calling - P0 Bug Fixed)
+- `/app/test_reports/iteration_7.json` - Previous (8 backend + 9 frontend tests - Event Itinerary with AI)
+- `/app/test_reports/iteration_6.json` - Earlier (7/7 frontend features - Events with photos per day)
 - `/app/test_reports/iteration_5.json` - Earlier (37 backend, 8 frontend tests passed)

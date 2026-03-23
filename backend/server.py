@@ -7,7 +7,8 @@ import bcrypt
 from jose import jwt, JWTError
 from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
-import os, requests as http_req
+import os
+import requests as http_req
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -247,6 +248,133 @@ def save_data(req: DataReq, cu: dict = Depends(get_current_user)):
         upsert=True,
     )
     return {'ok': True}
+
+# ── Friends Collection ──────────────────────────────────────────────────────────
+friends_c = db['friends']
+friends_c.create_index([('user_id', 1), ('friend_id', 1)], unique=True)
+
+# ── Friends Endpoints ───────────────────────────────────────────────────────────
+class AddFriendReq(BaseModel):
+    username: str
+
+@app.get('/api/friends')
+def get_friends(cu: dict = Depends(get_current_user)):
+    """Get list of friends for current user."""
+    uid = cu['sub']
+    
+    # Get friend relationships
+    friend_docs = list(friends_c.find({'user_id': uid}, {'_id': 0}))
+    friend_ids = [f['friend_id'] for f in friend_docs]
+    
+    if not friend_ids:
+        return {'friends': []}
+    
+    # Get friend user info
+    from bson import ObjectId
+    friends = []
+    for fid in friend_ids:
+        try:
+            user = users_c.find_one({'_id': ObjectId(fid)})
+            if user:
+                # Get friend's data for stats
+                friend_data = data_c.find_one({'user_id': fid}, {'_id': 0})
+                friends.append({
+                    'id': fid,
+                    'username': user['username'],
+                    'displayName': user.get('display_name', user['username']),
+                    'picture': user.get('picture', ''),
+                    'theme': user.get('theme', {}),
+                    'data': friend_data.get('data', {}) if friend_data else {}
+                })
+        except Exception:
+            continue
+    
+    return {'friends': friends}
+
+@app.post('/api/friends/add')
+def add_friend(req: AddFriendReq, cu: dict = Depends(get_current_user)):
+    """Add a friend by username."""
+    uid = cu['sub']
+    username = req.username.lower().strip()
+    
+    if not username:
+        raise HTTPException(status_code=400, detail='Username is required')
+    
+    # Find friend by username
+    friend = users_c.find_one({'username': username})
+    if not friend:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    friend_id = str(friend['_id'])
+    
+    # Can't add yourself
+    if friend_id == uid:
+        raise HTTPException(status_code=400, detail="You can't add yourself as a friend")
+    
+    # Check if already friends
+    existing = friends_c.find_one({'user_id': uid, 'friend_id': friend_id})
+    if existing:
+        raise HTTPException(status_code=400, detail='Already friends with this user')
+    
+    # Add friend relationship
+    friends_c.insert_one({
+        'user_id': uid,
+        'friend_id': friend_id,
+        'added_at': datetime.now(timezone.utc)
+    })
+    
+    return {
+        'message': f'Added {friend.get("display_name", username)} as friend',
+        'friend': {
+            'id': friend_id,
+            'username': friend['username'],
+            'displayName': friend.get('display_name', username),
+            'picture': friend.get('picture', ''),
+            'theme': friend.get('theme', {})
+        }
+    }
+
+@app.delete('/api/friends/{friend_id}')
+def remove_friend(friend_id: str, cu: dict = Depends(get_current_user)):
+    """Remove a friend."""
+    uid = cu['sub']
+    
+    result = friends_c.delete_one({'user_id': uid, 'friend_id': friend_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Friend not found')
+    
+    return {'message': 'Friend removed'}
+
+@app.get('/api/users/search')
+def search_users(q: str, cu: dict = Depends(get_current_user)):
+    """Search users by username (partial match)."""
+    uid = cu['sub']
+    
+    if not q or len(q) < 2:
+        return {'users': []}
+    
+    # Search by username (case insensitive, partial match)
+    import re
+    regex = re.compile(f'.*{re.escape(q)}.*', re.IGNORECASE)
+    users = list(users_c.find(
+        {'username': regex},
+        {'_id': 1, 'username': 1, 'display_name': 1, 'picture': 1, 'theme': 1}
+    ).limit(10))
+    
+    # Filter out current user and format response
+    result = []
+    for u in users:
+        user_id = str(u['_id'])
+        if user_id != uid:
+            result.append({
+                'id': user_id,
+                'username': u['username'],
+                'displayName': u.get('display_name', u['username']),
+                'picture': u.get('picture', ''),
+                'theme': u.get('theme', {})
+            })
+    
+    return {'users': result}
 
 # ── Startup Seed ───────────────────────────────────────────────────────────────
 def seed_users():

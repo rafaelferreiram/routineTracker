@@ -40,4 +40,17 @@ export const api = {
 
   saveData: (data) =>
     apiCall('PUT', '/data', { data }),
+
+  // Friends API
+  getFriends: () =>
+    apiCall('GET', '/friends'),
+
+  addFriend: (username) =>
+    apiCall('POST', '/friends/add', { username }),
+
+  removeFriend: (friendId) =>
+    apiCall('DELETE', `/friends/${friendId}`),
+
+  searchUsers: (query) =>
+    apiCall('GET', `/users/search?q=${encodeURIComponent(query)}`),
 };

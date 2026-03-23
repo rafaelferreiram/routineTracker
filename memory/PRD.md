@@ -83,6 +83,72 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - Google Maps Places Integration
+- New PlaceSearch.jsx component for searching real-world places
+- Google Maps JavaScript API + Places API integration
+- Features:
+  - Search by location (e.g., "Times Square, NYC")
+  - Filter by type: Restaurantes, Cafés, Atrações, Museus, Parques, Shopping, Hotéis, Bares
+  - Results show photos, ratings (stars), price levels ($-$$$$), and open/closed status
+  - Interactive mini-map with dark theme and place markers
+  - "Ver no Maps" button opens Google Maps in new tab
+  - "Adicionar ao Roteiro" with time picker modal
+- EventItinerary.jsx updated to 3-column layout:
+  - Left: Roteiro (day-by-day activities)
+  - Middle: Buscar Lugares (Google Maps search)
+  - Right: Assistente IA (chat)
+- Mobile-friendly with tab navigation for each section
+- API key stored in environment variable (VITE_GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY)
+- **TARS integration**: Backend `search_places` function now uses Google Places API (geocoding + nearbySearch) to return real places with ratings, prices, and Google Maps links
+
+### 2026-03-23 - TARS AI Assistant with Function Calling (P0 Bug Fixed)
+- Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
+- Custom TARS robot icon from user-provided image (/public/tars-icon.png)
+- Dark space-themed button in navbar
+- Personality includes "Humor: 75%" setting (movie reference)
+- AIChat.jsx component for general AI conversation
+- Voice-to-voice and text-to-text interaction
+- **System Actions via Function Calling:**
+  - `create_habit` - Create new habits with emoji and frequency
+  - `edit_habit` - Edit existing habits
+  - `create_event` - Create events/trips
+  - `search_places` - Search for restaurants, attractions, etc.
+  - `add_to_itinerary` - Add activities to event itineraries (**BUG FIXED**)
+  - `get_event_itinerary` - View event itineraries
+- Real-time weather via Open-Meteo API
+- OpenAI fallback to Emergent LLM Key
+- **P0 Bug Fix (2026-03-23)**: Fixed MongoDB query in `add_to_itinerary` using `array_filters` to correctly update events in nested arrays. Also fixed user data access path (`data.events` instead of `events`).
+
+### 2026-03-23 - Fire Animation for Streaks
+- Added CSS keyframe animations for fire effect (fireFlicker, fireGlow, fireBounce)
+- StreakBadge.jsx updated with fire-animation class
+- StreakPill component shows animated fire emoji with glow effect
+- Streaks 2+ days get flickering fire animation
+- Progressive glow intensity based on streak length (3d, 7d, 14d, 30d+)
+
+### 2026-03-23 - Event Itinerary with AI Assistant
+- New EventItinerary.jsx component for planning multi-day event itineraries
+- AI chat assistant (GPT-4o via Emergent LLM Key) that organizes activities into event days
+- Voice input support via OpenAI Whisper for hands-free planning
+- Two-column layout on desktop (itinerary + AI chat), stacked on mobile
+- "Planejar Roteiro" button only appears for multi-day events
+- Manual activity addition with time and title
+- Itinerary data persisted in event.itinerary array
+- Backend endpoints: /api/ai/itinerary and /api/ai/transcribe
+- **Calendar Export**: Download .ics file with each activity as separate event
+  - Each event includes TL;DR summary of the day's activities in description
+  - Works with iPhone Calendar, Google Calendar, Outlook, and any iCalendar-compatible app
+
+### 2026-03-23 - Event Memories with Photos per Day
+- Enhanced EventsPanel.jsx with support for single-day and multi-day (period) events
+- Event creation form with toggle between "1 dia" and "Período"
+- EventReviewModal now supports photos organized by day for multi-day events
+- Each day of a multi-day event can have up to 2 photos
+- Date tabs UI for navigating between days in the review modal
+- Correct calculation of max photos (days × 2)
+- Mobile-responsive design with horizontally scrollable date tabs
+- Minimalist design consistent with the rest of the app
+
 ### 2026-03-23 - Profile Management & Rebranding
 - Added profile photo upload (base64 stored in database)
 - Added change password functionality with strength validation
@@ -130,7 +196,7 @@
 ## Prioritized Backlog
 
 ### P0 (Critical - Blocking)
-- None currently
+- ~~TARS não consegue encontrar eventos existentes para modificá-los~~ ✅ FIXED (array_filters)
 
 ### P1 (High Priority)
 - ~~Password change/reset functionality~~ ✅ DONE
@@ -138,19 +204,48 @@
 - Push notifications for daily reminders
 
 ### P2 (Medium Priority)
-- Fire animation when completing streak habits
+- ~~Fire animation when completing streak habits~~ ✅ DONE
 - "Remember me" persistent login
 - Data export to PDF/CSV
+- TARS conversation memory/history persistence
+- TARS proactive habit analysis and suggestions
 
 ### P3 (Nice to Have)
 - WhatsApp notifications
 - Two-factor authentication
 - Admin dashboard
+- Email verification with Resend (pending API key)
 
 ## Next Tasks
-1. Test Google Login in production with real Google account
-2. Add push notifications for habit reminders
-3. Add fire animation for streaks
+1. Push notifications for daily habit reminders (P1)
+2. Test Google Login in production with real Google account
+3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_5.json` - Latest (37 backend, 8 frontend tests passed)
+- `/app/test_reports/iteration_10.json` - Latest (19/19 tests - Full TARS + Google Places Integration)
+- `/app/test_reports/iteration_9.json` - Previous (6/6 tests - Google Maps PlaceSearch Integration)
+- `/app/test_reports/iteration_8.json` - Earlier (8/8 tests - TARS Function Calling - P0 Bug Fixed)
+- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests)
+
+## 3rd Party Integrations
+- **MongoDB Atlas**: Production database
+- **OpenAI GPT-4o**: AI chat, function calling
+- **OpenAI Whisper**: Speech-to-text
+- **OpenAI TTS**: Text-to-speech
+- **Open-Meteo API**: Real-time weather (no API key)
+- **Google Maps JavaScript API**: Place search, maps (Frontend)
+- **Google Places API**: Search restaurants, attractions, etc. (Backend + Frontend)
+- **Google Geocoding API**: Convert addresses to coordinates (Backend)
+- **Emergent-managed Google Auth**: Social login (workaround active)
+
+## Known Issues
+- Google Login: Use o preview URL ou faça deploy para produção
+- Google Maps API deprecation warnings (PlacesService deprecated March 2025, but still functional)
+
+## Deploy Checklist
+Após fazer deploy para `routine-tracker.com`:
+1. O Google Auth vai usar o backend de produção
+2. Os dados serão sincronizados com o banco de produção
+3. Login com email `ferreira.rafah@gmail.com` / senha `admin` funcionará
+4. Google Login vai encontrar a conta existente pelo email e carregar os dados
+

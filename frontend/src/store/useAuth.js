@@ -64,7 +64,11 @@ export function AuthProvider({ children }) {
 
   async function login(username, password) {
     try {
-      const data = await api.login(username, password);
+      // Check if input looks like an email
+      const isEmail = username.includes('@');
+      const data = isEmail 
+        ? await api.loginEmail(username, password)
+        : await api.login(username, password);
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
       persistKnownUser(data.user);

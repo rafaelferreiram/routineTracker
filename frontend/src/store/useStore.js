@@ -537,8 +537,9 @@ function getInitialState(username, defaultTheme = {}) {
     journalEntries: [],
     events: isRafael
       ? [
-          { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', emoji: '✈️', color: '#22c55e', note: '', createdAt: new Date().toISOString() },
+          { id: 'event_nyc', title: 'Travel to NYC', date: '2026-04-17', endDate: '2026-04-27', emoji: '✈️', color: '#22c55e', note: 'Viagem de trabalho e férias', createdAt: new Date().toISOString() },
           { id: 'event_ufc', title: 'UFC White House', date: '2026-06-04', emoji: '🥊', color: '#f87171', note: '', createdAt: new Date().toISOString() },
+          { id: 'event_carnaval', title: 'Carnaval', date: '2026-03-01', endDate: '2026-03-05', emoji: '🎉', color: '#ec4899', note: 'Folia em Salvador', createdAt: new Date().toISOString() },
         ]
       : [],
     settings: { theme: defaultTheme.themeId || 'dark', accentColor: defaultTheme.accentColor || '#22c55e', appName: 'RoutineTracker', appIcon: '⚡', categories: DEFAULT_CATEGORIES },

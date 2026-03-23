@@ -35,12 +35,33 @@ import ExportImport from './components/ExportImport.jsx';
 import CustomizePanel from './components/CustomizePanel.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import FriendsPanel from './components/FriendsPanel.jsx';
+import OnboardingCarousel from './components/OnboardingCarousel.jsx';
+
+const ONBOARDING_KEY = 'routinetracker_onboarding_complete';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('today');
   const [showExport, setShowExport] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { confetti, levelUpPending, clearLevelUp, accentColor, settings } = useHabits();
   const { currentUser } = useAuth();
+
+  // Check if onboarding should be shown (first time user)
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem(ONBOARDING_KEY);
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  };
+
+  const handleShowOnboarding = () => {
+    setShowOnboarding(true);
+  };
 
   // Apply full theme (colors + accent) whenever either changes
   useEffect(() => {
@@ -66,8 +87,18 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-app">
+      {/* Onboarding Carousel for first-time users */}
+      {showOnboarding && (
+        <OnboardingCarousel onComplete={handleOnboardingComplete} />
+      )}
+
       <div className="lg:flex">
-        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} onExport={() => setShowExport(true)} />
+        <Navbar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          onExport={() => setShowExport(true)}
+          onShowOnboarding={handleShowOnboarding}
+        />
 
         <main className="flex-1 lg:ml-60 xl:ml-64 min-h-screen">
           {/* Mobile header is now rendered inside Navbar — just add top padding */}

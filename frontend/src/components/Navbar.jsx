@@ -1,21 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
 import { getLevelColor } from '../utils/gamification.js';
+import AIChat from './AIChat.jsx';
 
 const ALL_NAV = [
   { id: 'today',        label: 'Today',     icon: '🏠', section: 'main' },
   { id: 'habits',       label: 'Habits',    icon: '✅', section: 'main' },
   { id: 'stats',        label: 'Stats',     icon: '📊', section: 'main' },
-  { id: 'journal',      label: 'Journal',   icon: '📖', section: 'main' },
-  { id: 'achievements', label: 'Medals',    icon: '🏅', section: 'more' },
+  { id: 'journal',      label: 'Journal',   icon: '📖', section: 'more' },
+  { id: 'achievements', label: 'Medals',    icon: '🏅', section: 'main' },
   { id: 'events',       label: 'Events',    icon: '✈️',  section: 'more' },
   { id: 'friends',      label: 'Friends',   icon: '👥', section: 'more' },
   { id: 'customize',    label: 'Customize', icon: '🎨', section: 'more' },
-  { id: 'profile',      label: 'Profile',   icon: null,  section: 'more' },
+  { id: 'profile',      label: 'Profile',   icon: null,  section: 'bottom' },  // Special - shows avatar
 ];
 
-const BOTTOM_TABS = ALL_NAV.filter(n => n.section === 'main');
+// Bottom tabs: Today, Habits, AI, Medals, Profile (like Instagram with AI in center)
+const BOTTOM_TABS = ['today', 'habits', 'ai', 'achievements', 'profile'];
 
 // Avatar component - uses Google photo or initial as fallback
 function Avatar({ picture, initial, size = 36, levelColor, accentColor, className = '' }) {
@@ -48,7 +50,7 @@ function Avatar({ picture, initial, size = 36, levelColor, accentColor, classNam
   );
 }
 
-export default function Navbar({ activeTab, setActiveTab, onExport }) {
+export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboarding }) {
   const {
     profile, achievements, currentLevel,
     completionPercent, todayHabits, completedToday,
@@ -65,6 +67,52 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
   const [editingName, setEditingName] = useState(false);
   const [nameInput,   setNameInput]   = useState(profile?.name || '');
   const [showMenu,    setShowMenu]    = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+
+  // Capture the beforeinstallprompt event for PWA install
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setIsInstalled(true);
+    }
+
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    
+    // Listen for successful install
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    });
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setInstallPrompt(null);
+    } else {
+      // Show manual instructions for iOS or when prompt not available
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert('Para instalar no iPhone/iPad:\n\n1. Toque no ícone de compartilhar (↑)\n2. Role para baixo e toque em "Adicionar à Tela de Início"\n3. Toque em "Adicionar"');
+      } else {
+        alert('Para instalar:\n\n1. Abra o menu do navegador (⋮)\n2. Toque em "Instalar app" ou "Adicionar à tela inicial"');
+      }
+    }
+    setShowMenu(false);
+  };
 
   const handleNameSave = () => {
     if (nameInput.trim()) updateProfile({ name: nameInput.trim() });
@@ -192,7 +240,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           paddingLeft: 16,
           paddingRight: 16,
           paddingTop: 'env(safe-area-inset-top)',
-          background: 'rgba(8,8,8,0.97)',
+          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderColor: 'var(--bg-border, #1f1f1f)',
@@ -234,38 +282,82 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
       </header>
 
       {/* ════════════════════════════════════════════════════════════
-          MOBILE BOTTOM TAB BAR — 4 tabs, clean & spacious
+          MOBILE BOTTOM TAB BAR — Instagram-style: Today, Habits, Stats, Medals, Profile
       ════════════════════════════════════════════════════════════ */}
       <nav data-testid="mobile-bottom-nav"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
         style={{
-          background: 'rgba(8,8,8,0.97)',
+          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderColor: 'var(--bg-border, #1f1f1f)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
-        <div className="flex items-stretch" style={{ height: 66 }}>
-          {BOTTOM_TABS.map(item => {
-            const isActive = activeTab === item.id;
+        <div className="flex items-stretch" style={{ height: 56 }}>
+          {BOTTOM_TABS.map(tabId => {
+            const item = ALL_NAV.find(n => n.id === tabId);
+            const isActive = activeTab === tabId;
+            const isProfile = tabId === 'profile';
+            const isAI = tabId === 'ai';
+            
+            // AI button in center - special style
+            if (isAI) {
+              return (
+                <button key={tabId}
+                  data-testid="mobile-nav-ai"
+                  onClick={() => setShowAIChat(true)}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
+                >
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center -mt-4 shadow-lg overflow-hidden"
+                    style={{ 
+                      background: '#ffffff',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                      border: '2px solid #e5e7eb'
+                    }}
+                  >
+                    <img src="/tars-icon.png" alt="TARS" className="w-10 h-10 object-contain" />
+                  </div>
+                  <span className="text-[10px] font-medium leading-none" style={{ color: '#374151' }}>
+                    TARS
+                  </span>
+                </button>
+              );
+            }
+            
             return (
-              <button key={item.id}
-                data-testid={`mobile-nav-${item.id}`}
-                onClick={() => setActiveTab(item.id)}
-                className="flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 active:scale-90 relative"
+              <button key={tabId}
+                data-testid={`mobile-nav-${tabId}`}
+                onClick={() => setActiveTab(tabId)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
               >
-                {/* Active indicator line */}
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full"
-                    style={{ background: accentColor }} />
+                {isProfile ? (
+                  // Profile tab shows user avatar (Instagram-style)
+                  <div 
+                    className="rounded-full overflow-hidden flex items-center justify-center"
+                    style={{ 
+                      width: 28, 
+                      height: 28,
+                      border: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
+                      background: picture ? 'transparent' : `${levelColor || accentColor}22`,
+                    }}
+                  >
+                    {picture ? (
+                      <img src={picture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-xs font-bold" style={{ color: levelColor || accentColor }}>{initial}</span>
+                    )}
+                  </div>
+                ) : (
+                  // Regular tabs with icons
+                  <span className={`text-[22px] leading-none transition-all duration-200 ${isActive ? '' : 'opacity-40 grayscale'}`}>
+                    {item?.icon}
+                  </span>
                 )}
-                <span className={`text-[26px] leading-none transition-all duration-200 ${isActive ? 'scale-110' : 'scale-100 opacity-50'}`}>
-                  {item.icon}
-                </span>
-                <span className="text-[11px] font-semibold leading-none"
-                  style={{ color: isActive ? accentColor : '#374151' }}>
-                  {item.label}
+                <span className="text-[10px] font-medium leading-none"
+                  style={{ color: isActive ? 'var(--text-primary, #fff)' : 'var(--text-subtle, #4b5563)' }}>
+                  {item?.label}
                 </span>
               </button>
             );
@@ -378,6 +470,52 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
                   </button>
                 </>
               )}
+
+              {/* Install App - PWA */}
+              {!isInstalled && (
+                <>
+                  <div className="mx-5 my-3 border-t" style={{ borderColor: 'var(--bg-border,#1f1f1f)' }} />
+                  <button 
+                    onClick={handleInstallClick}
+                    data-testid="install-app-btn"
+                    className="w-full flex items-center gap-3.5 px-4 py-3 transition-all active:opacity-60"
+                  >
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
+                      style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}40` }}>
+                      📲
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="font-semibold text-[15px] block" style={{ color: accentColor }}>
+                        Instalar App
+                      </span>
+                      <span className="text-[11px] text-[#6b7280]">Adicionar à tela inicial</span>
+                    </div>
+                  </button>
+                </>
+              )}
+
+              {/* Tutorial / Onboarding */}
+              {onShowOnboarding && (
+                <>
+                  <div className="mx-5 my-3 border-t" style={{ borderColor: 'var(--bg-border,#1f1f1f)' }} />
+                  <button 
+                    onClick={() => { setShowMenu(false); onShowOnboarding(); }}
+                    data-testid="show-tutorial-btn"
+                    className="w-full flex items-center gap-3.5 px-4 py-3 transition-all active:opacity-60"
+                  >
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
+                      style={{ background: 'var(--bg-main,#0a0a0a)', border: '1px solid var(--bg-border,#1f1f1f)' }}>
+                      📖
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="font-semibold text-[15px] block" style={{ color: '#e5e7eb' }}>
+                        Ver Tutorial
+                      </span>
+                      <span className="text-[11px] text-[#6b7280]">Como usar o app</span>
+                    </div>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Sign out footer */}
@@ -393,6 +531,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           </div>
         </div>
       )}
+
+      {/* AI Chat Modal */}
+      <AIChat isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
     </>
   );
 }

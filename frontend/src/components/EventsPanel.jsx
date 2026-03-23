@@ -455,9 +455,22 @@ function PastEventCard({ event, onReview, onDelete }) {
             </div>
           )}
           
-          <button onClick={onReview} className="text-xs text-[#4b5563] hover:text-white">
-            ✏️ Editar
-          </button>
+          <div className="flex items-center gap-3 pt-2">
+            <button onClick={() => onReview()} 
+              className="text-xs text-[#6b7280] hover:text-white flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
+              data-testid="edit-memory-btn">
+              ✏️ Editar memória
+            </button>
+            <button onClick={() => {
+              if (window.confirm('Tem certeza que deseja excluir esta memória? As fotos e avaliação serão removidas.')) {
+                onReview(null, true);
+              }
+            }}
+              className="text-xs text-red-400/70 hover:text-red-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors"
+              data-testid="delete-memory-btn">
+              🗑️ Excluir memória
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -495,7 +508,18 @@ export default function EventsPanel() {
 
   const handleAdd = (data) => { addEvent(data); setShowAdd(false); };
   const handleUpdate = (data) => { updateEvent({ id: editingId, ...data }); setEditingId(null); };
-  const handleSaveReview = (review) => { updateEvent({ id: reviewingEvent.id, review }); setReviewingEvent(null); };
+  const handleSaveReview = (review, isDelete = false) => {
+    if (isDelete) {
+      // Clear the review completely
+      updateEvent({ id: reviewingEvent?.id, review: null });
+    } else {
+      updateEvent({ id: reviewingEvent.id, review });
+    }
+    setReviewingEvent(null);
+  };
+  const handleDeleteMemory = (eventId) => {
+    updateEvent({ id: eventId, review: null });
+  };
   const handleSaveItinerary = (data) => { updateEvent({ id: itineraryEvent.id, ...data }); setItineraryEvent(null); };
 
   // Check if event is multi-day (period)
@@ -628,7 +652,13 @@ export default function EventsPanel() {
               <PastEventCard 
                 key={event.id} 
                 event={event} 
-                onReview={() => setReviewingEvent(event)}
+                onReview={(reviewData, isDelete) => {
+                  if (isDelete) {
+                    handleDeleteMemory(event.id);
+                  } else {
+                    setReviewingEvent(event);
+                  }
+                }}
                 onDelete={() => deleteEvent(event.id)}
               />
             ))}

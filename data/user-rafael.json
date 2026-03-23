@@ -1,0 +1,534 @@
+{
+  "version": "routinequest_v1",
+  "exportedAt": "2026-03-22T02:04:57.327Z",
+  "meta": {
+    "username": "rafael",
+    "displayName": "Rafael",
+    "theme": { "themeId": "dark", "accentColor": "#22c55e" },
+    "note": "Live export — 24 habits tracked across March 2026 (21 days). 3685 XP, Level 10, 10 achievements, 2 upcoming events."
+  },
+  "profile": {
+    "name": "Rafael",
+    "totalXP": 3685,
+    "level": 10,
+    "joinDate": "2026-03-01",
+    "freezeShields": 0,
+    "focusHabitId": null,
+    "focusHabitDate": null
+  },
+  "settings": {
+    "theme": "dark",
+    "accentColor": "#22c55e",
+    "appName": "RoutineQuest",
+    "appIcon": "⚡",
+    "categories": [
+      { "name": "Religion", "emoji": "🙏" },
+      { "name": "Exercise", "emoji": "💪" },
+      { "name": "Meals",    "emoji": "🍽️" },
+      { "name": "Work",     "emoji": "💼" },
+      { "name": "Study",    "emoji": "📚" },
+      { "name": "Family",   "emoji": "❤️" },
+      { "name": "Health",   "emoji": "🌿" },
+      { "name": "Other",    "emoji": "⭐" }
+    ]
+  },
+  "achievements": [
+    { "id": "first_step",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "on_fire",        "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "week_warrior",   "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "habit_builder",  "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "consistent",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "unstoppable",    "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "fifty_done",     "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "double_century", "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "bjj_white_1",    "unlockedAt": "2026-03-22T02:04:57.327Z" },
+    { "id": "meals_week",     "unlockedAt": "2026-03-22T02:04:57.327Z" }
+  ],
+  "events": [
+    {
+      "id": "event_nyc",
+      "title": "Travel to NYC",
+      "date": "2026-04-17",
+      "emoji": "✈️",
+      "color": "#22c55e",
+      "note": "",
+      "createdAt": "2026-03-22T02:04:57.046Z"
+    },
+    {
+      "id": "event_ufc",
+      "title": "UFC White House",
+      "date": "2026-06-04",
+      "emoji": "🥊",
+      "color": "#f87171",
+      "note": "",
+      "createdAt": "2026-03-22T02:04:57.046Z"
+    }
+  ],
+  "journalEntries": [],
+  "moods": {},
+  "bootstrapVersion": 3,
+  "habits": [
+    {
+      "id": "habit_pray",
+      "name": "Pray",
+      "emoji": "🙏",
+      "category": "Religion",
+      "color": "#8B5CF6",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 6,
+      "bestStreak": 14,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-09","2026-03-10","2026-03-11",
+        "2026-03-12","2026-03-13","2026-03-14","2026-03-16","2026-03-17",
+        "2026-03-18","2026-03-19","2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_thank",
+      "name": "Thank God",
+      "emoji": "✨",
+      "category": "Religion",
+      "color": "#A78BFA",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 6,
+      "bestStreak": 9,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-07","2026-03-09","2026-03-10","2026-03-11","2026-03-12",
+        "2026-03-14","2026-03-16","2026-03-17","2026-03-18","2026-03-19",
+        "2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_jiujitsu",
+      "name": "Jiu Jitsu",
+      "emoji": "🥋",
+      "category": "Exercise",
+      "color": "#10B981",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 2,
+      "bestStreak": 2,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-04","2026-03-07","2026-03-09",
+        "2026-03-11","2026-03-14","2026-03-16","2026-03-18","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_gym",
+      "name": "Gym",
+      "emoji": "🏋️",
+      "category": "Exercise",
+      "color": "#34D399",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 3,
+      "bestStreak": 3,
+      "completions": [
+        "2026-03-03","2026-03-05","2026-03-06","2026-03-10","2026-03-12",
+        "2026-03-13","2026-03-17","2026-03-19","2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_meeting_blip",
+      "name": "Daily Meeting Blip",
+      "emoji": "📊",
+      "category": "Work",
+      "color": "#3B82F6",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 15,
+      "bestStreak": 15,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_meeting_livelo",
+      "name": "Daily Meeting Livelo",
+      "emoji": "🟠",
+      "category": "Work",
+      "color": "#F97316",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 15,
+      "bestStreak": 15,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_meeting_fox",
+      "name": "Daily Meeting Fox",
+      "emoji": "🦊",
+      "category": "Work",
+      "color": "#EF4444",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 15,
+      "bestStreak": 15,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_meeting_pinterest",
+      "name": "Daily Meeting Pinterest",
+      "emoji": "📌",
+      "category": "Work",
+      "color": "#E1306C",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 15,
+      "bestStreak": 15,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_work_blip",
+      "name": "Work time Blip",
+      "emoji": "⏱️",
+      "category": "Work",
+      "color": "#60A5FA",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 15,
+      "bestStreak": 15,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_work_livelo",
+      "name": "Work time Livelo",
+      "emoji": "⏳",
+      "category": "Work",
+      "color": "#FB923C",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 14,
+      "bestStreak": 14,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_work_fox",
+      "name": "Work time Fox",
+      "emoji": "🕐",
+      "category": "Work",
+      "color": "#F87171",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 14,
+      "bestStreak": 14,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-12","2026-03-13",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_work_pinterest",
+      "name": "Work time Pinterest",
+      "emoji": "🕑",
+      "category": "Work",
+      "color": "#F9A8D4",
+      "frequency": "weekdays",
+      "createdAt": "2026-03-01",
+      "streak": 14,
+      "bestStreak": 14,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-09","2026-03-10","2026-03-11","2026-03-12",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_read",
+      "name": "Read time",
+      "emoji": "📖",
+      "category": "Study",
+      "color": "#F59E0B",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 3,
+      "bestStreak": 5,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-04","2026-03-05","2026-03-07",
+        "2026-03-09","2026-03-10","2026-03-12","2026-03-13","2026-03-14",
+        "2026-03-16","2026-03-17","2026-03-19","2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_study_ai",
+      "name": "Study AI",
+      "emoji": "🤖",
+      "category": "Study",
+      "color": "#FBBF24",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 3,
+      "bestStreak": 3,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-05","2026-03-09","2026-03-10",
+        "2026-03-12","2026-03-16","2026-03-17","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_study_bitcoin",
+      "name": "Study Bitcoin",
+      "emoji": "🪙",
+      "category": "Study",
+      "color": "#D97706",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 1,
+      "bestStreak": 2,
+      "completions": [
+        "2026-03-01","2026-03-03","2026-03-07","2026-03-09","2026-03-11",
+        "2026-03-14","2026-03-16","2026-03-18","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_family_time",
+      "name": "Family time",
+      "emoji": "👨‍👩‍👧‍👦",
+      "category": "Family",
+      "color": "#EC4899",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 6,
+      "bestStreak": 19,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-09","2026-03-10","2026-03-11",
+        "2026-03-12","2026-03-13","2026-03-14","2026-03-16","2026-03-17",
+        "2026-03-18","2026-03-19","2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_thankful",
+      "name": "Be thankful",
+      "emoji": "💝",
+      "category": "Family",
+      "color": "#F472B6",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 6,
+      "bestStreak": 12,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-14","2026-03-16","2026-03-17",
+        "2026-03-18","2026-03-19","2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_breakfast",
+      "name": "Take Breakfast",
+      "emoji": "🥞",
+      "category": "Meals",
+      "color": "#F59E0B",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 21,
+      "bestStreak": 21,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_lunch",
+      "name": "Have Lunch",
+      "emoji": "🥗",
+      "category": "Meals",
+      "color": "#10B981",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 21,
+      "bestStreak": 21,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_dinner",
+      "name": "Have Dinner",
+      "emoji": "🍽️",
+      "category": "Meals",
+      "color": "#F97316",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 21,
+      "bestStreak": 21,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_fruits",
+      "name": "Eat Fruits",
+      "emoji": "🍎",
+      "category": "Meals",
+      "color": "#EF4444",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 21,
+      "bestStreak": 21,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_vitamins",
+      "name": "Take Vitamins",
+      "emoji": "💊",
+      "category": "Meals",
+      "color": "#8B5CF6",
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 21,
+      "bestStreak": 21,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05",
+        "2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10",
+        "2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15",
+        "2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20",
+        "2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {}
+    },
+    {
+      "id": "habit_water",
+      "name": "Drink 2L Water",
+      "emoji": "💧",
+      "category": "Health",
+      "type": "numeric",
+      "unit": "L",
+      "goal": 2,
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 5,
+      "bestStreak": 5,
+      "completions": [
+        "2026-03-01","2026-03-02","2026-03-04","2026-03-05","2026-03-06",
+        "2026-03-08","2026-03-09","2026-03-10","2026-03-12","2026-03-13",
+        "2026-03-14","2026-03-15","2026-03-17","2026-03-18","2026-03-19",
+        "2026-03-20","2026-03-21"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {
+        "2026-03-01": 2.0, "2026-03-02": 2.5, "2026-03-03": 1.5, "2026-03-04": 2.0,
+        "2026-03-05": 2.2, "2026-03-06": 2.0, "2026-03-07": 1.8, "2026-03-08": 2.5,
+        "2026-03-09": 2.0, "2026-03-10": 2.0, "2026-03-11": 1.5, "2026-03-12": 2.3,
+        "2026-03-13": 2.0, "2026-03-14": 2.5, "2026-03-15": 2.0, "2026-03-16": 1.7,
+        "2026-03-17": 2.0, "2026-03-18": 2.5, "2026-03-19": 2.0, "2026-03-20": 2.0,
+        "2026-03-21": 2.3
+      }
+    },
+    {
+      "id": "habit_sleep",
+      "name": "Sleep",
+      "emoji": "😴",
+      "category": "Health",
+      "type": "numeric",
+      "unit": "hrs",
+      "goal": 8,
+      "frequency": "daily",
+      "createdAt": "2026-03-01",
+      "streak": 0,
+      "bestStreak": 3,
+      "completions": [
+        "2026-03-02","2026-03-03","2026-03-06","2026-03-07","2026-03-08",
+        "2026-03-13","2026-03-14","2026-03-16","2026-03-19","2026-03-20"
+      ],
+      "completionTimestamps": {},
+      "numericValues": {
+        "2026-03-01": 7.5, "2026-03-02": 8.0, "2026-03-03": 8.5, "2026-03-04": 7.0,
+        "2026-03-05": 6.5, "2026-03-06": 8.0, "2026-03-07": 8.5, "2026-03-08": 8.0,
+        "2026-03-09": 7.0, "2026-03-10": 7.5, "2026-03-11": 6.0, "2026-03-12": 7.5,
+        "2026-03-13": 8.0, "2026-03-14": 8.5, "2026-03-15": 7.5, "2026-03-16": 8.0,
+        "2026-03-17": 6.5, "2026-03-18": 7.5, "2026-03-19": 8.0, "2026-03-20": 8.5,
+        "2026-03-21": 7.0
+      }
+    }
+  ]
+}

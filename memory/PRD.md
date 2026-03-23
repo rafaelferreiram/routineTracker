@@ -98,7 +98,8 @@
   - Middle: Buscar Lugares (Google Maps search)
   - Right: Assistente IA (chat)
 - Mobile-friendly with tab navigation for each section
-- API key stored in environment variable (VITE_GOOGLE_MAPS_API_KEY)
+- API key stored in environment variable (VITE_GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY)
+- **TARS integration**: Backend `search_places` function now uses Google Places API (geocoding + nearbySearch) to return real places with ratings, prices, and Google Maps links
 
 ### 2026-03-23 - TARS AI Assistant with Function Calling (P0 Bug Fixed)
 - Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
@@ -221,10 +222,10 @@
 3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_9.json` - Latest (6/6 tests - Google Maps PlaceSearch Integration)
-- `/app/test_reports/iteration_8.json` - Previous (8/8 tests - TARS Function Calling - P0 Bug Fixed)
-- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests - Event Itinerary with AI)
-- `/app/test_reports/iteration_6.json` - Earlier (7/7 frontend features - Events with photos per day)
+- `/app/test_reports/iteration_10.json` - Latest (19/19 tests - Full TARS + Google Places Integration)
+- `/app/test_reports/iteration_9.json` - Previous (6/6 tests - Google Maps PlaceSearch Integration)
+- `/app/test_reports/iteration_8.json` - Earlier (8/8 tests - TARS Function Calling - P0 Bug Fixed)
+- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests)
 
 ## 3rd Party Integrations
 - **MongoDB Atlas**: Production database
@@ -232,7 +233,12 @@
 - **OpenAI Whisper**: Speech-to-text
 - **OpenAI TTS**: Text-to-speech
 - **Open-Meteo API**: Real-time weather (no API key)
-- **Google Maps JavaScript API**: Place search, maps
-- **Google Places API**: Search restaurants, attractions, etc.
+- **Google Maps JavaScript API**: Place search, maps (Frontend)
+- **Google Places API**: Search restaurants, attractions, etc. (Backend + Frontend)
+- **Google Geocoding API**: Convert addresses to coordinates (Backend)
 - **Emergent-managed Google Auth**: Social login (workaround active)
+
+## Known Issues
+- Google Login may fail with "Invalid session" - use email login as workaround
+- Google Maps API deprecation warnings (PlacesService deprecated March 2025, but still functional)
 

@@ -136,6 +136,80 @@ class UpdateProfileReq(BaseModel):
 def health():
     return {'status': 'ok', 'service': 'RoutineTracker API'}
 
+# ── Data Sync Endpoint (for importing data to production) ──────────────────────
+SYNC_SECRET = os.environ.get('SYNC_SECRET', 'routine_sync_2026_secret')
+
+class SyncDataReq(BaseModel):
+    secret: str
+    email: str
+    data: Any
+    user_info: Optional[dict] = None
+
+@app.post('/api/sync/import')
+def sync_import(req: SyncDataReq):
+    """Import user data (for syncing between environments). Protected by secret."""
+    if req.secret != SYNC_SECRET:
+        raise HTTPException(status_code=403, detail='Invalid sync secret')
+    
+    email = req.email.lower().strip()
+    
+    # Find user by email
+    user = users_c.find_one({'email': email})
+    if not user:
+        # Also check by regex
+        user = users_c.find_one({'email': re.compile(f'^{re.escape(email)}$', re.IGNORECASE)})
+    
+    if not user:
+        # Create user if user_info is provided
+        if req.user_info:
+            username = req.user_info.get('username', email.split('@')[0])
+            # Make sure username is unique
+            base_username = username
+            counter = 1
+            while users_c.find_one({'username': username}):
+                username = f'{base_username}{counter}'
+                counter += 1
+            
+            theme = req.user_info.get('theme', {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'})
+            ins = users_c.insert_one({
+                'username': username,
+                'display_name': req.user_info.get('display_name', username),
+                'email': email,
+                'picture': req.user_info.get('picture', ''),
+                'theme': theme,
+                'password_hash': hash_pw('admin'),  # Default password
+                'auth_provider': 'synced',
+                'created_at': datetime.now(timezone.utc),
+            })
+            user = users_c.find_one({'_id': ins.inserted_id})
+            print(f'[SYNC] Created new user: {username} with email {email}')
+        else:
+            raise HTTPException(status_code=404, detail=f'User with email {email} not found. Please login first or provide user_info.')
+    
+    uid = str(user['_id'])
+    
+    # Update or create user_data
+    result = data_c.update_one(
+        {'user_id': uid},
+        {'$set': {
+            'data': req.data,
+            'synced_at': datetime.now(timezone.utc)
+        }},
+        upsert=True
+    )
+    
+    habits_count = len(req.data.get('habits', []))
+    events_count = len(req.data.get('events', []))
+    
+    return {
+        'success': True,
+        'message': f'Data imported for {email}',
+        'user_id': uid,
+        'username': user['username'],
+        'habits': habits_count,
+        'events': events_count
+    }
+
 @app.post('/api/auth/login')
 def login(req: AuthReq, request: Request):
     # Rate limit login attempts

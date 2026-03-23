@@ -147,4 +147,20 @@ export function applyTheme(theme, accentColor) {
   root.style.setProperty('--accent',           accent);
   root.style.setProperty('--accent-rgb',       `${r} ${g} ${b}`);
   document.body.style.background = theme.bgMain;
+  document.body.style.color = theme.textPrimary;
+  
+  // Update PWA theme-color meta tag for mobile status bar
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', theme.bgMain);
+  }
+  
+  // Update apple status bar style
+  const appleStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (appleStatusBar) {
+    appleStatusBar.setAttribute('content', theme.isLight ? 'default' : 'black-translucent');
+  }
+  
+  // Update html background for iOS safe areas
+  root.style.background = theme.bgMain;
 }

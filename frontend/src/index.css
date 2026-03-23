@@ -390,3 +390,98 @@ html[data-theme="light"] input,  html[data-theme="rose"] input,  html[data-theme
 html[data-theme="light"] textarea, html[data-theme="rose"] textarea, html[data-theme="forest"] textarea {
   color-scheme: light;
 }
+
+/* ── Additional background overrides for light themes ────────────────── */
+html[data-theme="light"] .bg-\[\#080808\],   html[data-theme="rose"] .bg-\[\#080808\],   html[data-theme="forest"] .bg-\[\#080808\]   { background: var(--bg-main)  !important; }
+html[data-theme="light"] .bg-\[\#0a0a0a\],   html[data-theme="rose"] .bg-\[\#0a0a0a\],   html[data-theme="forest"] .bg-\[\#0a0a0a\]   { background: var(--bg-main)  !important; }
+html[data-theme="light"] .bg-\[\#0d0d0d\],   html[data-theme="rose"] .bg-\[\#0d0d0d\],   html[data-theme="forest"] .bg-\[\#0d0d0d\]   { background: var(--bg-inner) !important; }
+html[data-theme="light"] .bg-\[\#141414\],   html[data-theme="rose"] .bg-\[\#141414\],   html[data-theme="forest"] .bg-\[\#141414\]   { background: var(--bg-card)  !important; }
+html[data-theme="light"] .bg-\[\#171717\],   html[data-theme="rose"] .bg-\[\#171717\],   html[data-theme="forest"] .bg-\[\#171717\]   { background: var(--bg-card)  !important; }
+html[data-theme="light"] .bg-\[\#1a1a1a\],   html[data-theme="rose"] .bg-\[\#1a1a1a\],   html[data-theme="forest"] .bg-\[\#1a1a1a\]   { background: var(--bg-inner-border) !important; }
+html[data-theme="light"] .bg-\[\#222222\],   html[data-theme="rose"] .bg-\[\#222222\],   html[data-theme="forest"] .bg-\[\#222222\]   { background: var(--bg-border) !important; }
+html[data-theme="light"] .bg-\[\#2a2a2a\],   html[data-theme="rose"] .bg-\[\#2a2a2a\],   html[data-theme="forest"] .bg-\[\#2a2a2a\]   { background: var(--bg-border) !important; }
+
+/* ── Ocean theme background overrides ─────────────────────────────────── */
+html[data-theme="ocean"] .bg-\[\#080808\]   { background: var(--bg-main)  !important; }
+html[data-theme="ocean"] .bg-\[\#0a0a0a\]   { background: var(--bg-main)  !important; }
+html[data-theme="ocean"] .bg-\[\#0d0d0d\]   { background: var(--bg-inner) !important; }
+
+/* ── Additional border overrides for light themes ────────────────────── */
+html[data-theme="light"] .border-\[\#222222\], html[data-theme="rose"] .border-\[\#222222\], html[data-theme="forest"] .border-\[\#222222\] { border-color: var(--bg-border) !important; }
+html[data-theme="light"] .border-\[\#0f0f0f\], html[data-theme="rose"] .border-\[\#0f0f0f\], html[data-theme="forest"] .border-\[\#0f0f0f\] { border-color: var(--bg-inner) !important; }
+
+/* ── PWA / Mobile status bar and safe areas ──────────────────────────── */
+html[data-theme="light"] { background-color: var(--bg-main, #f3f4f6); }
+html[data-theme="rose"]  { background-color: var(--bg-main, #fdf2f8); }
+html[data-theme="forest"]{ background-color: var(--bg-main, #f0fdf4); }
+html[data-theme="ocean"] { background-color: var(--bg-main, #08111f); }
+html[data-theme="dark"]  { background-color: var(--bg-main, #080808); }
+
+/* ── Fix rgba backgrounds for light themes ───────────────────────────── */
+html[data-theme="light"] .bg-black\/50,  html[data-theme="rose"] .bg-black\/50,  html[data-theme="forest"] .bg-black\/50  { background-color: rgba(0,0,0,0.3)  !important; }
+html[data-theme="light"] .bg-black\/60,  html[data-theme="rose"] .bg-black\/60,  html[data-theme="forest"] .bg-black\/60  { background-color: rgba(0,0,0,0.4)  !important; }
+html[data-theme="light"] .bg-black\/70,  html[data-theme="rose"] .bg-black\/70,  html[data-theme="forest"] .bg-black\/70  { background-color: rgba(0,0,0,0.5)  !important; }
+html[data-theme="light"] .bg-black\/80,  html[data-theme="rose"] .bg-black\/80,  html[data-theme="forest"] .bg-black\/80  { background-color: rgba(0,0,0,0.6)  !important; }
+
+/* ── Fix text colors for specific components on light themes ─────────── */
+html[data-theme="light"] .text-\[\#e5e7eb\], html[data-theme="rose"] .text-\[\#e5e7eb\], html[data-theme="forest"] .text-\[\#e5e7eb\] { color: var(--text-muted) !important; }
+html[data-theme="light"] .text-\[\#d1d5db\], html[data-theme="rose"] .text-\[\#d1d5db\], html[data-theme="forest"] .text-\[\#d1d5db\] { color: var(--text-muted) !important; }
+html[data-theme="light"] .text-\[\#f3f4f6\], html[data-theme="rose"] .text-\[\#f3f4f6\], html[data-theme="forest"] .text-\[\#f3f4f6\] { color: var(--text-primary) !important; }
+html[data-theme="light"] .text-\[\#f1f5f9\], html[data-theme="rose"] .text-\[\#f1f5f9\], html[data-theme="forest"] .text-\[\#f1f5f9\] { color: var(--text-primary) !important; }
+
+/* ── Fix modal/backdrop for light themes ─────────────────────────────── */
+html[data-theme="light"] .backdrop-blur-sm, html[data-theme="rose"] .backdrop-blur-sm, html[data-theme="forest"] .backdrop-blur-sm {
+  --tw-backdrop-blur: blur(8px);
+}
+
+/* ── Fix focus rings for light themes ─────────────────────────────────── */
+html[data-theme="light"] :focus-visible, html[data-theme="rose"] :focus-visible, html[data-theme="forest"] :focus-visible {
+  outline-color: var(--accent, #22c55e);
+}
+
+/* ── Navigation bar fixes for light themes ───────────────────────────── */
+html[data-theme="light"] nav, html[data-theme="rose"] nav, html[data-theme="forest"] nav {
+  background: var(--bg-nav) !important;
+}
+
+/* ── Bottom tab bar for mobile on light themes ───────────────────────── */
+html[data-theme="light"] .fixed.bottom-0,
+html[data-theme="rose"] .fixed.bottom-0,
+html[data-theme="forest"] .fixed.bottom-0 {
+  background: var(--bg-card) !important;
+  border-color: var(--bg-border) !important;
+}
+
+/* ── Sidebar fixes for light themes ──────────────────────────────────── */
+html[data-theme="light"] aside, html[data-theme="rose"] aside, html[data-theme="forest"] aside {
+  background: var(--bg-sidebar) !important;
+}
+
+/* ── Card hover states for light themes ──────────────────────────────── */
+html[data-theme="light"] .hover\:bg-\[\#111111\]:hover, html[data-theme="rose"] .hover\:bg-\[\#111111\]:hover, html[data-theme="forest"] .hover\:bg-\[\#111111\]:hover { background: var(--bg-inner) !important; }
+html[data-theme="light"] .hover\:bg-\[\#1a1a1a\]:hover, html[data-theme="rose"] .hover\:bg-\[\#1a1a1a\]:hover, html[data-theme="forest"] .hover\:bg-\[\#1a1a1a\]:hover { background: var(--bg-border) !important; }
+
+/* ── Ensure body and root backgrounds match theme ────────────────────── */
+html[data-theme="light"] body, html[data-theme="rose"] body, html[data-theme="forest"] body {
+  background: var(--bg-main) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] #root, html[data-theme="rose"] #root, html[data-theme="forest"] #root {
+  background: var(--bg-main) !important;
+}
+
+/* ── Fix PWA theme-color meta tag color-scheme ───────────────────────── */
+@media (prefers-color-scheme: light) {
+  html[data-theme="light"], html[data-theme="rose"], html[data-theme="forest"] {
+    color-scheme: light;
+  }
+}
+
+/* ── Mobile hamburger menu drawer for light themes ───────────────────── */
+html[data-theme="light"] .animate-slide-in-right,
+html[data-theme="rose"] .animate-slide-in-right,
+html[data-theme="forest"] .animate-slide-in-right {
+  background: var(--bg-card) !important;
+}
+

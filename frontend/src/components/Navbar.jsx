@@ -192,7 +192,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
           paddingLeft: 16,
           paddingRight: 16,
           paddingTop: 'env(safe-area-inset-top)',
-          background: 'rgba(8,8,8,0.97)',
+          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderColor: 'var(--bg-border, #1f1f1f)',
@@ -239,7 +239,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport }) {
       <nav data-testid="mobile-bottom-nav"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
         style={{
-          background: 'rgba(8,8,8,0.97)',
+          background: 'var(--bg-nav, rgba(8,8,8,0.97))',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderColor: 'var(--bg-border, #1f1f1f)',

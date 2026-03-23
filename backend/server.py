@@ -210,6 +210,35 @@ def sync_import(req: SyncDataReq):
         'events': events_count
     }
 
+@app.post('/api/sync/setup-password')
+def sync_setup_password(req: SyncDataReq):
+    """Add password to a Google-only account. Protected by secret."""
+    if req.secret != SYNC_SECRET:
+        raise HTTPException(status_code=403, detail='Invalid sync secret')
+    
+    email = req.email.lower().strip()
+    password = req.data.get('password', 'admin')
+    
+    # Find user by email
+    user = users_c.find_one({'email': email})
+    if not user:
+        user = users_c.find_one({'email': re.compile(f'^{re.escape(email)}$', re.IGNORECASE)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail=f'User with email {email} not found')
+    
+    # Update password
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'password_hash': hash_pw(password)}}
+    )
+    
+    return {
+        'success': True,
+        'message': f'Password set for {email}',
+        'username': user['username']
+    }
+
 @app.post('/api/auth/login')
 def login(req: AuthReq, request: Request):
     # Rate limit login attempts

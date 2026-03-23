@@ -129,6 +129,7 @@ function getHealthPct(habits, key, dateStr) {
 const HEALTH_CHART_RANGES = RANGES.slice(0, 4); // 1W, 1M, 3M, 6M
 
 function HealthGrowthChart({ habits, achievements }) {
+  const { t } = useLanguage();
   const [rangeIdx, setRangeIdx] = useState(0);
   const [hover, setHover] = useState(null);
   const svgRef = useRef(null);

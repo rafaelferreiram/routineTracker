@@ -92,6 +92,25 @@
 - App now renders correctly on all modern mobile devices (iPhone 14 Pro, etc.)
 - 100% test pass rate (iteration 11)
 
+### 2026-03-23 - DDoS Protection & Security System (COMPLETED)
+- Global HTTP middleware for DDoS protection (blocks >100 req/min)
+- Enhanced rate limiting with violation tracking (30 req/60s per endpoint)
+- IP blocking system with configurable duration (300s default)
+- Suspicious activity tracking (blocks after 5 violations)
+- Security events logged to MongoDB with 30-day TTL
+- Admin can manually unblock IPs via /api/admin/security/unblock
+
+### 2026-03-23 - Analytics & Metrics System (COMPLETED)
+- /api/admin/analytics endpoint with period selector (24h, 7d, 30d, 90d)
+- User growth chart by period
+- Login activity by hour (peak usage times)
+- Popular habits ranking with user count
+- Category distribution across all users
+- Engagement metrics: habit/event adoption rates, completion rate
+- Real-time metrics: active connections, requests/hour, blocked IPs
+- AdminAnalytics.jsx component with charts and security tab
+- Security tab: blocked IPs, suspicious IPs, recent events, manual unblock
+
 ### 2026-03-23 - Admin Panel System (COMPLETED)
 - Created admin user (admin/@dm1n) with is_admin flag
 - Backend endpoints: /api/admin/stats, /api/admin/users, /api/admin/user/action, /api/admin/user/{id}
@@ -272,9 +291,9 @@
 3. "Remember me" persistent login (P2)
 
 ## Test Reports
-- `/app/test_reports/iteration_12.json` - Latest (30/30 tests - Admin Panel + Google Auth Fix)
-- `/app/test_reports/iteration_11.json` - Previous (10/10 tests - PWA Responsiveness for iPhones)
-- `/app/test_reports/iteration_10.json` - Earlier (19/19 tests - Full TARS + Google Places Integration)
+- `/app/test_reports/iteration_12.json` - Admin Panel + Google Auth (30/30 tests)
+- `/app/backend/tests/test_security_analytics.py` - Security & Analytics (21/21 tests)
+- `/app/test_reports/iteration_11.json` - PWA Responsiveness (10/10 tests)
 
 ## 3rd Party Integrations
 - **MongoDB Atlas**: Production database

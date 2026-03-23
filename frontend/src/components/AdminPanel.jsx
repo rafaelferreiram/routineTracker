@@ -15,8 +15,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Lock,
-  Unlock
+  Unlock,
+  BarChart3
 } from 'lucide-react';
+import AdminAnalytics from './AdminAnalytics';
 
 // Simple API wrapper for admin endpoints
 const adminApi = {
@@ -41,6 +43,7 @@ export default function AdminPanel() {
   const [newPassword, setNewPassword] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordTarget, setPasswordTarget] = useState(null);
+  const [activeView, setActiveView] = useState('users'); // 'users' or 'analytics'
 
   // Load stats and users on mount
   useEffect(() => {
@@ -399,8 +402,57 @@ export default function AdminPanel() {
     );
   }
 
+  // Render Analytics view
+  if (activeView === 'analytics') {
+    return (
+      <div className="space-y-6">
+        {/* View Switcher */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveView('users')}
+            className="flex-1 py-3 rounded-xl text-sm font-medium transition-all bg-[#111111] text-[#6b7280] border border-[#1f1f1f]"
+            data-testid="switch-to-users"
+          >
+            <Users className="w-4 h-4 inline mr-2" />
+            Usuários
+          </button>
+          <button
+            onClick={() => setActiveView('analytics')}
+            className="flex-1 py-3 rounded-xl text-sm font-medium transition-all bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/30"
+            data-testid="switch-to-analytics"
+          >
+            <BarChart3 className="w-4 h-4 inline mr-2" />
+            Analytics
+          </button>
+        </div>
+        
+        <AdminAnalytics />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="admin-panel">
+      {/* View Switcher */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveView('users')}
+          className="flex-1 py-3 rounded-xl text-sm font-medium transition-all bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/30"
+          data-testid="switch-to-users"
+        >
+          <Users className="w-4 h-4 inline mr-2" />
+          Usuários
+        </button>
+        <button
+          onClick={() => setActiveView('analytics')}
+          className="flex-1 py-3 rounded-xl text-sm font-medium transition-all bg-[#111111] text-[#6b7280] border border-[#1f1f1f]"
+          data-testid="switch-to-analytics"
+        >
+          <BarChart3 className="w-4 h-4 inline mr-2" />
+          Analytics
+        </button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-[#22c55e]/20 flex items-center justify-center">

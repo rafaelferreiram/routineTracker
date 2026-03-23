@@ -55,13 +55,81 @@ data_c.create_index('user_id')
 # ── Security ───────────────────────────────────────────────────────────────────
 bearer = HTTPBearer()
 
-# Simple in-memory rate limiter
+# ═══════════════════════════════════════════════════════════════════════════════
+# ═══ ADVANCED DDoS PROTECTION & SECURITY SYSTEM ════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Rate limiting storage
 rate_limit_store = defaultdict(list)
+blocked_ips = {}  # IP -> unblock_timestamp
+suspicious_activity = defaultdict(int)  # IP -> violation count
+request_analytics = defaultdict(list)  # endpoint -> timestamps for analytics
+
+# Configuration
 RATE_LIMIT_WINDOW = 60  # seconds
-RATE_LIMIT_MAX_REQUESTS = 30  # max requests per window for auth endpoints
+RATE_LIMIT_MAX_REQUESTS = 30  # max requests per window for general endpoints
+DDOS_BLOCK_DURATION = 300  # 5 minutes block for DDoS attempts
+DDOS_THRESHOLD = 100  # requests per minute to trigger DDoS protection
+SUSPICIOUS_THRESHOLD = 5  # violations before IP gets blocked
+MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB max request size
+
+# Analytics collection for admin dashboard
+analytics_c = db['analytics']
+analytics_c.create_index([('type', 1), ('timestamp', -1)])
+analytics_c.create_index('timestamp', expireAfterSeconds=30*24*60*60)  # 30 days TTL
+
+def log_analytics_event(event_type: str, data: dict = None):
+    """Log analytics event for admin dashboard."""
+    try:
+        analytics_c.insert_one({
+            'type': event_type,
+            'timestamp': datetime.now(timezone.utc),
+            'data': data or {},
+        })
+    except Exception as e:
+        print(f'[ANALYTICS] Error logging event: {e}')
+
+def is_ip_blocked(ip: str) -> bool:
+    """Check if IP is currently blocked."""
+    if ip in blocked_ips:
+        if time.time() < blocked_ips[ip]:
+            return True
+        else:
+            del blocked_ips[ip]
+            suspicious_activity[ip] = 0
+    return False
+
+def block_ip(ip: str, duration: int = DDOS_BLOCK_DURATION):
+    """Block an IP for specified duration."""
+    blocked_ips[ip] = time.time() + duration
+    log_analytics_event('ip_blocked', {'ip': ip, 'duration': duration})
+    print(f'[SECURITY] Blocked IP: {ip} for {duration} seconds')
+
+def check_ddos_protection(request: Request):
+    """Check for DDoS attacks and block suspicious IPs."""
+    ip = request.client.host if request.client else 'unknown'
+    
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        raise HTTPException(status_code=403, detail='Access temporarily blocked. Try again later.')
+    
+    # Track requests for DDoS detection
+    now = time.time()
+    key = f"ddos:{ip}"
+    rate_limit_store[key] = [t for t in rate_limit_store[key] if now - t < 60]
+    rate_limit_store[key].append(now)
+    
+    # Check for DDoS (too many requests in short time)
+    if len(rate_limit_store[key]) > DDOS_THRESHOLD:
+        block_ip(ip, DDOS_BLOCK_DURATION)
+        raise HTTPException(status_code=429, detail='Too many requests. Access blocked temporarily.')
 
 def check_rate_limit(ip: str, endpoint: str = 'default', max_requests: int = RATE_LIMIT_MAX_REQUESTS):
-    """Simple rate limiting by IP address."""
+    """Enhanced rate limiting with violation tracking."""
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        raise HTTPException(status_code=403, detail='Access temporarily blocked.')
+    
     key = f"{ip}:{endpoint}"
     now = time.time()
     
@@ -69,9 +137,57 @@ def check_rate_limit(ip: str, endpoint: str = 'default', max_requests: int = RAT
     rate_limit_store[key] = [t for t in rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
     
     if len(rate_limit_store[key]) >= max_requests:
+        # Track violation
+        suspicious_activity[ip] += 1
+        
+        # Log analytics
+        log_analytics_event('rate_limit_exceeded', {'ip': ip, 'endpoint': endpoint})
+        
+        # Block if too many violations
+        if suspicious_activity[ip] >= SUSPICIOUS_THRESHOLD:
+            block_ip(ip)
+            raise HTTPException(status_code=403, detail='Access blocked due to repeated violations.')
+        
         raise HTTPException(status_code=429, detail='Too many requests. Please try again later.')
     
     rate_limit_store[key].append(now)
+
+# Middleware for global security
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Global security middleware for DDoS protection and request validation."""
+    ip = request.client.host if request.client else 'unknown'
+    
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Access temporarily blocked. Try again later."}
+        )
+    
+    # Track request for analytics
+    endpoint = request.url.path
+    request_analytics[endpoint].append(time.time())
+    
+    # Clean old analytics data (keep last hour)
+    now = time.time()
+    for ep in list(request_analytics.keys()):
+        request_analytics[ep] = [t for t in request_analytics[ep] if now - t < 3600]
+    
+    # DDoS check for all requests
+    try:
+        check_ddos_protection(request)
+    except HTTPException as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    
+    # Log page view for analytics (only for main endpoints)
+    if endpoint in ['/', '/api/data', '/api/habits']:
+        log_analytics_event('page_view', {'endpoint': endpoint, 'ip_hash': hash(ip) % 10000})
+    
+    response = await call_next(request)
+    return response
 
 def hash_pw(pw: str) -> str:
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -954,6 +1070,228 @@ def admin_get_user_detail(user_id: str, cu: dict = Depends(get_admin_user)):
             'lastUpdated': user_data.get('updated_at').isoformat() if user_data and user_data.get('updated_at') else None,
         }
     }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ ANALYTICS & METRICS ENDPOINTS ═════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/analytics')
+def admin_get_analytics(
+    cu: dict = Depends(get_admin_user),
+    period: str = '7d'  # '24h', '7d', '30d', '90d'
+):
+    """Get comprehensive analytics for admin dashboard."""
+    
+    # Calculate date range
+    now = datetime.now(timezone.utc)
+    if period == '24h':
+        start_date = now - timedelta(hours=24)
+        interval = 'hour'
+    elif period == '7d':
+        start_date = now - timedelta(days=7)
+        interval = 'day'
+    elif period == '30d':
+        start_date = now - timedelta(days=30)
+        interval = 'day'
+    else:  # 90d
+        start_date = now - timedelta(days=90)
+        interval = 'week'
+    
+    # 1. User Growth Chart
+    user_growth = []
+    if interval == 'hour':
+        for i in range(24):
+            hour_start = now - timedelta(hours=23-i)
+            hour_end = hour_start + timedelta(hours=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': hour_start, '$lt': hour_end}
+            })
+            user_growth.append({
+                'label': hour_start.strftime('%H:00'),
+                'value': count
+            })
+    elif interval == 'day':
+        days = 7 if period == '7d' else 30
+        for i in range(days):
+            day_start = (now - timedelta(days=days-1-i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': day_start, '$lt': day_end}
+            })
+            user_growth.append({
+                'label': day_start.strftime('%d/%m'),
+                'value': count
+            })
+    else:  # week
+        for i in range(12):  # 12 weeks
+            week_start = now - timedelta(weeks=11-i)
+            week_end = week_start + timedelta(weeks=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': week_start, '$lt': week_end}
+            })
+            user_growth.append({
+                'label': f'W{i+1}',
+                'value': count
+            })
+    
+    # 2. Login Activity (by hour of day)
+    login_by_hour = [0] * 24
+    users_with_login = list(users_c.find(
+        {'last_login_at': {'$gte': start_date}},
+        {'last_login_at': 1}
+    ))
+    for u in users_with_login:
+        if u.get('last_login_at'):
+            hour = u['last_login_at'].hour
+            login_by_hour[hour] += 1
+    
+    # 3. Popular Habits (aggregate from all users)
+    habit_counts = defaultdict(int)
+    all_user_data = list(data_c.find({}, {'data.habits': 1}))
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            name = habit.get('name', 'Unknown')
+            habit_counts[name] += 1
+    
+    popular_habits = sorted(
+        [{'name': k, 'count': v} for k, v in habit_counts.items()],
+        key=lambda x: x['count'],
+        reverse=True
+    )[:10]
+    
+    # 4. Category Distribution
+    category_counts = defaultdict(int)
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            category = habit.get('category', 'Other')
+            category_counts[category] += 1
+    
+    category_distribution = [
+        {'category': k, 'count': v}
+        for k, v in sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+    
+    # 5. Completion Rate (average across all users)
+    total_completions = 0
+    total_expected = 0
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            completions = habit.get('completions', [])
+            total_completions += len(completions)
+            # Estimate expected (7 days * habit count)
+            total_expected += 7
+    
+    avg_completion_rate = (total_completions / total_expected * 100) if total_expected > 0 else 0
+    
+    # 6. Security Events
+    security_events = list(analytics_c.find(
+        {'type': {'$in': ['ip_blocked', 'rate_limit_exceeded']}, 'timestamp': {'$gte': start_date}},
+        {'_id': 0, 'type': 1, 'timestamp': 1, 'data': 1}
+    ).sort('timestamp', -1).limit(50))
+    
+    # Convert timestamps
+    for event in security_events:
+        event['timestamp'] = event['timestamp'].isoformat()
+    
+    # 7. Real-time metrics
+    active_ips = len([k for k in rate_limit_store.keys() if k.startswith('ddos:')])
+    blocked_count = len(blocked_ips)
+    
+    # 8. Engagement metrics
+    users_with_habits = data_c.count_documents({'data.habits.0': {'$exists': True}})
+    users_with_events = data_c.count_documents({'data.events.0': {'$exists': True}})
+    total_users = users_c.count_documents({'username': {'$ne': ADMIN_USERNAME}})
+    
+    return {
+        'period': period,
+        'userGrowth': user_growth,
+        'loginByHour': [
+            {'hour': f'{h:02d}:00', 'count': login_by_hour[h]}
+            for h in range(24)
+        ],
+        'popularHabits': popular_habits,
+        'categoryDistribution': category_distribution,
+        'avgCompletionRate': round(avg_completion_rate, 1),
+        'securityEvents': security_events,
+        'realTimeMetrics': {
+            'activeConnections': active_ips,
+            'blockedIPs': blocked_count,
+            'requestsLastHour': sum(len(v) for v in request_analytics.values()),
+        },
+        'engagement': {
+            'usersWithHabits': users_with_habits,
+            'usersWithEvents': users_with_events,
+            'totalUsers': total_users,
+            'habitAdoptionRate': round((users_with_habits / total_users * 100) if total_users > 0 else 0, 1),
+            'eventAdoptionRate': round((users_with_events / total_users * 100) if total_users > 0 else 0, 1),
+        }
+    }
+
+@app.get('/api/admin/security')
+def admin_get_security_status(cu: dict = Depends(get_admin_user)):
+    """Get current security status and blocked IPs."""
+    now = time.time()
+    
+    # Clean expired blocks
+    for ip in list(blocked_ips.keys()):
+        if now >= blocked_ips[ip]:
+            del blocked_ips[ip]
+    
+    # Get blocked IPs with remaining time
+    blocked_list = [
+        {'ip': ip, 'remaining_seconds': int(blocked_ips[ip] - now)}
+        for ip in blocked_ips
+    ]
+    
+    # Get suspicious IPs (not yet blocked but with violations)
+    suspicious_list = [
+        {'ip': ip, 'violations': count}
+        for ip, count in suspicious_activity.items()
+        if count > 0 and ip not in blocked_ips
+    ]
+    
+    # Recent security events
+    recent_events = list(analytics_c.find(
+        {'type': {'$in': ['ip_blocked', 'rate_limit_exceeded']}},
+        {'_id': 0}
+    ).sort('timestamp', -1).limit(20))
+    
+    for event in recent_events:
+        event['timestamp'] = event['timestamp'].isoformat()
+    
+    return {
+        'blockedIPs': blocked_list,
+        'suspiciousIPs': suspicious_list,
+        'totalBlocked': len(blocked_list),
+        'totalSuspicious': len(suspicious_list),
+        'recentEvents': recent_events,
+        'config': {
+            'rateLimitWindow': RATE_LIMIT_WINDOW,
+            'rateLimitMaxRequests': RATE_LIMIT_MAX_REQUESTS,
+            'ddosThreshold': DDOS_THRESHOLD,
+            'blockDuration': DDOS_BLOCK_DURATION,
+            'suspiciousThreshold': SUSPICIOUS_THRESHOLD,
+        }
+    }
+
+class UnblockIPRequest(BaseModel):
+    ip: str
+
+@app.post('/api/admin/security/unblock')
+def admin_unblock_ip(req: UnblockIPRequest, cu: dict = Depends(get_admin_user)):
+    """Manually unblock an IP address."""
+    if req.ip in blocked_ips:
+        del blocked_ips[req.ip]
+        suspicious_activity[req.ip] = 0
+        log_analytics_event('ip_unblocked', {'ip': req.ip, 'admin': cu['username']})
+        return {'ok': True, 'message': f'IP {req.ip} unblocked'}
+    return {'ok': False, 'message': 'IP not found in blocked list'}
 
 # ── Friends Collection ──────────────────────────────────────────────────────────
 friends_c = db['friends']

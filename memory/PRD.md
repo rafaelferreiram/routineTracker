@@ -83,6 +83,16 @@
 
 ## What's Been Implemented
 
+### 2026-03-23 - Event Memories with Photos per Day
+- Enhanced EventsPanel.jsx with support for single-day and multi-day (period) events
+- Event creation form with toggle between "1 dia" and "Período"
+- EventReviewModal now supports photos organized by day for multi-day events
+- Each day of a multi-day event can have up to 2 photos
+- Date tabs UI for navigating between days in the review modal
+- Correct calculation of max photos (days × 2)
+- Mobile-responsive design with horizontally scrollable date tabs
+- Minimalist design consistent with the rest of the app
+
 ### 2026-03-23 - Profile Management & Rebranding
 - Added profile photo upload (base64 stored in database)
 - Added change password functionality with strength validation
@@ -148,9 +158,10 @@
 - Admin dashboard
 
 ## Next Tasks
-1. Test Google Login in production with real Google account
-2. Add push notifications for habit reminders
-3. Add fire animation for streaks
+1. Push notifications for daily habit reminders (P1)
+2. Fire animation when completing streak habits (P2)
+3. Test Google Login in production with real Google account
 
 ## Test Reports
-- `/app/test_reports/iteration_5.json` - Latest (37 backend, 8 frontend tests passed)
+- `/app/test_reports/iteration_6.json` - Latest (7/7 frontend features passed - Events with photos per day)
+- `/app/test_reports/iteration_5.json` - Previous (37 backend, 8 frontend tests passed)

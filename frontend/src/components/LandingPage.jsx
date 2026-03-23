@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import LandingChart from './LandingChart.jsx';
 
 export default function LandingPage({ onGetStarted }) {
   const features = [
@@ -39,18 +40,6 @@ export default function LandingPage({ onGetStarted }) {
       color: '#06b6d4'
     }
   ];
-
-  // Dummy chart data for 7 days
-  const chartData = [
-    { day: 'Mon', value: 75 },
-    { day: 'Tue', value: 85 },
-    { day: 'Wed', value: 60 },
-    { day: 'Thu', value: 90 },
-    { day: 'Fri', value: 80 },
-    { day: 'Sat', value: 95 },
-    { day: 'Sun', value: 70 },
-  ];
-  const maxValue = Math.max(...chartData.map(d => d.value));
 
   return (
     <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
@@ -176,17 +165,17 @@ export default function LandingPage({ onGetStarted }) {
                       <span className="text-[#22c55e] text-xs font-bold">+12%</span>
                     </div>
                     <div className="flex items-end justify-between gap-1 h-12">
-                      {chartData.map((d, i) => (
+                      {[75, 85, 60, 90, 80, 95, 70].map((val, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center gap-1">
                           <div 
                             className="w-full rounded-t transition-all"
                             style={{ 
-                              height: `${(d.value / maxValue) * 100}%`,
-                              background: i === chartData.length - 1 ? '#22c55e' : '#22c55e55',
+                              height: `${val}%`,
+                              background: i === 6 ? '#22c55e' : '#22c55e55',
                               minHeight: '4px'
                             }} 
                           />
-                          <span className="text-[8px] text-[#4b5563]">{d.day[0]}</span>
+                          <span className="text-[8px] text-[#4b5563]">{'MTWTFSS'[i]}</span>
                         </div>
                       ))}
                     </div>
@@ -264,37 +253,8 @@ export default function LandingPage({ onGetStarted }) {
             <p className="text-[#6b7280] text-lg">Beautiful charts to visualize your progress</p>
           </div>
 
-          {/* Large chart preview */}
-          <div className="rounded-2xl border border-[#1f1f1f] bg-[#111] p-6 sm:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-white font-bold text-lg">Weekly Completion Rate</h3>
-                <p className="text-[#6b7280] text-sm">Last 7 days performance</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[#22c55e] font-bold text-2xl">79%</p>
-                <p className="text-[#6b7280] text-xs">avg completion</p>
-              </div>
-            </div>
-            
-            {/* Chart bars */}
-            <div className="flex items-end justify-between gap-2 sm:gap-4 h-40 sm:h-48">
-              {chartData.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-white text-xs font-medium">{d.value}%</span>
-                  <div 
-                    className="w-full rounded-t-lg transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${(d.value / 100) * 100}%`,
-                      background: `linear-gradient(to top, #22c55e, #22c55e${Math.round(d.value * 0.7).toString(16).padStart(2, '0')})`,
-                      minHeight: '20px'
-                    }} 
-                  />
-                  <span className="text-[#6b7280] text-xs">{d.day}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Real chart component */}
+          <LandingChart accent="#22c55e" />
         </div>
       </section>
 

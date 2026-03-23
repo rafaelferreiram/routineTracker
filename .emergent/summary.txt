@@ -1,152 +1,159 @@
 <analysis>**original_problem_statement**:
 The user wants to build a habit-tracking application named RoutineTracker.
 
-Initial requests included connecting a frontend to a secure database, storing user data, and ensuring the app is responsive.
-
 **PRODUCT REQUIREMENTS**:
-1.  **Database & Data Import**: Set up a database and import user data for 'rafael' and 'gabriela' from user-provided JSON files. This has been a recurring request to keep the data up-to-date.
-2.  **Mobile UI/UX**: Improve the mobile experience by replacing a crowded navigation bar with a cleaner hamburger menu and bottom tab bar. The app should be responsive and feel like a PWA.
-3.  **Authentication**:
+1.  **Database & Data Import**: Set up a database and import user data for 'rafael' and 'gabriela'. This has been a recurring request. A production MongoDB Atlas database has now been configured and populated.
+2.  **Mobile UI/UX**:
+    *   Improve the mobile experience by replacing a crowded navigation bar with a cleaner, Instagram-style bottom tab bar.
+    *   Ensure all themes (especially light/rose) are consistent and do not have hardcoded dark elements on mobile.
+    *   Add a button/prompt to easily install the app as a PWA on the user's home screen.
+3.  **Authentication & Account Unification**:
     *   Implement secure custom authentication (username/password).
     *   Implement Google Social Login.
-    *   Implement password strength validation (min 6 chars, 1 letter, 1 number) for new user signups.
-4.  **Account Unification**: The user account  (password: ) and the Google account associated with  must be treated as a single, unified account, sharing all data (habits, XP, level, etc.).
-5.  **Friends System**: Implement a feature where users can add friends by searching for their username, rather than showing all users in the database.
-6.  **Landing Page**: Create an attractive, responsive landing page for unauthenticated users to showcase the app's features, including a preview of the application and its charts, using dummy data. The app name should be RoutineTracker.
+    *   The user account  (password: ) and the Google account associated with  must be treated as a single, unified account. *A workaround was implemented to allow login with email + password as the Google Auth flow was unreliable.*
+    *   Implement a change/reset password feature.
+    *   Allow users to manually upload a profile picture.
+    *   Implement email verification with a custom HTML email template (on hold, pending API key).
+4.  **Onboarding**: Create a practical, multi-step onboarding carousel for first-time users that explains how to use the app's features (add/complete habits, view stats, etc.). This should be in a minimalist style consistent with the landing page and be re-viewable from the hamburger menu.
+5.  **Event Memories**:
+    *   After an event's end date passes, prompt the user to add a memory.
+    *   The memory should include a mood rating (e.g., 🤩, 😊, 🙂, 😐, 😔) and an optional text description.
+    *   For single-day events, allow up to 2 photos.
+    *   For multi-day events, allow up to 2 photos **per day** of the event's duration.
+6.  **Friends System**: Implement a feature where users can add friends by searching for their username.
+7.  **Landing Page**: Create an attractive, responsive landing page for unauthenticated users. The app name should be RoutineTracker, and it should feature a login button.
 
-**User's preferred language**: **Portuguese**. The user communicates primarily in Portuguese. The next agent MUST respond in Portuguese.
+**User's preferred language**: **Portuguese**. The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-The project is a full-stack application named RoutineTracker with a React frontend, a FastAPI backend, and a MongoDB database.
-- **Authentication**: Supports custom JWT login and Google Social Login. Password strength rules are enforced for new registrations.
-- **UI**: The application is responsive, with a dedicated landing page for new users, and a PWA-like experience (manifest.json, meta tags). The logged-in UI features a desktop sidebar and a mobile-friendly layout with a bottom tab bar and a hamburger menu.
-- **Features**: A Friends system allows users to search and add others by username.
-- **Data**: Two main users,  and , exist. The  user account has been linked to the email  in the database and populated with extensive habit data.
+The RoutineTracker application is a full-stack React/FastAPI/MongoDB app. A production MongoDB Atlas database has been configured and populated with data for the primary user, . The critical Google Login bug, where a new account was created, has been worked around by enabling login with  + . The UI has been significantly enhanced with a new logo, an Instagram-style bottom navigation bar, improved PWA themes, an Install App button, and a multi-step practical onboarding carousel. A new Event Memories feature has been partially implemented, allowing users to review past events with mood ratings and photos.
 
 **Last working item**:
-*   **Last item agent was working**: Fixing a critical bug where logging in with Google () creates a new, empty user account instead of loading the data for the existing, linked  user. The user reported this after testing on their own device.
-*   **Status**: IN PROGRESS
-*   **Agent Testing Done**: N (for this specific bug)
-*   **Which testing method agent to use?**: both. The bug is in the account linking logic, which involves the frontend triggering the login and the backend handling the callback.
-*   **User Testing Done**: Y (and it failed, which initiated this bug fix)
+- **Last item agent was working**: Enhancing the Event Memories feature. The user requested that the event creation/editing process distinguish between single-day and multi-day events. For multi-day events, the user should be able to upload up to 2 photos *for each day* of the event's duration to create a detailed memory log. The agent had just started this task by overwriting .
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: frontend testing agent (to verify the new event creation modal, multi-day logic, and photo upload functionality per day).
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Google Login Account Unification Failure (P0)**
-    *   **Description**: When the user logs in with the Google account , the system creates a new, blank user profile instead of loading the data associated with the existing  user, despite the database record showing the email is linked to .
-    *   **Status**: IN PROGRESS
-    *   **Is recurring issue?**: Y
-    *   **Should Test frontend/backend/both after fix?**: both
-    *   **Debugging checklist for current issue**:
-        1.  **Backend ()**: Examine the  endpoint. The logic at  () likely has a flaw. It should robustly find a user by  and, if found, use that existing user's data. If not found, it should create a new one. The current logic might be failing to find the existing user or is incorrectly creating a new one regardless.
-        2.  **Database**: Verify the  collection again to ensure the  document has the  field correctly set and that there isn't another user document with the same email.
-        3.  **Frontend ()**: Review the  function to ensure it correctly sends the  and handles the response from the backend. The frontend seems to be working, but the data it receives is for a new user.
+- **Issue 1: Unreliable Google Social Login (P1)**
+    - **Description**: The core Google Auth flow via the Emergent service was intermittently failing with a  error, causing a new, empty user to be created.
+    - **Attempted fixes**: The agent implemented a workaround by adding a new endpoint () and modifying the frontend to allow login with  and . This solves the user's immediate problem of accessing their account but does not fix the root cause of the Google OAuth failure.
+    - **Next debug checklist**:
+        1.  Since the workaround is functional, this is no longer a P0 blocker.
+        2.  Future investigation could involve checking the  lifecycle with the Emergent Auth service or implementing a more robust frontend polling mechanism after the OAuth redirect.
+    - **Why fix this issue and what will be achieved with the fix?**: To provide a seamless, one-click Google login experience as originally intended, without relying on the user remembering a separate password.
+    - **Status**: BLOCKED (on Emergent Auth service reliability) / WORKAROUND IMPLEMENTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: both
 
 **In progress Task List**:
-None. The P0 issue is blocking further development.
+- **Task 1: Enhance Event Creation and Memories (P0)**
+    - **Description**: Modify the event creation/editing modal to support both single-day and multi-day events. For multi-day events, the Memories feature must allow uploading up to 2 photos per day of the event.
+    - **Where to resume**: The agent just overwrote . The next step is to implement the new modal logic within this component. This will likely require backend changes to the event data model in  to store photos in a structure that maps them to specific dates (e.g., ).
+    - **What will be achieved with this?**: A more robust and engaging Memories feature that allows users to create rich, day-by-day journals of their past events.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: both
+    - **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   Allow users to manually upload a profile picture (as an alternative to the Google profile picture). (P1)
-    *   Implement a change/reset password feature. (P1)
+    *   **Email Verification (P1)**: Implement email verification using Resend. This is currently blocked pending the user providing a Resend API key. The agent has the playbook from the integration agent.
 *   **Future Tasks**:
     *   Send daily push notifications to remind users about their habits. (P2)
     *   Add a fire animation when a user completes a habit on a streak. (P2)
     *   Add a Remember me option for persistent login sessions. (P2)
 
 **Completed work in this session**
-- **Google Social Login**: Implemented and tested the full flow, although a critical bug in account linking was later discovered.
-- **User Switching Bug Fix**: Corrected an issue on the login screen where users couldn't easily switch between accounts.
-- **Data Import & Account Linking**: Linked  to  in the DB and repeatedly imported/updated habit data from user-provided JSON.
-- **Google Profile Picture**: Integrated the Google profile picture as the user's avatar, visible across the app.
-- **PWA Enhancements**: Made the app PWA-ready by adding  and necessary HTML meta tags.
-- **Friends Feature**: Implemented a full friends system (search by username, add, list, remove).
-- **Landing Page**: Created a comprehensive, responsive landing page with app previews, feature showcases, and a static version of the app's real progress chart.
-- **Branding Change**: Renamed the application from RoutineQuest to RoutineTracker across the entire codebase.
-- **Password Strength Validation**: Added backend and frontend validation for new user passwords.
-- **GitHub PR Validation**: Confirmed the user's PR was successfully merged into the  branch of their GitHub repository.
+- **Production Database Setup**: Successfully connected the application to a user-provided MongoDB Atlas instance for production, including resolving connection issues and populating it with user data.
+- **Google Login Workaround**: Implemented a robust workaround for the failing Google OAuth by allowing users to log in with their linked email () and password ().
+- **Data Restoration**: Recovered and re-imported lost user data for  from a backup found in the codebase.
+- **App Re-branding**: Changed the app name from RoutineQuest to RoutineTracker and generated/integrated a new logo across the application.
+- **PWA Enhancements**:
+    - Added an Instalar App button to the hamburger menu to trigger the PWA installation prompt.
+    - Fixed UI inconsistencies in light/rose themes to ensure a clean look on mobile.
+- **UI/UX Overhaul**:
+    - Redesigned the mobile bottom navigation to an intuitive, 5-tab, Instagram-style layout with a profile avatar.
+    - Added a Login button to the landing page header.
+- **Onboarding Carousel**: Created and iterated on a multi-step, practical, and visually appealing onboarding experience for new users, which is also replayable from the hamburger menu.
+- **Event Memories (V1)**: Implemented the initial version of the event review feature, allowing users to rate past events with a mood and add a text-based memory.
+- **Profile Features**: Implemented change password and upload profile picture functionalities.
 
 **Earlier issues found/mentioned but not fixed**
-None.
+- **Issue 1: Root Cause of Google Auth Failure**
+    - **Debug checklist**: The backend logs consistently showed  when trying to exchange the . This points to an issue with the session expiring or being invalidated before the backend can use it.
+    - **Why to solve this issue and what will be achieved with this?**: Fixing this would restore the intended one-click Google Sign-In functionality, improving user experience.
+    - **Should Test frontend/backend/both after fix**: both
+    - **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
-*   **Issue**: The unification of the  user and the Google login ().
-*   **Recurrence count**: 3+ times. The agent has run scripts to link the accounts and import data, confirming success with its own tests, but the user's real-world tests continue to fail, indicating the core logic in the application is flawed.
-*   **Status**: IN PROGRESS
+- **Issue**: The unification of the  user and the Google login ().
+- **Recurrence count**: 4+ times.
+- **Status**: RESOLVED (via workaround). The direct Google login still fails, but the user can now access the correct account using their email and password, which was the ultimate goal.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Backend**: FastAPI, MongoDB (), JWT authentication (, ).
-*   **Frontend**: React, Vite, Tailwind CSS, Zustand, React Router (introduced in ).
-*   **Authentication**: Dual system with custom JWT and Emergent-managed Google OAuth 2.0.
-*   **PWA**:  and meta tags for Add to Home Screen functionality.
+*   **Backend**: FastAPI, MongoDB (), JWT authentication (, ). Now connected to MongoDB Atlas for production.
+*   **Frontend**: React, Vite, Tailwind CSS, Zustand. Features PWA capabilities, including a dynamic  and an install prompt handler.
+*   **Authentication**: Dual system with custom JWT (username/password OR email/password) and a (currently unreliable) Emergent-managed Google OAuth 2.0 flow.
+*   **Database**: The application now distinguishes between a local MongoDB for preview/development and a user-provided MongoDB Atlas instance for production.
 
 **key DB schema**
-*   **users**: 
-*   **user_data**: 
-
-**changes in tech stack**
-None.
+- **users**: 
+- **user_data**: 
+    - The  field will need to be updated to support the new multi-day photo upload requirement. A possible new structure is .
 
 **All files of reference**
-*   : Contains the Google callback logic that needs to be fixed. Also has the new friends endpoints.
-*   : UI for login, which was modified to fix user switching.
-*   : Handles the frontend part of the authentication flow.
-*   : Completely rewritten to support the new add by username feature.
-*   : The new landing page component.
-*   : Modified to handle routing between the landing page and the main app.
-
-**key api endpoints**
-*    (POST)
-*    (POST)
-*    (POST)
-*    (GET) - **Suspected location of the P0 bug.**
-*    (GET)
-*    (GET)
-*    (POST)
-*    (POST)
-*    (GET/PUT)
+*   **/app/frontend/src/components/EventsPanel.jsx**: **Actively being modified**. Target for the next implementation steps.
+*   **/app/backend/server.py**: May need changes to the  data model to support photos-per-day.
+*   **/app/frontend/src/components/OnboardingCarousel.jsx**: Recently created and iterated upon.
+*   **/app/frontend/src/components/Navbar.jsx**: Recently modified for the Instagram-style footer and PWA install button.
+*   **/app/frontend/src/main.jsx**: Contains the logic for handling the Google Auth redirect.
+*   **/app/backend/.env**: **CRITICAL**: This file was modified to contain the production MongoDB Atlas connection string. This is a security risk and incorrect practice. The connection string should be managed via deployment environment variables, not committed to the repository.
 
 **Critical Info for New Agent**
 *   **MUST reply in Portuguese.**
-*   The absolute top priority is fixing the Google Login bug (Issue 1). The user is blocked and has reported this multiple times. Do not proceed to other tasks until this is resolved and verified by the user.
-*   The bug is almost certainly in the backend logic within  at the  endpoint. The code must correctly find an existing user by email and use their data, not create a new user.
+*   The immediate priority is the Event Memories enhancement (Task 1). Resume work in .
+*   The production database is on MongoDB Atlas. The credentials were provided by the user.
+*   **SECURITY WARNING**: The previous agent hardcoded the production MongoDB Atlas connection string (with credentials) into . This is incorrect. The next agent should advise the user on setting this as a secret environment variable in their Emergent deployment settings and revert the change in the  file to use the local MongoDB URL for the preview environment.
+*   The primary user login is  with the password . This accesses the  account data. The direct Google login flow is unreliable.
 
 **documents and test reports created in this job**
 *    (updated)
 *   
-*   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Bug Report (LATEST/CURRENT)**: Logged in with Google () on anonymous tab and phone, and the account is empty. Asks to fix it and provides the full JSON data for the  account again. (IN PROGRESS)
-2.  **Clarification**: Confirmed that / and  are the exact same user and should have identical data. (RESOLVED, but the implementation is buggy)
-3.  **Question**: Asked about WhatsApp integration requirements (phone number vs. bot). (ANSWERED)
-4.  **Request**: Use the real app chart on the landing page, not a different-looking one. (DONE)
-5.  **Request**: Show a chart on the landing page, use a dummy name (not rafael), and change the app name from RoutineQuest to RoutineTracker. (DONE)
-6.  **Request**: Create a landing page for new users. (DONE)
-7.  **Request**: Confirm  is linked to  and all data is migrated. Also, change the friends tab to add friends by username. (DONE, but the linking is buggy)
-8.  **Confirmation**: Stated they did the GitHub merge and asked the agent to pull and confirm. (DONE)
-9.  **Request**: Apply a password strength rule and validate that the PR merge was successful. (DONE)
-10. **Bug Report**: Google Social Login failed during user's test. Also asked to fix git conflicts. (RESOLVED, though a new bug was found)
+1.  **Request (LATEST/CURRENT)**: Enhance the event memory feature to allow 2 photos *per day* for multi-day events.
+2.  **Request**: Make the onboarding more practical, showing *how* to add/complete habits, view stats, etc. (DONE)
+3.  **Request**: Redesign the onboarding to be minimalist, matching the landing page style, with TradingView-like charts. (DONE)
+4.  **Request**: Create an onboarding carousel for new users, replayable from the menu. (DONE)
+5.  **Request**: Add a button/shortcut to install the app as a PWA on the user's device. (DONE)
+6.  **Request**: Change the mobile footer to an Instagram-style layout. (DONE)
+7.  **Request**: Fix PWA themes (light/rose) on mobile where dark elements were still visible. (DONE)
+8.  **Confirmation**: Stated that a new deploy should contain all fixes and data for the  account. (CONFIRMED)
+9.  **Request**: After an event ends, prompt the user for a review with a mood rating and allow uploading up to 2 photos as a memory. (PARTIALLY DONE, ENHANCEMENT IN PROGRESS)
+10. **Confirmation**: Confirmed all data for  should be accessible via the  login. (DONE)
 
 **Project Health Check:**
-*   **Broken**: The account unification logic for Google Sign-In is critically broken.
-*   **Mocked**: The Google Authentication flow uses Emergent's mock auth service for testing.
+*   **Broken**: The original Google Social Login flow is unreliable and effectively broken. A workaround is in place.
+*   **Mocked**: Google Authentication uses Emergent's mock auth service.
 
 **3rd Party Integrations**
-*   **Emergent-managed Google Auth**: Implemented, but with a critical bug in the application's handling of the callback.
+*   **Emergent-managed Google Auth**: Implemented, but unreliable.
+*   **MongoDB Atlas**: Now used as the production database.
+*   **Resend**: Playbook received for email verification, but implementation is on hold pending user-provided API key.
 
 **Testing status**
-*   **Testing agent used after significant changes**: YES. Multiple times. However, it did not catch the account unification bug that the user found through manual testing.
-*   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**: , .
-*   **Known regressions**: None.
+- **Testing agent used after significant changes**: YES, successfully verified features before the production DB was configured.
+- **Troubleshoot agent used after agent stuck in loop**: NO
+- **Test files created**: []
+- **Known regressions**: None.
 
 **Credentials to test flow:**
-*   **User 1**:  / 
-*   **User 2**:  / 
-*   **Google Login**: Use the Google login flow. The test email  should log into the  account with all its data. **This is currently failing.**
+*   **Login**:  /  (accesses 's full account)
+*   **Login 2**:  / 
 
 **What agent forgot to execute**
-The agent failed to create a robust and correctly working implementation for the Google account unification, despite multiple attempts and confirmations. The agent relied on its own scripts and tests which passed, but did not account for the real-world scenario the user tested, leading to a recurring critical bug.</analysis>
+- The agent hardcoded the production database connection string with credentials directly into . This is a significant security flaw and incorrect deployment practice. The connection string should be managed as a secret environment variable through the deployment platform. The next agent must address this.</analysis>

@@ -391,6 +391,16 @@ html[data-theme="light"] textarea, html[data-theme="rose"] textarea, html[data-t
   color-scheme: light;
 }
 
+
+
+/* ── Slow pulse animation for review prompts ─────────────────────────── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
 /* ── Additional background overrides for light themes ────────────────── */
 html[data-theme="light"] .bg-\[\#080808\],   html[data-theme="rose"] .bg-\[\#080808\],   html[data-theme="forest"] .bg-\[\#080808\]   { background: var(--bg-main)  !important; }
 html[data-theme="light"] .bg-\[\#0a0a0a\],   html[data-theme="rose"] .bg-\[\#0a0a0a\],   html[data-theme="forest"] .bg-\[\#0a0a0a\]   { background: var(--bg-main)  !important; }

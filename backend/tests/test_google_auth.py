@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://routine-tracker-344.preview.emergentagent.com"
+BASE_URL = "https://habit-events-log.preview.emergentagent.com"
 
 
 class TestHealthEndpoint:

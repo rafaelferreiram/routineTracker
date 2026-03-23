@@ -26,7 +26,7 @@ print('User ID: ' + userId);
 
 ## Step 2: Test Backend API
 ```bash
-API="https://routine-tracker-344.preview.emergentagent.com"
+API="https://habit-events-log.preview.emergentagent.com"
 curl -X GET "$API/api/auth/me" -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 

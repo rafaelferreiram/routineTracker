@@ -237,26 +237,34 @@ def google_auth(req: GoogleAuthReq):
     picture      = g.get('picture', '')
     google_id    = g.get('sub', g.get('id', ''))
 
-    print(f'[GOOGLE AUTH] Google returned: email={google_email}, name={name}, google_id={google_id}')
+    print(f'[GOOGLE AUTH] Google returned: email={google_email}, name={name}, google_id={google_id}, picture={picture[:50] if picture else "None"}')
 
     if not email_lower:
         raise HTTPException(status_code=400, detail='No email from Google')
 
-    # 2. Find existing user by email (case-insensitive search)
+    # 2. Find existing user by email (case-insensitive search) - Multiple strategies
     import re
     
-    # Try multiple search strategies
+    user = None
+    
+    # Strategy 1: Exact lowercase match
     user = users_c.find_one({'email': email_lower})
     print(f'[GOOGLE AUTH] Search 1 (exact lowercase): {user is not None}')
     
+    # Strategy 2: Exact original case match
     if not user:
         user = users_c.find_one({'email': google_email})
         print(f'[GOOGLE AUTH] Search 2 (exact original): {user is not None}')
     
+    # Strategy 3: Case-insensitive regex
     if not user:
-        # Try case-insensitive regex
         user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
         print(f'[GOOGLE AUTH] Search 3 (regex): {user is not None}')
+    
+    # Strategy 4: Search by google_id if we've seen this user before
+    if not user and google_id:
+        user = users_c.find_one({'google_id': google_id})
+        print(f'[GOOGLE AUTH] Search 4 (google_id): {user is not None}')
     
     if user:
         print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}')
@@ -264,19 +272,34 @@ def google_auth(req: GoogleAuthReq):
         # Existing user — update Google info but keep their username and ID
         uid      = str(user['_id'])
         username = user['username']
-        display  = user.get('display_name', name)
+        display  = name  # Use Google's display name
         theme    = user.get('theme', {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'})
         
-        # Update Google-specific fields
+        # Update user with Google info and picture
         users_c.update_one(
             {'_id': user['_id']},
             {'$set': {
                 'picture':        picture,
                 'google_id':      google_id,
+                'display_name':   display,
+                'email':          email_lower,  # Ensure email is set
                 'last_google_at': datetime.now(timezone.utc),
             }}
         )
-        print(f'[GOOGLE AUTH] Updated existing user {username} with id {uid}')
+        print(f'[GOOGLE AUTH] Updated existing user {username} with id {uid}, picture updated')
+        
+        # Verify user_data exists for this user
+        existing_data = data_c.find_one({'user_id': uid})
+        if existing_data:
+            data_info = existing_data.get('data', {})
+            print(f'[GOOGLE AUTH] User has existing data: {len(data_info.get("habits", []))} habits, {len(data_info.get("events", []))} events')
+        else:
+            print(f'[GOOGLE AUTH] WARNING: No user_data found for user {uid}, creating empty data document')
+            data_c.insert_one({
+                'user_id': uid,
+                'data': {'habits': [], 'events': [], 'profile': {'name': display}},
+                'created_at': datetime.now(timezone.utc)
+            })
     else:
         # New user — derive username from email
         print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}')
@@ -302,6 +325,31 @@ def google_auth(req: GoogleAuthReq):
         })
         uid = str(ins.inserted_id)
         print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}')
+        
+        # Create initial user_data document
+        data_c.insert_one({
+            'user_id': uid,
+            'data': {
+                'habits': [],
+                'events': [],
+                'profile': {
+                    'name': display,
+                    'freezeShields': 0,
+                    'focusHabitId': None,
+                    'focusHabitDate': None,
+                    'totalXP': 0
+                },
+                'settings': {
+                    'theme': 'dark',
+                    'accentColor': '#22c55e'
+                },
+                'moods': {},
+                'journalEntries': [],
+                'achievements': []
+            },
+            'created_at': datetime.now(timezone.utc)
+        })
+        print(f'[GOOGLE AUTH] Created initial user_data for {username}')
 
     token = make_token(uid, username)
     print(f'[GOOGLE AUTH] Success! Returning token for user {username} (id={uid})')

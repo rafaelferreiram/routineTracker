@@ -239,6 +239,13 @@
 - **Emergent-managed Google Auth**: Social login (workaround active)
 
 ## Known Issues
-- Google Login may fail with "Invalid session" - use email login as workaround
+- Google Login: Use o preview URL ou faça deploy para produção
 - Google Maps API deprecation warnings (PlacesService deprecated March 2025, but still functional)
+
+## Deploy Checklist
+Após fazer deploy para `routine-tracker.com`:
+1. O Google Auth vai usar o backend de produção
+2. Os dados serão sincronizados com o banco de produção
+3. Login com email `ferreira.rafah@gmail.com` / senha `admin` funcionará
+4. Google Login vai encontrar a conta existente pelo email e carregar os dados
 

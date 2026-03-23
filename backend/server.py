@@ -24,6 +24,8 @@ JWT_DAYS   = 90
 # Use user's OpenAI key or fallback to Emergent LLM Key
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-46676Cb71D8D39eA36')
+# Google Maps API Key
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyDLQT29DB2Lt7yxkCTzEG5LCYk4V8zOB14')
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')
@@ -1078,27 +1080,109 @@ Responda SEMPRE em português brasileiro. Use emojis."""
                 return f"✅ Evento '{args['title']}' {args.get('emoji', '')} criado para {args['date']}!"
             
             elif func_name == "search_places":
-                # This function returns recommendations - GPT will use its knowledge
+                # Use Google Places API to search for real places
                 location = args.get("location", "")
                 place_type = args.get("type", "restaurant")
                 cuisine = args.get("cuisine", "")
-                time_pref = args.get("time_preference", "")
-                budget = args.get("budget", "moderate")
-                special = args.get("special_requirements", "")
+                keyword = args.get("keyword", cuisine or place_type)
                 
-                # Build search context for GPT to use
-                search_context = f"""Pesquisando {place_type} em {location}"""
-                if cuisine:
-                    search_context += f", culinária {cuisine}"
-                if time_pref:
-                    search_context += f", para {time_pref}"
-                if budget:
-                    budget_map = {"budget": "econômico", "moderate": "preço médio", "upscale": "sofisticado", "luxury": "luxo"}
-                    search_context += f", {budget_map.get(budget, budget)}"
-                if special:
-                    search_context += f", {special}"
+                # Map place types to Google Places API types
+                type_mapping = {
+                    "restaurant": "restaurant",
+                    "restaurante": "restaurant",
+                    "cafe": "cafe",
+                    "café": "cafe",
+                    "bar": "bar",
+                    "hotel": "lodging",
+                    "museum": "museum",
+                    "museu": "museum",
+                    "park": "park",
+                    "parque": "park",
+                    "attraction": "tourist_attraction",
+                    "atração": "tourist_attraction",
+                    "shopping": "shopping_mall"
+                }
+                google_type = type_mapping.get(place_type.lower(), "restaurant")
                 
-                return f"🔍 {search_context}. Use seu conhecimento para recomendar lugares reais e populares com nome, endereço aproximado e detalhes úteis."
+                try:
+                    # First, geocode the location to get coordinates
+                    geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={GOOGLE_MAPS_API_KEY}"
+                    geo_resp = http_req.get(geocode_url, timeout=10)
+                    geo_data = geo_resp.json()
+                    
+                    if geo_data.get("status") != "OK" or not geo_data.get("results"):
+                        return f"❌ Não consegui encontrar a localização '{location}'. Tente ser mais específico."
+                    
+                    lat = geo_data["results"][0]["geometry"]["location"]["lat"]
+                    lng = geo_data["results"][0]["geometry"]["location"]["lng"]
+                    formatted_address = geo_data["results"][0]["formatted_address"]
+                    
+                    # Now search for places nearby
+                    places_url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+                    params = {
+                        "location": f"{lat},{lng}",
+                        "radius": 2000,  # 2km radius
+                        "type": google_type,
+                        "keyword": keyword,
+                        "key": GOOGLE_MAPS_API_KEY,
+                        "language": "pt-BR"
+                    }
+                    
+                    places_resp = http_req.get(places_url, params=params, timeout=10)
+                    places_data = places_resp.json()
+                    
+                    if places_data.get("status") != "OK" or not places_data.get("results"):
+                        return f"❌ Não encontrei {place_type} em {location}. Tente outro tipo de lugar ou localização."
+                    
+                    # Format results
+                    results = []
+                    for place in places_data["results"][:5]:  # Top 5 results
+                        name = place.get("name", "")
+                        address = place.get("vicinity", "")
+                        rating = place.get("rating", 0)
+                        user_ratings = place.get("user_ratings_total", 0)
+                        price_level = place.get("price_level", -1)
+                        is_open = place.get("opening_hours", {}).get("open_now", None)
+                        place_id = place.get("place_id", "")
+                        
+                        # Price level emoji
+                        price_emoji = ""
+                        if price_level == 0:
+                            price_emoji = "💚 Grátis"
+                        elif price_level == 1:
+                            price_emoji = "💵 $"
+                        elif price_level == 2:
+                            price_emoji = "💵💵 $$"
+                        elif price_level == 3:
+                            price_emoji = "💵💵💵 $$$"
+                        elif price_level == 4:
+                            price_emoji = "💎 $$$$"
+                        
+                        # Open status
+                        open_status = ""
+                        if is_open is True:
+                            open_status = "✅ Aberto agora"
+                        elif is_open is False:
+                            open_status = "🔴 Fechado"
+                        
+                        result_text = f"📍 **{name}**\n"
+                        result_text += f"   📫 {address}\n"
+                        if rating > 0:
+                            result_text += f"   ⭐ {rating}/5 ({user_ratings} avaliações)\n"
+                        if price_emoji:
+                            result_text += f"   {price_emoji}\n"
+                        if open_status:
+                            result_text += f"   {open_status}\n"
+                        result_text += f"   🗺️ [Ver no Google Maps](https://www.google.com/maps/place/?q=place_id:{place_id})"
+                        
+                        results.append(result_text)
+                    
+                    return f"🔍 Encontrei {len(results)} {place_type}{'s' if len(results) > 1 else ''} perto de {formatted_address}:\n\n" + "\n\n".join(results)
+                    
+                except Exception as e:
+                    print(f"Google Places API error: {e}")
+                    # Fallback to GPT knowledge
+                    return f"🔍 Pesquisando {place_type} em {location}. Use seu conhecimento para recomendar lugares reais e populares com nome, endereço aproximado e detalhes úteis."
             
             elif func_name == "add_to_itinerary":
                 event_title = args.get("event_title", "").lower()

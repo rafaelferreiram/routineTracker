@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../store/useAuth.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 export default function LoginScreen({ onBack }) {
   const { login, signup, users, startGoogleLogin } = useAuth();
+  const { t } = useLanguage();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
 
-  // Note: Google OAuth callback is now handled in main.jsx
   const [mode, setMode]               = useState('login');
   const [username, setUsername]       = useState('');
   const [password, setPassword]       = useState('');
@@ -64,7 +65,7 @@ export default function LoginScreen({ onBack }) {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          <span className="text-sm">Back</span>
+          <span className="text-sm">{t('auth.back')}</span>
         </button>
       )}
 
@@ -72,7 +73,7 @@ export default function LoginScreen({ onBack }) {
       <div className="mb-8 text-center">
         <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-16 h-16 mx-auto mb-3" />
         <h1 className="text-white font-bold text-2xl tracking-tight">RoutineTracker</h1>
-        <p className="text-[#4b5563] text-sm mt-1">Track your habits. Level up your life.</p>
+        <p className="text-[#4b5563] text-sm mt-1">{t('auth.tagline')}</p>
       </div>
 
       <div className="w-full max-w-sm">
@@ -81,7 +82,7 @@ export default function LoginScreen({ onBack }) {
         {!selectedUser && mode === 'login' && knownUsers.length > 0 && (
           <div className="mb-6">
             <p className="text-[#4b5563] text-xs font-semibold uppercase tracking-wider mb-3 text-center">
-              Who&apos;s playing?
+              {t('auth.whosPlaying')}
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               {knownUsers.map(user => {
@@ -117,14 +118,14 @@ export default function LoginScreen({ onBack }) {
                 onClick={() => { setMode('signup'); setSelectedUser(null); setUsername(''); setPassword(''); }}
                 className="text-[#4b5563] hover:text-white text-xs transition-colors underline underline-offset-2"
               >
-                + Nova conta
+                {t('auth.newAccount')}
               </button>
               <button
                 data-testid="other-account-btn"
                 onClick={() => { setMode('other'); setSelectedUser(null); setUsername(''); setPassword(''); }}
                 className="text-[#4b5563] hover:text-white text-xs transition-colors underline underline-offset-2"
               >
-                Outra conta
+                {t('auth.otherAccount')}
               </button>
             </div>
           </div>
@@ -146,7 +147,7 @@ export default function LoginScreen({ onBack }) {
                   <span className="text-white font-semibold">{selectedUser.displayName}</span>
                 </div>
               ) : mode === 'other' ? (
-                <span className="text-white font-semibold">Entrar com outra conta</span>
+                <span className="text-white font-semibold">{t('auth.enterOtherAccount')}</span>
               ) : (
                 <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#0f0f0f' }}>
                   {['login', 'signup'].map(m => (
@@ -157,7 +158,7 @@ export default function LoginScreen({ onBack }) {
                       style={mode === m
                         ? { background: '#1f1f1f', color: '#ffffff' }
                         : { color: '#4b5563' }}>
-                      {m === 'login' ? 'Sign In' : 'Sign Up'}
+                      {m === 'login' ? t('auth.signIn') : t('auth.signUp')}
                     </button>
                   ))}
                 </div>
@@ -166,7 +167,7 @@ export default function LoginScreen({ onBack }) {
                 <button data-testid="back-btn"
                   onClick={handleBack}
                   className="text-[#4b5563] hover:text-white text-sm transition-colors px-2 py-1">
-                  ← Voltar
+                  ← {t('common.back')}
                 </button>
               )}
             </div>
@@ -176,14 +177,14 @@ export default function LoginScreen({ onBack }) {
               {!selectedUser && (
                 <div>
                   <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                    {mode === 'signup' ? 'Username' : 'Username ou Email'}
+                    {mode === 'signup' ? t('auth.username') : t('auth.usernameOrEmail')}
                   </label>
                   <input
                     data-testid="username-input"
                     type="text"
                     value={username}
                     onChange={e => { setUsername(e.target.value); setError(''); }}
-                    placeholder={mode === 'signup' ? 'your username' : 'username ou email@exemplo.com'}
+                    placeholder={mode === 'signup' ? t('auth.usernamePlaceholder') : t('auth.usernameOrEmailPlaceholder')}
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete={mode === 'signup' ? 'username' : 'email'}
@@ -193,7 +194,7 @@ export default function LoginScreen({ onBack }) {
               )}
               <div>
                 <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <input
                   data-testid="password-input"
@@ -207,13 +208,13 @@ export default function LoginScreen({ onBack }) {
                 {mode === 'signup' && (
                   <div className="mt-2 space-y-1">
                     <p className={`text-xs flex items-center gap-1.5 ${password.length >= 6 ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                      <span>{password.length >= 6 ? '✓' : '○'}</span> Mínimo 6 caracteres
+                      <span>{password.length >= 6 ? '✓' : '○'}</span> {t('auth.minChars')}
                     </p>
                     <p className={`text-xs flex items-center gap-1.5 ${/[a-zA-Z]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                      <span>{/[a-zA-Z]/.test(password) ? '✓' : '○'}</span> Pelo menos uma letra
+                      <span>{/[a-zA-Z]/.test(password) ? '✓' : '○'}</span> {t('auth.atLeastLetter')}
                     </p>
                     <p className={`text-xs flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                      <span>{/[0-9]/.test(password) ? '✓' : '○'}</span> Pelo menos um número
+                      <span>{/[0-9]/.test(password) ? '✓' : '○'}</span> {t('auth.atLeastNumber')}
                     </p>
                   </div>
                 )}
@@ -236,10 +237,10 @@ export default function LoginScreen({ onBack }) {
                 {loading ? (
                   <>
                     <span className="inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    {(mode === 'login' || mode === 'other') ? 'Entrando...' : 'Criando...'}
+                    {(mode === 'login' || mode === 'other') ? t('auth.loggingIn') : t('auth.creating')}
                   </>
                 ) : (
-                  (mode === 'login' || mode === 'other') ? 'Entrar' : 'Criar Conta'
+                  (mode === 'login' || mode === 'other') ? t('auth.signIn') : t('auth.createAccountBtn')
                 )}
               </button>
             </form>
@@ -252,7 +253,7 @@ export default function LoginScreen({ onBack }) {
             <button data-testid="switch-to-signup"
               onClick={() => setMode('signup')}
               className="text-[#4b5563] hover:text-white text-sm transition-colors py-2">
-              Don&apos;t have an account? <span className="text-white underline">Sign Up</span>
+              {t('auth.noAccountSignUp')} <span className="text-white underline">{t('auth.signUpLink')}</span>
             </button>
           </div>
         )}
@@ -260,14 +261,14 @@ export default function LoginScreen({ onBack }) {
         {/* Cloud sync badge */}
         <div className="mt-6 flex items-center justify-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-          <span className="text-[#4b5563] text-xs">Cloud-synced · Secure</span>
+          <span className="text-[#4b5563] text-xs">{t('auth.cloudSynced')}</span>
         </div>
 
         {/* Google Sign In */}
         <div className="mt-5">
           <div className="relative flex items-center justify-center my-4">
             <div className="flex-grow border-t border-[#1f1f1f]"></div>
-            <span className="px-3 text-[#4b5563] text-xs">or</span>
+            <span className="px-3 text-[#4b5563] text-xs">{t('auth.or')}</span>
             <div className="flex-grow border-t border-[#1f1f1f]"></div>
           </div>
           
@@ -287,7 +288,7 @@ export default function LoginScreen({ onBack }) {
             {googleLoading ? (
               <>
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Entrando com Google...
+                {t('auth.signingInGoogle')}
               </>
             ) : (
               <>
@@ -297,7 +298,7 @@ export default function LoginScreen({ onBack }) {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Entrar com Google
+                {t('auth.signInGoogle')}
               </>
             )}
           </button>

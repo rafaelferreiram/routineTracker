@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // ─── TradingView-style Mini Chart ────────────────────────────────────────────
 const W = 280, H = 90;
@@ -54,7 +55,7 @@ const CHART_DATA = [
 ];
 
 // ─── UI Mockup Components ────────────────────────────────────────────────────
-function MockHabitCard({ emoji, name, completed, streak, onTap }) {
+function MockHabitCard({ emoji, name, completed, streak, onTap, streakLabel }) {
   return (
     <div 
       className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${onTap ? 'cursor-pointer active:scale-[0.98]' : ''}`}
@@ -70,7 +71,7 @@ function MockHabitCard({ emoji, name, completed, streak, onTap }) {
       </div>
       <div className="flex-1">
         <p className="text-white text-sm font-medium">{name}</p>
-        <p className="text-[#4b5563] text-xs">{streak} dias de streak</p>
+        <p className="text-[#4b5563] text-xs">{streak} {streakLabel}</p>
       </div>
       <div 
         className="w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all"
@@ -85,13 +86,13 @@ function MockHabitCard({ emoji, name, completed, streak, onTap }) {
   );
 }
 
-function MockAddButton() {
+function MockAddButton({ label }) {
   return (
     <div className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-[#2a2a2a] text-[#4b5563]">
       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border border-dashed border-[#2a2a2a]">
         +
       </div>
-      <span className="text-sm">Adicionar hábito</span>
+      <span className="text-sm">{label}</span>
     </div>
   );
 }
@@ -136,49 +137,14 @@ function HandPointer({ style }) {
 }
 
 // ─── Slide Data ──────────────────────────────────────────────────────────────
-const SLIDES = [
-  {
-    id: 'welcome',
-    tag: 'Bem-vindo',
-    title: 'Sua jornada começa aqui',
-    description: 'O RoutineTracker ajuda você a criar e manter hábitos, acompanhar seu progresso e atingir seus objetivos.',
-  },
-  {
-    id: 'add-habit',
-    tag: 'Passo 1',
-    title: 'Crie seus hábitos',
-    description: 'Toque no + para adicionar um hábito. Defina emoji, nome, categoria e frequência (diário, dias específicos, etc).',
-  },
-  {
-    id: 'complete-habit',
-    tag: 'Passo 2', 
-    title: 'Marque e ganhe XP',
-    description: 'Complete hábitos para ganhar XP e subir de nível. Mantenha streaks para bônus extras!',
-  },
-  {
-    id: 'ai-assistant',
-    tag: 'TARS',
-    title: 'Seu assistente pessoal',
-    description: 'O TARS pode criar hábitos, planejar viagens e responder perguntas. Fale por voz ou digite!',
-  },
-  {
-    id: 'events',
-    tag: 'Eventos',
-    title: 'Planeje viagens e metas',
-    description: 'Adicione eventos futuros como viagens, compromissos ou metas. O TARS ajuda a montar roteiros!',
-  },
-  {
-    id: 'install',
-    tag: 'Instalar',
-    title: 'Adicione à tela inicial',
-    description: 'Instale o app para acesso rápido. Funciona offline e parece um app nativo!',
-  },
-  {
-    id: 'ready',
-    tag: 'Pronto!',
-    title: 'Vamos começar?',
-    description: 'Crie seu primeiro hábito e comece sua jornada. Consistência é a chave!',
-  },
+const SLIDE_KEYS = [
+  { id: 'welcome', tagKey: 'onboarding.slides.welcome.tag', titleKey: 'onboarding.slides.welcome.title', descKey: 'onboarding.slides.welcome.desc' },
+  { id: 'add-habit', tagKey: 'onboarding.slides.addHabit.tag', titleKey: 'onboarding.slides.addHabit.title', descKey: 'onboarding.slides.addHabit.desc' },
+  { id: 'complete-habit', tagKey: 'onboarding.slides.complete.tag', titleKey: 'onboarding.slides.complete.title', descKey: 'onboarding.slides.complete.desc' },
+  { id: 'ai-assistant', tagKey: 'onboarding.slides.tars.tag', titleKey: 'onboarding.slides.tars.title', descKey: 'onboarding.slides.tars.desc' },
+  { id: 'events', tagKey: 'onboarding.slides.events.tag', titleKey: 'onboarding.slides.events.title', descKey: 'onboarding.slides.events.desc' },
+  { id: 'install', tagKey: 'onboarding.slides.install.tag', titleKey: 'onboarding.slides.install.title', descKey: 'onboarding.slides.install.desc' },
+  { id: 'ready', tagKey: 'onboarding.slides.ready.tag', titleKey: 'onboarding.slides.ready.title', descKey: 'onboarding.slides.ready.desc' },
 ];
 
 // ─── Visual Components for each slide ────────────────────────────────────────
@@ -198,12 +164,13 @@ function WelcomeVisual() {
 }
 
 function AddHabitVisual() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-2 relative">
-      <MockHabitCard emoji="🙏" name="Orar" completed={true} streak={7} />
-      <MockHabitCard emoji="💪" name="Academia" completed={false} streak={3} />
+      <MockHabitCard emoji="🙏" name={t('common.save')} completed={true} streak={7} streakLabel={t('onboarding.daysStreak')} />
+      <MockHabitCard emoji="💪" name="Gym" completed={false} streak={3} streakLabel={t('onboarding.daysStreak')} />
       <div className="relative">
-        <MockAddButton />
+        <MockAddButton label={t('onboarding.addHabit')} />
         <HandPointer style={{ bottom: -8, right: '30%' }} />
       </div>
     </div>
@@ -211,23 +178,25 @@ function AddHabitVisual() {
 }
 
 function CompleteHabitVisual() {
+  const { t } = useLanguage();
   const [demo, setDemo] = useState(false);
   return (
     <div className="space-y-2 relative">
-      <MockHabitCard emoji="📚" name="Ler 30 min" completed={true} streak={5} />
+      <MockHabitCard emoji="📚" name="Read 30 min" completed={true} streak={5} streakLabel={t('onboarding.daysStreak')} />
       <div className="relative">
         <MockHabitCard 
           emoji="💧" 
-          name="Beber 2L água" 
+          name="Drink 2L water" 
           completed={demo} 
           streak={demo ? 4 : 3}
           onTap={() => setDemo(!demo)}
+          streakLabel={t('onboarding.daysStreak')}
         />
         {!demo && <HandPointer style={{ top: '50%', right: 2, transform: 'translateY(-50%)' }} />}
       </div>
       {demo && (
         <div className="text-center animate-bounce">
-          <span className="text-[#22c55e] text-sm font-semibold">+15 XP! 🎉</span>
+          <span className="text-[#22c55e] text-sm font-semibold">+15 XP!</span>
         </div>
       )}
     </div>
@@ -235,11 +204,12 @@ function CompleteHabitVisual() {
 }
 
 function StatsVisual() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-3">
       <div className="rounded-xl p-3" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
         <div className="flex justify-between items-center mb-2">
-          <span className="text-white text-xs font-medium">Taxa de Conclusão</span>
+          <span className="text-white text-xs font-medium">{t('onboarding.completionRate')}</span>
           <span className="text-[#22c55e] text-xs font-semibold">+28% ↑</span>
         </div>
         <MiniChart data={CHART_DATA} color="#22c55e" />
@@ -247,11 +217,11 @@ function StatsVisual() {
       <div className="flex gap-2">
         <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
           <p className="text-white font-bold text-lg">87%</p>
-          <p className="text-[#4b5563] text-[10px]">Média</p>
+          <p className="text-[#4b5563] text-[10px]">{t('onboarding.average')}</p>
         </div>
         <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
           <p className="text-[#22c55e] font-bold text-lg">12</p>
-          <p className="text-[#4b5563] text-[10px]">Dias Perfeitos</p>
+          <p className="text-[#4b5563] text-[10px]">{t('onboarding.perfectDays')}</p>
         </div>
       </div>
     </div>
@@ -259,13 +229,14 @@ function StatsVisual() {
 }
 
 function EventsVisual() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-2 relative">
-      <MockEvent emoji="✈️" title="Viagem NYC" date="17-27 Abr" color="#3b82f6" />
+      <MockEvent emoji="✈️" title="NYC Trip" date="17-27 Apr" color="#3b82f6" />
       <MockEvent emoji="🥊" title="UFC" date="4 Jun" color="#ef4444" />
       <div className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-[#2a2a2a] text-[#4b5563]">
         <span className="text-xl">+</span>
-        <span className="text-sm">Adicionar evento</span>
+        <span className="text-sm">{t('onboarding.addEvent')}</span>
       </div>
       <HandPointer style={{ bottom: 0, right: '35%' }} />
     </div>
@@ -273,15 +244,15 @@ function EventsVisual() {
 }
 
 function AIAssistantVisual() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-3 relative">
-      {/* Chat bubbles mockup */}
       <div className="flex justify-end">
         <div className="max-w-[75%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm"
           style={{ background: '#3b82f6', color: '#fff' }}>
           <div className="flex items-center gap-1">
             <span className="text-xs">🎤</span>
-            <span>Como melhorar minha rotina?</span>
+            <span>{t('onboarding.howToImprove')}</span>
           </div>
         </div>
       </div>
@@ -290,12 +261,11 @@ function AIAssistantVisual() {
           style={{ background: '#1a1a2e', color: '#e5e7eb', border: '1px solid #0f3460' }}>
           <div className="flex items-start gap-2">
             <span className="text-xs">🔊</span>
-            <span>Comece com 3 hábitos simples e aumente gradualmente...</span>
+            <span>{t('onboarding.tarsResponse')}</span>
           </div>
         </div>
       </div>
       
-      {/* TARS button mockup */}
       <div className="flex justify-center mt-4">
         <div 
           className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg animate-bounce overflow-hidden"
@@ -309,22 +279,23 @@ function AIAssistantVisual() {
           <img src="/tars-icon.png" alt="TARS" className="w-14 h-14 object-contain" />
         </div>
       </div>
-      <p className="text-center text-[#374151] text-xs font-medium mt-2">Toque no TARS na barra inferior</p>
+      <p className="text-center text-[#374151] text-xs font-medium mt-2">{t('onboarding.tapTars')}</p>
     </div>
   );
 }
 
 function MedalsVisual() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-3">
       <div className="flex justify-center gap-4">
         <MockMedal emoji="🔥" name="On Fire" unlocked={true} />
-        <MockMedal emoji="⭐" name="7 Dias" unlocked={true} />
-        <MockMedal emoji="🏆" name="Mestre" unlocked={false} />
-        <MockMedal emoji="💎" name="Lendário" unlocked={false} />
+        <MockMedal emoji="⭐" name="7 Days" unlocked={true} />
+        <MockMedal emoji="🏆" name="Master" unlocked={false} />
+        <MockMedal emoji="💎" name="Legend" unlocked={false} />
       </div>
       <div className="text-center">
-        <p className="text-white text-sm font-medium">10/30 medalhas</p>
+        <p className="text-white text-sm font-medium">10/30 {t('onboarding.medals')}</p>
         <div className="w-full h-2 rounded-full bg-[#1a1a1a] mt-2 overflow-hidden">
           <div className="h-full rounded-full bg-gradient-to-r from-[#fbbf24] to-[#f59e0b]" style={{ width: '33%' }} />
         </div>
@@ -334,10 +305,11 @@ function MedalsVisual() {
 }
 
 function TipsVisual() {
+  const { t } = useLanguage();
   const tips = [
-    { emoji: '🎨', text: 'Customize: mude cores e tema' },
-    { emoji: '👥', text: 'Friends: adicione amigos' },
-    { emoji: '📲', text: 'Instale na tela inicial' },
+    { emoji: '🎨', text: t('onboarding.customizeTip') },
+    { emoji: '👥', text: t('onboarding.friendsTip') },
+    { emoji: '📲', text: t('onboarding.installTip') },
   ];
   return (
     <div className="space-y-2">
@@ -352,11 +324,11 @@ function TipsVisual() {
 }
 
 function InstallVisual() {
+  const { t } = useLanguage();
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
   
   return (
     <div className="space-y-4">
-      {/* App icon preview */}
       <div className="flex justify-center">
         <div 
           className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg"
@@ -374,47 +346,46 @@ function InstallVisual() {
         </div>
       </div>
       
-      {/* Installation steps */}
       <div className="rounded-xl p-4" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
         {isIOS ? (
           <div className="space-y-3">
+            <p className="text-white text-sm font-medium mb-2">{t('onboarding.inSafari')}</p>
             <div className="flex items-center gap-3">
               <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">1</span>
-              <span className="text-white text-sm">Toque em <span className="text-[#22c55e]">Compartilhar</span> (↑)</span>
+              <span className="text-white text-sm">{t('pwa.iosStep1')} (↑)</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">2</span>
-              <span className="text-white text-sm">"Adicionar à Tela de Início"</span>
+              <span className="text-white text-sm">{t('pwa.iosStep2')}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-7 h-7 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-xs text-[#22c55e] font-bold">3</span>
-              <span className="text-white text-sm">Toque em <span className="text-[#22c55e]">Adicionar</span></span>
+              <span className="text-white text-sm">{t('pwa.iosStep3')}</span>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📲</span>
-              <span className="text-white text-sm">Após o tutorial, você verá um botão para instalar</span>
+              <span className="text-white text-sm">{t('onboarding.afterTutorial')}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-2xl">✨</span>
-              <span className="text-white text-sm">Basta tocar em "Sim" e pronto!</span>
+              <span className="text-white text-sm">{t('onboarding.justTapYes')}</span>
             </div>
           </div>
         )}
       </div>
       
-      {/* Benefits */}
       <div className="flex gap-2 justify-center">
         <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#22c55e15', color: '#22c55e', border: '1px solid #22c55e30' }}>
-          Offline
+          {t('onboarding.offline')}
         </span>
         <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#3b82f615', color: '#3b82f6', border: '1px solid #3b82f630' }}>
-          Rápido
+          {t('onboarding.fast')}
         </span>
         <span className="px-3 py-1.5 rounded-full text-xs" style={{ background: '#f59e0b15', color: '#f59e0b', border: '1px solid #f59e0b30' }}>
-          Notificações
+          {t('onboarding.notifications')}
         </span>
       </div>
     </div>
@@ -434,11 +405,12 @@ function ReadyVisual() {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function OnboardingCarousel({ onComplete }) {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
 
-  const slide = SLIDES[current];
-  const isLast = current === SLIDES.length - 1;
+  const slide = SLIDE_KEYS[current];
+  const isLast = current === SLIDE_KEYS.length - 1;
 
   const handleNext = () => {
     if (isLast) onComplete();
@@ -496,15 +468,16 @@ export default function OnboardingCarousel({ onComplete }) {
         <button 
           onClick={onComplete}
           className="text-[#6b7280] text-sm font-medium hover:text-white transition-colors"
+          data-testid="onboarding-skip"
         >
-          Pular
+          {t('onboarding.skip')}
         </button>
       </div>
 
       {/* Progress bar */}
       <div className="px-4">
         <div className="flex gap-1">
-          {SLIDES.map((_, i) => (
+          {SLIDE_KEYS.map((_, i) => (
             <div 
               key={i} 
               className="flex-1 h-1 rounded-full transition-all"
@@ -522,18 +495,18 @@ export default function OnboardingCarousel({ onComplete }) {
             className="px-3 py-1 rounded-full text-xs font-semibold"
             style={{ background: '#22c55e15', color: '#22c55e', border: '1px solid #22c55e30' }}
           >
-            {slide.tag}
+            {t(slide.tagKey)}
           </span>
         </div>
 
         {/* Title */}
         <h1 className="text-xl sm:text-2xl font-bold text-white text-center mb-2">
-          {slide.title}
+          {t(slide.titleKey)}
         </h1>
 
         {/* Description */}
         <p className="text-[#9ca3af] text-center text-sm max-w-xs mx-auto leading-relaxed mb-6">
-          {slide.description}
+          {t(slide.descKey)}
         </p>
 
         {/* Visual - takes remaining space */}
@@ -558,10 +531,11 @@ export default function OnboardingCarousel({ onComplete }) {
           )}
           <button
             onClick={handleNext}
+            data-testid="onboarding-next"
             className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
             style={{ background: '#22c55e', color: '#000' }}
           >
-            {isLast ? 'Começar! 🎉' : 'Continuar'}
+            {isLast ? t('onboarding.start') : t('onboarding.continue')}
           </button>
         </div>
       </div>

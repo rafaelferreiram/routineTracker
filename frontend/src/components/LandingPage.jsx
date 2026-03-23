@@ -1,44 +1,18 @@
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { LanguageSelectorInline } from './LanguageSelector';
 import LandingChart from './LandingChart.jsx';
 
 export default function LandingPage({ onGetStarted }) {
+  const { t } = useLanguage();
+  
   const features = [
-    {
-      icon: '✅',
-      title: 'Track Daily Habits',
-      description: 'Build powerful routines with beautiful habit tracking',
-      color: '#22c55e'
-    },
-    {
-      icon: '🔥',
-      title: 'Streak System',
-      description: 'Stay motivated with streaks and never break the chain',
-      color: '#f97316'
-    },
-    {
-      icon: '📊',
-      title: 'Detailed Stats',
-      description: 'Visualize your progress with charts and insights',
-      color: '#3b82f6'
-    },
-    {
-      icon: '🏆',
-      title: 'Achievements',
-      description: 'Unlock medals and level up as you grow',
-      color: '#a855f7'
-    },
-    {
-      icon: '👥',
-      title: 'Friends',
-      description: 'Connect with friends and track progress together',
-      color: '#ec4899'
-    },
-    {
-      icon: '☁️',
-      title: 'Cloud Sync',
-      description: 'Your data synced securely across all devices',
-      color: '#06b6d4'
-    }
+    { icon: '✅', titleKey: 'landing.features.habits', descKey: 'landing.features.habitsDesc', color: '#22c55e' },
+    { icon: '🔥', titleKey: 'landing.features.streaks', descKey: 'landing.features.streaksDesc', color: '#f97316' },
+    { icon: '🤖', titleKey: 'landing.features.ai', descKey: 'landing.features.aiDesc', color: '#3b82f6' },
+    { icon: '📊', titleKey: 'landing.features.statsTitle', descKey: 'landing.features.statsDesc', color: '#a855f7' },
+    { icon: '👥', titleKey: 'landing.features.friendsTitle', descKey: 'landing.features.friendsDesc', color: '#ec4899' },
+    { icon: '☁️', titleKey: 'landing.features.backupTitle', descKey: 'landing.features.backupDesc', color: '#06b6d4' },
   ];
 
   return (
@@ -56,6 +30,9 @@ export default function LandingPage({ onGetStarted }) {
             <span className="font-bold text-xl tracking-tight">RoutineTracker</span>
           </div>
           <div className="flex items-center gap-3">
+            {/* Language Selector */}
+            <LanguageSelectorInline />
+            
             <button
               data-testid="nav-login-btn"
               onClick={onGetStarted}
@@ -64,14 +41,14 @@ export default function LandingPage({ onGetStarted }) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-              Login
+              {t('auth.login')}
             </button>
             <button
               data-testid="nav-get-started-btn"
               onClick={onGetStarted}
               className="px-5 py-2.5 rounded-full text-sm font-semibold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all active:scale-95"
             >
-              Get Started
+              {t('landing.getStarted')}
             </button>
           </div>
         </nav>
@@ -80,17 +57,16 @@ export default function LandingPage({ onGetStarted }) {
         <div className="relative z-10 px-6 pt-12 pb-20 sm:pt-20 sm:pb-28 max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#22c55e15] border border-[#22c55e30] mb-6">
             <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-            <span className="text-[#22c55e] text-sm font-medium">Level up your life</span>
+            <span className="text-[#22c55e] text-sm font-medium">{t('landing.badge')}</span>
           </div>
           
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-            Build habits that
-            <span className="block text-[#22c55e]">actually stick</span>
+            {t('landing.hero')}
+            <span className="block text-[#22c55e]">✓</span>
           </h1>
           
           <p className="text-[#9ca3af] text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Transform your daily routines into a game. Track habits, earn XP, 
-            level up, and compete with friends — all in one beautiful app.
+            {t('landing.subtitle')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -99,32 +75,26 @@ export default function LandingPage({ onGetStarted }) {
               onClick={onGetStarted}
               className="px-8 py-4 rounded-2xl text-base font-bold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all active:scale-95 flex items-center justify-center gap-2"
             >
-              Start Free
+              {t('landing.getStarted')}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </button>
-            <a
-              href="#features"
-              className="px-8 py-4 rounded-2xl text-base font-semibold border border-[#1f1f1f] hover:border-[#333] hover:bg-[#111] transition-all flex items-center justify-center gap-2"
-            >
-              Learn More
-            </a>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-16 max-w-lg mx-auto">
             <div className="text-center">
               <p className="text-2xl sm:text-3xl font-bold text-white">100+</p>
-              <p className="text-[#6b7280] text-sm">Daily habits</p>
+              <p className="text-[#6b7280] text-sm">{t('nav.habits')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl sm:text-3xl font-bold text-[#22c55e]">∞</p>
-              <p className="text-[#6b7280] text-sm">Possibilities</p>
+              <p className="text-[#6b7280] text-sm">{t('events.upcoming')}</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white">Free</p>
-              <p className="text-[#6b7280] text-sm">Forever</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">{t('landing.free')}</p>
+              <p className="text-[#6b7280] text-sm">{t('landing.forever')}</p>
             </div>
           </div>
         </div>
@@ -232,9 +202,9 @@ export default function LandingPage({ onGetStarted }) {
       <section id="features" className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything you need</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.everythingYouNeed')}</h2>
             <p className="text-[#6b7280] text-lg max-w-xl mx-auto">
-              Powerful features to help you build lasting habits
+              {t('landing.powerfulFeatures')}
             </p>
           </div>
 
@@ -250,8 +220,8 @@ export default function LandingPage({ onGetStarted }) {
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-white font-bold text-lg mb-2">{feature.title}</h3>
-                <p className="text-[#6b7280] text-sm leading-relaxed">{feature.description}</p>
+                <h3 className="text-white font-bold text-lg mb-2">{t(feature.titleKey)}</h3>
+                <p className="text-[#6b7280] text-sm leading-relaxed">{t(feature.descKey)}</p>
               </div>
             ))}
           </div>
@@ -262,8 +232,8 @@ export default function LandingPage({ onGetStarted }) {
       <section className="py-20 px-6 bg-[#0a0a0a]">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Track your growth</h2>
-            <p className="text-[#6b7280] text-lg">Beautiful charts to visualize your progress</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.trackGrowth')}</h2>
+            <p className="text-[#6b7280] text-lg">{t('landing.trackGrowthDesc')}</p>
           </div>
 
           {/* Real chart component */}
@@ -275,23 +245,23 @@ export default function LandingPage({ onGetStarted }) {
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">How it works</h2>
-            <p className="text-[#6b7280] text-lg">Get started in 3 simple steps</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.howItWorks')}</h2>
+            <p className="text-[#6b7280] text-lg">{t('landing.howItWorksDesc')}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Create Habits', desc: 'Add daily, weekly, or custom habits you want to build', icon: '➕' },
-              { step: '02', title: 'Track Progress', desc: 'Check off habits daily and watch your streaks grow', icon: '✅' },
-              { step: '03', title: 'Level Up', desc: 'Earn XP, unlock achievements, and become unstoppable', icon: '🚀' },
+              { step: '01', titleKey: 'landing.steps.create', descKey: 'landing.steps.createDesc', icon: '➕' },
+              { step: '02', titleKey: 'landing.steps.track', descKey: 'landing.steps.trackDesc', icon: '✅' },
+              { step: '03', titleKey: 'landing.steps.levelUp', descKey: 'landing.steps.levelUpDesc', icon: '🚀' },
             ].map((item, i) => (
               <div key={i} className="relative text-center">
                 <div className="w-16 h-16 rounded-2xl bg-[#22c55e15] border border-[#22c55e30] flex items-center justify-center text-3xl mx-auto mb-4">
                   {item.icon}
                 </div>
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-[#22c55e] text-xs font-bold">{item.step}</span>
-                <h3 className="text-white font-bold text-lg mb-2">{item.title}</h3>
-                <p className="text-[#6b7280] text-sm">{item.desc}</p>
+                <h3 className="text-white font-bold text-lg mb-2">{t(item.titleKey)}</h3>
+                <p className="text-[#6b7280] text-sm">{t(item.descKey)}</p>
               </div>
             ))}
           </div>
@@ -303,26 +273,17 @@ export default function LandingPage({ onGetStarted }) {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a855f715] border border-[#a855f730] mb-8">
             <span className="text-[#a855f7]">🏆</span>
-            <span className="text-[#a855f7] text-sm font-medium">Gamified habit tracking</span>
+            <span className="text-[#a855f7] text-sm font-medium">{t('landing.gamified')}</span>
           </div>
           
           <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            Turn your goals into<br />
-            <span className="text-[#22c55e]">an adventure</span>
+            {t('landing.adventureTitle')}<br />
+            <span className="text-[#22c55e]">{t('landing.adventureHighlight')}</span>
           </h2>
           
           <p className="text-[#6b7280] text-lg max-w-2xl mx-auto mb-10">
-            Join others who are building better habits through gamification. 
-            Every habit completed earns XP, every streak maintained unlocks achievements.
+            {t('landing.adventureDesc')}
           </p>
-
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {['🎯 Goals', '💪 Fitness', '📚 Learning', '🧘 Mindfulness', '💼 Work', '❤️ Family'].map((tag, i) => (
-              <span key={i} className="px-4 py-2 rounded-full bg-[#111] border border-[#1f1f1f] text-sm text-[#9ca3af]">
-                {tag}
-              </span>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -335,9 +296,9 @@ export default function LandingPage({ onGetStarted }) {
             
             <div className="relative z-10">
               <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-14 h-14 mx-auto mb-6" />
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to level up?</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.readyTitle')}</h2>
               <p className="text-[#6b7280] text-lg mb-8 max-w-lg mx-auto">
-                Start building habits that stick. Free forever, no credit card required.
+                {t('landing.readyDesc')}
               </p>
               
               <button
@@ -345,11 +306,11 @@ export default function LandingPage({ onGetStarted }) {
                 onClick={onGetStarted}
                 className="px-10 py-4 rounded-2xl text-lg font-bold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all active:scale-95"
               >
-                Get Started Now
+                {t('landing.getStartedNow')}
               </button>
 
               <p className="text-[#4b5563] text-sm mt-6">
-                ✓ Free forever &nbsp; ✓ No credit card &nbsp; ✓ Google login
+                ✓ {t('landing.freeForever')} &nbsp; ✓ {t('landing.noCreditCard')} &nbsp; ✓ {t('landing.googleLoginLabel')}
               </p>
             </div>
           </div>
@@ -364,7 +325,7 @@ export default function LandingPage({ onGetStarted }) {
             <span className="font-semibold">RoutineTracker</span>
           </div>
           <p className="text-[#4b5563] text-sm">
-            © 2026 RoutineTracker. Level up your life.
+            © 2026 RoutineTracker. {t('nav.levelUpLife')}.
           </p>
         </div>
       </footer>

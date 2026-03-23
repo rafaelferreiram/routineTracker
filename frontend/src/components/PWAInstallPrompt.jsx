@@ -1,19 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 
-/**
- * Native-style PWA Install Prompt
- * Shows a simple Yes/No prompt to install the app on home screen
- */
 export default function PWAInstallPrompt({ onClose }) {
+  const { t } = useLanguage();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
 
-  useEffect(() => {
-    // Check if iOS
+  useState(() => {
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(iOS);
 
-    // Capture beforeinstallprompt event for Android/Chrome
     const handler = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -25,7 +21,6 @@ export default function PWAInstallPrompt({ onClose }) {
 
   const handleInstall = async () => {
     if (installPrompt) {
-      // Chrome/Android - use native prompt
       installPrompt.prompt();
       const { outcome } = await installPrompt.userChoice;
       if (outcome === 'accepted') {
@@ -33,8 +28,6 @@ export default function PWAInstallPrompt({ onClose }) {
       }
       setInstallPrompt(null);
       onClose();
-    } else if (isIOS) {
-      // iOS - show manual instructions (handled in UI)
     }
   };
 
@@ -69,10 +62,10 @@ export default function PWAInstallPrompt({ onClose }) {
           </div>
           
           <h2 className="text-white text-lg font-bold mb-1">
-            Adicionar à Tela Inicial?
+            {t('pwa.addToHome')}
           </h2>
           <p className="text-[#9ca3af] text-sm">
-            Acesso rápido como um app nativo
+            {t('pwa.quickAccess')}
           </p>
         </div>
 
@@ -80,19 +73,19 @@ export default function PWAInstallPrompt({ onClose }) {
         {isIOS && (
           <div className="px-5 pb-4">
             <div className="rounded-xl p-4" style={{ background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
-              <p className="text-white text-sm font-medium mb-3">No Safari:</p>
+              <p className="text-white text-sm font-medium mb-3">{t('pwa.inSafari')}</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-[#9ca3af] text-sm">
                   <span className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xs">1</span>
-                  <span>Toque em <span className="text-white">Compartilhar</span> (↑)</span>
+                  <span>{t('pwa.iosStep1')} (↑)</span>
                 </div>
                 <div className="flex items-center gap-3 text-[#9ca3af] text-sm">
                   <span className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xs">2</span>
-                  <span>Toque em <span className="text-white">"Adicionar à Tela de Início"</span></span>
+                  <span>{t('pwa.iosStep2')}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[#9ca3af] text-sm">
                   <span className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xs">3</span>
-                  <span>Toque em <span className="text-white">Adicionar</span></span>
+                  <span>{t('pwa.iosStep3')}</span>
                 </div>
               </div>
             </div>
@@ -107,7 +100,7 @@ export default function PWAInstallPrompt({ onClose }) {
             style={{ background: '#1a1a1a', color: '#9ca3af' }}
             data-testid="pwa-install-no"
           >
-            Agora não
+            {t('pwa.notNow')}
           </button>
           {isIOS ? (
             <button
@@ -116,7 +109,7 @@ export default function PWAInstallPrompt({ onClose }) {
               style={{ background: '#22c55e', color: '#000' }}
               data-testid="pwa-install-ok"
             >
-              Entendi!
+              {t('pwa.gotIt')}
             </button>
           ) : (
             <button
@@ -125,7 +118,7 @@ export default function PWAInstallPrompt({ onClose }) {
               style={{ background: '#22c55e', color: '#000' }}
               data-testid="pwa-install-yes"
             >
-              Sim, instalar
+              {t('pwa.install')}
             </button>
           )}
         </div>

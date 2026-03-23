@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getLevelColor } from '../utils/gamification.js';
 import AIChat from './AIChat.jsx';
 
-const ALL_NAV = [
-  { id: 'today',        label: 'Today',     icon: '🏠', section: 'main' },
-  { id: 'habits',       label: 'Habits',    icon: '✅', section: 'main' },
-  { id: 'stats',        label: 'Stats',     icon: '📊', section: 'main' },
-  { id: 'journal',      label: 'Journal',   icon: '📖', section: 'more' },
-  { id: 'achievements', label: 'Medals',    icon: '🏅', section: 'main' },
-  { id: 'events',       label: 'Events',    icon: '✈️',  section: 'more' },
-  { id: 'friends',      label: 'Friends',   icon: '👥', section: 'more' },
-  { id: 'customize',    label: 'Customize', icon: '🎨', section: 'more' },
-  { id: 'profile',      label: 'Profile',   icon: null,  section: 'bottom' },  // Special - shows avatar
+const NAV_KEYS = [
+  { id: 'today',        labelKey: 'nav.today',     icon: '🏠', section: 'main' },
+  { id: 'habits',       labelKey: 'nav.habits',    icon: '✅', section: 'main' },
+  { id: 'stats',        labelKey: 'nav.stats',     icon: '📊', section: 'main' },
+  { id: 'journal',      labelKey: 'nav.journal',   icon: '📖', section: 'more' },
+  { id: 'achievements', labelKey: 'nav.medals',    icon: '🏅', section: 'main' },
+  { id: 'events',       labelKey: 'nav.events',    icon: '✈️',  section: 'more' },
+  { id: 'friends',      labelKey: 'nav.friends',   icon: '👥', section: 'more' },
+  { id: 'customize',    labelKey: 'nav.customize', icon: '🎨', section: 'more' },
+  { id: 'profile',      labelKey: 'nav.profile',   icon: null,  section: 'bottom' },
 ];
 
 // Bottom tabs: Today, Habits, AI, Medals, Profile (like Instagram with AI in center)
@@ -57,6 +58,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
     updateProfile, accentColor, settings,
   } = useHabits();
   const { currentUser, logout } = useAuth();
+  const { t } = useLanguage();
 
   const levelColor = getLevelColor(currentLevel);
   const initial    = (profile?.name || currentUser?.displayName || '?')[0].toUpperCase();
@@ -106,9 +108,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
       // Show manual instructions for iOS or when prompt not available
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (isIOS) {
-        alert('Para instalar no iPhone/iPad:\n\n1. Toque no ícone de compartilhar (↑)\n2. Role para baixo e toque em "Adicionar à Tela de Início"\n3. Toque em "Adicionar"');
+        alert(t('nav.iosInstallAlert'));
       } else {
-        alert('Para instalar:\n\n1. Abra o menu do navegador (⋮)\n2. Toque em "Instalar app" ou "Adicionar à tela inicial"');
+        alert(t('nav.browserInstallAlert'));
       }
     }
     setShowMenu(false);
@@ -138,7 +140,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
           </div>
           <div>
             <h1 className="text-white font-bold text-sm leading-none tracking-tight">{appName}</h1>
-            <p className="text-[#4b5563] text-[10px] mt-0.5">Level up your life</p>
+            <p className="text-[#4b5563] text-[10px] mt-0.5">{t('nav.levelUpLife')}</p>
           </div>
         </div>
 
@@ -183,7 +185,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
 
         {/* Nav items */}
         <nav className="flex flex-col gap-0.5 flex-1">
-          {ALL_NAV.map(item => {
+          {NAV_KEYS.map(item => {
             const isActive  = activeTab === item.id;
             const isProfile = item.id === 'profile';
             return (
@@ -203,7 +205,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                 ) : (
                   <span className="text-base w-5 text-center leading-none">{item.icon}</span>
                 )}
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium">{t(item.labelKey)}</span>
                 {isActive && <div className="ml-auto w-1 h-4 rounded-full" style={{ background: accentColor }} />}
               </button>
             );
@@ -213,7 +215,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
         {/* Footer */}
         <div className="mt-4 pt-4 border-t border-[#1f1f1f]">
           <div className="flex items-center justify-between px-1 mb-2">
-            <span className="text-[#4b5563] text-xs">Medals</span>
+            <span className="text-[#4b5563] text-xs">{t('nav.medals')}</span>
             <span className="text-white text-xs font-bold">{achievements.length}/30</span>
           </div>
           <div className="h-1 rounded-full overflow-hidden" style={{ background: '#1f1f1f' }}>
@@ -223,7 +225,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
           {onExport && (
             <button onClick={onExport}
               className="mt-3 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[#4b5563] hover:text-[#9ca3af] hover:bg-white/[0.03] transition-all text-xs">
-              <span>⊞</span><span>Backup & Restore</span>
+              <span>⊞</span><span>{t('nav.backup')}</span>
             </button>
           )}
         </div>
@@ -264,8 +266,10 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
           <span className="text-[11px] text-[#6b7280] font-medium px-2.5 py-1 rounded-full"
             style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)' }}>
-            {activeTab === 'achievements' ? 'Medals'
-              : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            {(() => {
+              const navItem = NAV_KEYS.find(n => n.id === activeTab);
+              return navItem ? t(navItem.labelKey) : activeTab;
+            })()}
           </span>
 
           {/* Hamburger button */}
@@ -299,7 +303,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
       >
         <div className="flex items-stretch" style={{ height: 56 }}>
           {BOTTOM_TABS.map(tabId => {
-            const item = ALL_NAV.find(n => n.id === tabId);
+            const item = NAV_KEYS.find(n => n.id === tabId);
             const isActive = activeTab === tabId;
             const isProfile = tabId === 'profile';
             const isAI = tabId === 'ai';
@@ -360,7 +364,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                 )}
                 <span className="text-[10px] font-medium leading-none"
                   style={{ color: isActive ? 'var(--text-primary, #fff)' : 'var(--text-subtle, #4b5563)' }}>
-                  {item?.label}
+                  {item ? t(item.labelKey) : tabId}
                 </span>
               </button>
             );
@@ -409,8 +413,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
             {/* Scrollable nav list */}
             <div className="flex-1 overflow-y-auto py-2">
               {/* Main section */}
-              <p className="text-[10px] font-bold uppercase tracking-wider px-5 pt-3 pb-1.5 text-[#374151]">Main</p>
-              {ALL_NAV.filter(n => n.section === 'main').map(item => {
+              <p className="text-[10px] font-bold uppercase tracking-wider px-5 pt-3 pb-1.5 text-[#374151]">{t('nav.main')}</p>
+              {NAV_KEYS.filter(n => n.section === 'main').map(item => {
                 const isActive = activeTab === item.id;
                 return (
                   <button key={item.id}
@@ -425,7 +429,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                     </div>
                     <span className="font-semibold text-[15px] flex-1 text-left"
                       style={{ color: isActive ? accentColor : '#e5e7eb' }}>
-                      {item.label}
+                      {t(item.labelKey)}
                     </span>
                     {isActive && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accentColor }} />}
                   </button>
@@ -433,8 +437,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
               })}
 
               {/* More section */}
-              <p className="text-[10px] font-bold uppercase tracking-wider px-5 pt-4 pb-1.5 text-[#374151]">More</p>
-              {ALL_NAV.filter(n => n.section === 'more').map(item => {
+              <p className="text-[10px] font-bold uppercase tracking-wider px-5 pt-4 pb-1.5 text-[#374151]">{t('nav.more')}</p>
+              {NAV_KEYS.filter(n => n.section === 'more').map(item => {
                 const isActive  = activeTab === item.id;
                 const isProfile = item.id === 'profile';
                 return (
@@ -452,7 +456,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                     </div>
                     <span className="font-semibold text-[15px] flex-1 text-left"
                       style={{ color: isActive ? accentColor : '#e5e7eb' }}>
-                      {item.label}
+                      {t(item.labelKey)}
                     </span>
                     {isActive && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accentColor }} />}
                   </button>
@@ -469,7 +473,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                       style={{ background: 'var(--bg-main,#0a0a0a)', border: '1px solid var(--bg-border,#1f1f1f)' }}>
                       ⊞
                     </div>
-                    <span className="font-semibold text-[15px]">Backup & Restore</span>
+                    <span className="font-semibold text-[15px]">{t('nav.backup')}</span>
                   </button>
                 </>
               )}
@@ -489,9 +493,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                     </div>
                     <div className="flex-1 text-left">
                       <span className="font-semibold text-[15px] block" style={{ color: accentColor }}>
-                        Instalar App
+                        {t('nav.installApp')}
                       </span>
-                      <span className="text-[11px] text-[#6b7280]">Adicionar à tela inicial</span>
+                      <span className="text-[11px] text-[#6b7280]">{t('nav.addToHome')}</span>
                     </div>
                   </button>
                 </>
@@ -512,9 +516,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                     </div>
                     <div className="flex-1 text-left">
                       <span className="font-semibold text-[15px] block" style={{ color: '#e5e7eb' }}>
-                        Ver Tutorial
+                        {t('nav.tutorial')}
                       </span>
-                      <span className="text-[11px] text-[#6b7280]">Como usar o app</span>
+                      <span className="text-[11px] text-[#6b7280]">{t('nav.tutorialDesc')}</span>
                     </div>
                   </button>
                 </>
@@ -528,7 +532,7 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                 onClick={() => { setShowMenu(false); logout(); }}
                 className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-all active:scale-[0.98]"
                 style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)' }}>
-                Sign out
+                {t('nav.signOut')}
               </button>
             </div>
           </div>

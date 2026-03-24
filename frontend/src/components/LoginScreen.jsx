@@ -37,9 +37,9 @@ export default function LoginScreen({ onBack }) {
         const result = await signup(username, password, email || null, rememberMe);
         if (result.error) {
           setError(result.error);
-        } else if (result.emailSent && result.email) {
-          // Show verification sent message — the user is already logged in (token saved)
-          setSignupSuccess({ email: result.email, emailSent: true });
+        } else if (result.email) {
+          // Show verification screen whenever email was provided (regardless of delivery status)
+          setSignupSuccess({ email: result.email, emailSent: result.emailSent });
         }
         // If no email provided, signup just proceeds normally (user is logged in)
       } else {

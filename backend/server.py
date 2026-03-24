@@ -486,6 +486,7 @@ def login(req: AuthReq, request: Request):
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
             'isAdmin': is_admin,
+            'emailVerified': user.get('email_verified') if user.get('email') else None,
         }
     }
 
@@ -536,6 +537,7 @@ def login_email(req: EmailLoginReq, request: Request):
             'email': user.get('email', ''),
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
+            'emailVerified': user.get('email_verified') if user.get('email') else None,
         }
     }
 

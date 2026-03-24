@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { getLastNDays, getTodayString } from '../utils/dateUtils.js';
-import { getLevelColor, getLevelTitle, getLevelIcon, ACHIEVEMENTS, RARITY_COLORS } from '../utils/gamification.js';
+import { getLevelColor, getLevelTitle, getLevelIcon, ACHIEVEMENTS, TROPHY_TIERS } from '../utils/gamification.js';
 import XPBar from './XPBar.jsx';
 import WeeklyReview from './WeeklyReview.jsx';
 import GrowthChart, { RANGES, PAD, cW, cH, buildSmoothPath, xAxisStep, formatXLabel, RangeSelector, ChartGrid } from './GrowthChart.jsx';
@@ -249,7 +249,7 @@ function HealthChart({ habits, achievements }) {
         <div className="p-4 grid grid-cols-2 gap-2">
           {healthMedals.map(achievement => {
             const unlocked = unlockedIds.has(achievement.id);
-            const rarity = RARITY_COLORS[achievement.rarity] || RARITY_COLORS.common;
+            const rarity = TROPHY_TIERS[achievement.tier] || TROPHY_TIERS.bronze;
             return (
               <div
                 key={achievement.id}

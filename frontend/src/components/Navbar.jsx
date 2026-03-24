@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
-import { getLevelColor } from '../utils/gamification.js';
+import { getLevelColor, ACHIEVEMENTS } from '../utils/gamification.js';
 import { LanguageSelectorMenu } from './LanguageSelector.jsx';
 import AIChat from './AIChat.jsx';
 
@@ -216,8 +216,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
         {/* Footer */}
         <div className="mt-4 pt-4 border-t border-[#1f1f1f]">
           <div className="flex items-center justify-between px-1 mb-2">
-            <span className="text-[#4b5563] text-xs">{t('nav.medals')}</span>
-            <span className="text-white text-xs font-bold">{achievements.length}/30</span>
+            <span className="text-[#4b5563] text-xs">{t('achievements.title')}</span>
+            <span className="text-white text-xs font-bold">{achievements.length}/{ACHIEVEMENTS.length}</span>
           </div>
           <div className="h-1 rounded-full overflow-hidden" style={{ background: '#1f1f1f' }}>
             <div className="h-full rounded-full"
@@ -268,8 +268,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
           </div>
         </button>
 
-        {/* Right: section label + hamburger */}
-        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Right: section label */}
+        <div className="flex items-center flex-shrink-0 ml-2">
           <span className="text-[11px] text-[#6b7280] font-medium px-2.5 py-1 rounded-full"
             style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)' }}>
             {(() => {
@@ -277,17 +277,6 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
               return navItem ? t(navItem.labelKey) : activeTab;
             })()}
           </span>
-
-          {/* Hamburger button */}
-          <button data-testid="hamburger-btn"
-            onClick={() => setShowMenu(true)}
-            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl active:scale-90 transition-all"
-            style={{ background: 'var(--bg-card, #111111)', border: '1px solid var(--bg-border, #1f1f1f)' }}
-          >
-            <span className="block w-[18px] h-[2px] rounded-full bg-white/75" />
-            <span className="block w-[18px] h-[2px] rounded-full bg-white/75" />
-            <span className="block w-[12px] h-[2px] rounded-full bg-white/50 self-start ml-[3px]" />
-          </button>
         </div>
       </header>
 

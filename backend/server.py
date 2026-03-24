@@ -252,6 +252,13 @@ class ChangePasswordReq(BaseModel):
     current_password: str
     new_password: str
 
+class ForgotPasswordReq(BaseModel):
+    email: str
+
+class ResetPasswordReq(BaseModel):
+    token: str
+    new_password: str
+
 class UpdateProfileReq(BaseModel):
     picture: Optional[str] = None
     display_name: Optional[str] = None
@@ -831,6 +838,137 @@ async def resend_verification(cu: dict = Depends(get_current_user)):
     if not sent:
         raise HTTPException(status_code=500, detail='Falha ao enviar e-mail. Tente novamente.')
     return {'ok': True, 'message': f'E-mail de verificação reenviado para {user["email"]}'}
+
+# ── Forgot / Reset Password ────────────────────────────────────────────────────
+
+def get_reset_password_email_html(display_name: str, reset_url: str) -> str:
+    logo_url = "https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png"
+    return f"""
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redefinir senha - RoutineTracker</title>
+</head>
+<body style="margin:0;padding:0;background-color:#080808;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#080808;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;">
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              <img src="{logo_url}" width="56" height="56" alt="RoutineTracker" style="border-radius:16px;display:block;margin:0 auto 16px auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">RoutineTracker</h1>
+              <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">Transforme sua rotina em conquistas</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111111;border:1px solid #1f1f1f;border-radius:24px;padding:40px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+                <tr><td style="height:3px;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:99px;"></td></tr>
+              </table>
+              <h2 style="margin:0 0 8px;color:#ffffff;font-size:20px;font-weight:700;">Redefinir sua senha</h2>
+              <p style="margin:0 0 24px;color:#9ca3af;font-size:15px;line-height:1.6;">
+                Olá, <strong style="color:#ffffff;">{display_name}</strong>! Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{reset_url}" target="_blank"
+                      style="display:inline-block;background-color:#f59e0b;color:#000000;text-decoration:none;font-weight:700;font-size:15px;padding:14px 36px;border-radius:14px;letter-spacing:0.3px;">
+                      Redefinir Senha
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+                <tr><td style="height:1px;background-color:#1f1f1f;"></td></tr>
+              </table>
+              <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">
+                Este link é válido por <strong style="color:#9ca3af;">1 hora</strong>. Se você não solicitou a redefinição de senha, ignore este e-mail — sua conta continua segura.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 16px 0;text-align:center;">
+              <p style="margin:0 0 8px;color:#6b7280;font-size:12px;">Ou copie e cole este link no navegador:</p>
+              <p style="margin:0;word-break:break-all;">
+                <a href="{reset_url}" style="color:#f59e0b;font-size:11px;text-decoration:none;">{reset_url}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 16px 0;text-align:center;border-top:1px solid #1f1f1f;margin-top:28px;">
+              <p style="margin:0 0 4px;color:#6b7280;font-size:11px;">© 2026 RoutineTracker</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+async def send_reset_password_email(email: str, display_name: str, token: str):
+    if not RESEND_API_KEY:
+        print('[EMAIL] RESEND_API_KEY not configured, skipping reset email')
+        return False
+    reset_url = f"{APP_URL}/?reset_password={token}"
+    html = get_reset_password_email_html(display_name, reset_url)
+    params = {
+        "from": f"RoutineTracker <{SENDER_EMAIL}>",
+        "to": [email],
+        "subject": "Redefinir senha — RoutineTracker",
+        "html": html,
+    }
+    try:
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        print(f'[EMAIL] Sent password reset to {email}: {result}')
+        return True
+    except Exception as e:
+        print(f'[EMAIL] Failed to send reset to {email}: {e}')
+        return False
+
+@app.post('/api/auth/forgot-password')
+async def forgot_password(req: ForgotPasswordReq):
+    """Send a password reset email. Always returns success to avoid revealing if email exists."""
+    email_lower = req.email.strip().lower()
+    user = users_c.find_one({'email': {'$regex': f'^{re.escape(email_lower)}$', '$options': 'i'}})
+
+    if user and user.get('email'):
+        reset_token   = secrets.token_urlsafe(32)
+        reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        users_c.update_one(
+            {'_id': user['_id']},
+            {'$set': {'reset_token': reset_token, 'reset_token_expires': reset_expires}}
+        )
+        display = user.get('display_name') or user.get('displayName') or user.get('username', '')
+        await send_reset_password_email(user['email'], display, reset_token)
+
+    return {'ok': True, 'message': 'Se o e-mail estiver cadastrado, enviaremos um link de redefinição.'}
+
+@app.post('/api/auth/reset-password')
+async def reset_password(req: ResetPasswordReq):
+    """Reset user password using the token from the reset email."""
+    user = users_c.find_one({'reset_token': req.token})
+    if not user:
+        raise HTTPException(status_code=400, detail='Link inválido ou já utilizado.')
+
+    expires = user.get('reset_token_expires')
+    if expires and expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        users_c.update_one({'_id': user['_id']}, {'$unset': {'reset_token': '', 'reset_token_expires': ''}})
+        raise HTTPException(status_code=400, detail='Link expirado. Solicite um novo.')
+
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail='A nova senha deve ter pelo menos 6 caracteres.')
+
+    new_hash = hash_pw(req.new_password)
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'password_hash': new_hash}, '$unset': {'reset_token': '', 'reset_token_expires': ''}}
+    )
+    return {'ok': True, 'message': 'Senha redefinida com sucesso!'}
 
 # ── Google OAuth ───────────────────────────────────────────────────────────────
 @app.post('/api/auth/google')

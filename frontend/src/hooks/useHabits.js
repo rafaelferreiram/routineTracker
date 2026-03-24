@@ -5,7 +5,7 @@ import { calculateXPGain, computeStats, getLevelFromXP, getLevelProgress, getLev
 
 export function useHabits() {
   const { state, dispatch, synced } = useStore();
-  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events, moods } = state;
+  const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events, moods, disabledTrophies } = state;
 
   // ─── Computed Values ───────────────────────────────────────────────────────
 
@@ -171,6 +171,14 @@ export function useHabits() {
     dispatch({ type: ACTIONS.LOG_MOOD, payload: { date, mood } });
   }, [dispatch]);
 
+  const disableTrophy = useCallback((id) => {
+    dispatch({ type: ACTIONS.DISABLE_TROPHY, payload: { id } });
+  }, [dispatch]);
+
+  const enableTrophy = useCallback((id) => {
+    dispatch({ type: ACTIONS.ENABLE_TROPHY, payload: { id } });
+  }, [dispatch]);
+
   const addEvent = useCallback((eventData) => {
     dispatch({ type: ACTIONS.ADD_EVENT, payload: eventData });
   }, [dispatch]);
@@ -211,6 +219,7 @@ export function useHabits() {
     habits,
     profile,
     achievements,
+    disabledTrophies: disabledTrophies || [],
     settings: settings || {},
     accentColor,
     toasts,
@@ -260,5 +269,7 @@ export function useHabits() {
     deleteEvent,
     logNumericValue,
     logMood,
+    disableTrophy,
+    enableTrophy,
   };
 }

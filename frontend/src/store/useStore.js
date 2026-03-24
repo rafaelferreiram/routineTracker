@@ -518,6 +518,7 @@ function getInitialState(username, defaultTheme = {}) {
         levelUpPending: null,
         events: [],
         moods: {},
+        disabledTrophies: [],
         ...parsed,
       };
     }
@@ -544,6 +545,7 @@ function getInitialState(username, defaultTheme = {}) {
       : [],
     settings: { theme: defaultTheme.themeId || 'dark', accentColor: defaultTheme.accentColor || '#22c55e', appName: 'RoutineTracker', appIcon: '⚡', categories: DEFAULT_CATEGORIES },
     moods: {},
+    disabledTrophies: [],
     toasts: [],
     confetti: false,
     levelUpPending: null,
@@ -569,6 +571,8 @@ export const ACTIONS = {
 
   // Achievements
   UNLOCK_ACHIEVEMENT: 'UNLOCK_ACHIEVEMENT',
+  DISABLE_TROPHY: 'DISABLE_TROPHY',
+  ENABLE_TROPHY: 'ENABLE_TROPHY',
 
   // UI
   ADD_TOAST: 'ADD_TOAST',
@@ -707,6 +711,18 @@ function reducer(state, action) {
           { id: action.payload.id, unlockedAt: new Date().toISOString() },
         ],
       };
+    }
+
+    case ACTIONS.DISABLE_TROPHY: {
+      const id = action.payload.id;
+      const existing = state.disabledTrophies || [];
+      if (existing.includes(id)) return state;
+      return { ...state, disabledTrophies: [...existing, id] };
+    }
+
+    case ACTIONS.ENABLE_TROPHY: {
+      const id = action.payload.id;
+      return { ...state, disabledTrophies: (state.disabledTrophies || []).filter(tid => tid !== id) };
     }
 
     case ACTIONS.ADD_TOAST: {
@@ -889,6 +905,7 @@ function reducer(state, action) {
         profile:        { freezeShields: 0, focusHabitId: null, focusHabitDate: null, ...loaded.profile },
         habits:         (loaded.habits || []).map(h => ({ completionTimestamps: {}, completions: [], numericValues: {}, ...h })),
         achievements:   loaded.achievements   || state.achievements,
+        disabledTrophies: loaded.disabledTrophies || state.disabledTrophies || [],
         journalEntries: loaded.journalEntries || [],
         events:         loaded.events         || [],
         moods:          loaded.moods          || {},
@@ -944,6 +961,7 @@ export function StoreProvider({ children, username, defaultTheme }) {
           profile:          state.profile,
           habits:           state.habits,
           achievements:     state.achievements,
+          disabledTrophies: state.disabledTrophies || [],
           journalEntries:   state.journalEntries || [],
           events:           state.events || [],
           moods:            state.moods || {},
@@ -967,7 +985,7 @@ export function StoreProvider({ children, username, defaultTheme }) {
       }
     }, 500);
     return () => clearTimeout(saveTimerRef.current);
-  }, [synced, state.profile, state.habits, state.achievements, state.journalEntries, state.events, state.moods, state.settings, storageKey]);
+  }, [synced, state.profile, state.habits, state.achievements, state.disabledTrophies, state.journalEntries, state.events, state.moods, state.settings, storageKey]);
 
   // Check achievements on mount + whenever habits change
   useEffect(() => {
@@ -978,7 +996,8 @@ export function StoreProvider({ children, username, defaultTheme }) {
     const newlyUnlocked = checkAchievements(
       state.habits,
       state.achievements,
-      state.profile
+      state.profile,
+      state.disabledTrophies
     );
 
     newlyUnlocked.forEach(achievementId => {

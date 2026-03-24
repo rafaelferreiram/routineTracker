@@ -15,6 +15,8 @@ import io
 import re
 from collections import defaultdict
 import time
+import secrets
+import resend
 
 load_dotenv()
 
@@ -29,6 +31,12 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # Google Maps API Key
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+# Resend Email
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL   = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+APP_URL        = os.environ.get('APP_URL', 'http://localhost:3000')
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')
@@ -228,6 +236,7 @@ def sanitize_string(s: str, max_length: int = 1000) -> str:
 class AuthReq(BaseModel):
     username: str
     password: str
+    email: Optional[str] = None
 
 class EmailLoginReq(BaseModel):
     email: str
@@ -477,6 +486,7 @@ def login(req: AuthReq, request: Request):
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
             'isAdmin': is_admin,
+            'emailVerified': user.get('email_verified') if user.get('email') else None,
         }
     }
 
@@ -527,6 +537,7 @@ def login_email(req: EmailLoginReq, request: Request):
             'email': user.get('email', ''),
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
+            'emailVerified': user.get('email_verified') if user.get('email') else None,
         }
     }
 
@@ -543,16 +554,169 @@ def validate_password(password: str) -> tuple[bool, str]:
         return False, 'Senha deve conter pelo menos um número'
     return True, ''
 
+def get_verification_email_html(username: str, display_name: str, verify_url: str) -> str:
+    """Generate a beautiful HTML verification email matching the RoutineTracker dark theme."""
+    logo_url = "https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png"
+    return f"""
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirme seu e-mail - RoutineTracker</title>
+</head>
+<body style="margin:0;padding:0;background-color:#080808;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#080808;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              <img src="{logo_url}" width="56" height="56" alt="RoutineTracker" style="border-radius:16px;display:block;margin:0 auto 16px auto;" />
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">RoutineTracker</h1>
+              <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">Transforme sua rotina em conquistas</p>
+            </td>
+          </tr>
+
+          <!-- Main Card -->
+          <tr>
+            <td style="background-color:#111111;border:1px solid #1f1f1f;border-radius:24px;padding:40px 36px;">
+
+              <!-- Green top accent bar -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+                <tr>
+                  <td style="height:3px;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:99px;"></td>
+                </tr>
+              </table>
+
+              <!-- Greeting -->
+              <h2 style="margin:0 0 8px;color:#ffffff;font-size:20px;font-weight:700;">Olá, {display_name}! 👋</h2>
+              <p style="margin:0 0 24px;color:#9ca3af;font-size:15px;line-height:1.6;">
+                Bem-vindo ao RoutineTracker! Para ativar sua conta e começar a transformar seus hábitos, confirme seu endereço de e-mail clicando no botão abaixo.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{verify_url}" target="_blank"
+                      style="display:inline-block;background-color:#22c55e;color:#000000;text-decoration:none;font-weight:700;font-size:15px;padding:14px 36px;border-radius:14px;letter-spacing:0.3px;">
+                      ✓ Confirmar E-mail
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Divider -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+                <tr>
+                  <td style="height:1px;background-color:#1f1f1f;"></td>
+                </tr>
+              </table>
+
+              <!-- What you'll get section -->
+              <p style="margin:0 0 16px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">
+                Com o RoutineTracker você terá:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding:6px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:middle;"><span style="display:inline-block;width:20px;height:20px;background:#22c55e18;border:1px solid #22c55e30;border-radius:6px;text-align:center;line-height:20px;font-size:11px;">✅</span></td>
+                        <td style="padding-left:10px;color:#d1d5db;font-size:14px;">Rastreamento de hábitos com XP e níveis</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:middle;"><span style="display:inline-block;width:20px;height:20px;background:#22c55e18;border:1px solid #22c55e30;border-radius:6px;text-align:center;line-height:20px;font-size:11px;">✈️</span></td>
+                        <td style="padding-left:10px;color:#d1d5db;font-size:14px;">Eventos compartilhados com amigos</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:middle;"><span style="display:inline-block;width:20px;height:20px;background:#22c55e18;border:1px solid #22c55e30;border-radius:6px;text-align:center;line-height:20px;font-size:11px;">🤖</span></td>
+                        <td style="padding-left:10px;color:#d1d5db;font-size:14px;">Assistente TARS com IA personalizada</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Small print about link expiry -->
+              <p style="margin:24px 0 0;color:#6b7280;font-size:12px;line-height:1.6;">
+                Este link é válido por <strong style="color:#9ca3af;">72 horas</strong>. Se não foi você, pode ignorar este e-mail.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Fallback URL -->
+          <tr>
+            <td style="padding:24px 16px 0;text-align:center;">
+              <p style="margin:0 0 8px;color:#6b7280;font-size:12px;">Ou copie e cole este link no navegador:</p>
+              <p style="margin:0;word-break:break-all;">
+                <a href="{verify_url}" style="color:#22c55e;font-size:11px;text-decoration:none;">{verify_url}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 16px 0;text-align:center;border-top:1px solid #1f1f1f;margin-top:28px;">
+              <p style="margin:0 0 4px;color:#6b7280;font-size:11px;">© 2026 RoutineTracker — Transforme sua rotina em conquistas.</p>
+              <p style="margin:0;color:#374151;font-size:10px;">Você está recebendo este e-mail porque se cadastrou no RoutineTracker.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+async def send_verification_email(email: str, username: str, display_name: str, token: str):
+    """Send email verification asynchronously via Resend."""
+    if not RESEND_API_KEY:
+        print('[EMAIL] RESEND_API_KEY not configured, skipping email')
+        return False
+    verify_url = f"{APP_URL}/?verify_email={token}"
+    html = get_verification_email_html(username, display_name, verify_url)
+    params = {
+        "from": f"RoutineTracker <{SENDER_EMAIL}>",
+        "to": [email],
+        "subject": "✅ Confirme seu e-mail — RoutineTracker",
+        "html": html,
+    }
+    try:
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        print(f'[EMAIL] Sent verification to {email}: {result}')
+        return True
+    except Exception as e:
+        print(f'[EMAIL] Failed to send to {email}: {e}')
+        return False
+
 @app.post('/api/auth/register')
-def register(req: AuthReq, request: Request):
+async def register(req: AuthReq, request: Request):
     # Rate limit registration attempts
     client_ip = request.client.host if request.client else 'unknown'
-    check_rate_limit(client_ip, 'register', max_requests=5)  # 5 attempts per minute
-    
+    check_rate_limit(client_ip, 'register', max_requests=5)
+
     username = sanitize_string(req.username.lower(), 20)
     display  = sanitize_string(req.username, 20)
-    password = req.password  # Don't sanitize password, just validate
-    
+    password = req.password
+    email    = req.email.strip().lower() if req.email else None
+
     if not username or not password:
         raise HTTPException(status_code=400, detail='Username and password are required')
     if len(username) < 2:
@@ -561,34 +725,112 @@ def register(req: AuthReq, request: Request):
         raise HTTPException(status_code=400, detail='Username must be at most 20 characters')
     if not username.isalnum():
         raise HTTPException(status_code=400, detail='Username must contain only letters and numbers')
-    
-    # Validate password strength
+
     is_valid, error_msg = validate_password(password)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
-    
+
     if users_c.find_one({'username': username}):
         raise HTTPException(status_code=400, detail='Username already taken')
 
+    if email:
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            raise HTTPException(status_code=400, detail='E-mail inválido')
+        if users_c.find_one({'email': email}):
+            raise HTTPException(status_code=400, detail='Este e-mail já está em uso')
+
     theme = {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'}
-    ins = users_c.insert_one({
+
+    verification_token   = secrets.token_urlsafe(32) if email else None
+    verification_expires = datetime.now(timezone.utc) + timedelta(hours=72) if email else None
+
+    user_doc = {
         'username':      username,
         'display_name':  display,
         'password_hash': hash_pw(password),
         'theme':         theme,
         'created_at':    datetime.now(timezone.utc),
-    })
+    }
+    if email:
+        user_doc.update({
+            'email':                email,
+            'email_verified':       False,
+            'verification_token':   verification_token,
+            'verification_expires': verification_expires,
+        })
+
+    ins   = users_c.insert_one(user_doc)
     uid   = str(ins.inserted_id)
     token = make_token(uid, username)
+
+    email_sent = False
+    if email and verification_token:
+        email_sent = await send_verification_email(email, username, display, verification_token)
+
     return {
         'token': token,
         'user': {
-            'id': uid,
-            'username': username,
-            'displayName': display,
-            'theme': theme,
-        }
+            'id':           uid,
+            'username':     username,
+            'displayName':  display,
+            'theme':        theme,
+            'email':        email,
+            'emailVerified': False if email else None,
+        },
+        'emailSent': email_sent,
     }
+
+# ── Email Verification ─────────────────────────────────────────────────────────
+
+@app.get('/api/auth/verify-email')
+async def verify_email(token: str):
+    """Verify email using the token from the verification email."""
+    if not token:
+        raise HTTPException(status_code=400, detail='Token inválido')
+
+    user = users_c.find_one({'verification_token': token})
+    if not user:
+        raise HTTPException(status_code=404, detail='Token não encontrado ou já utilizado')
+
+    # Check expiry
+    expires = user.get('verification_expires')
+    if expires:
+        if isinstance(expires, str):
+            expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=400, detail='Token expirado. Solicite um novo e-mail de verificação.')
+
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'email_verified': True}, '$unset': {'verification_token': '', 'verification_expires': ''}}
+    )
+    return {'ok': True, 'message': 'E-mail confirmado com sucesso! Você já pode fazer login.'}
+
+@app.post('/api/auth/resend-verification')
+async def resend_verification(cu: dict = Depends(get_current_user)):
+    """Resend email verification link."""
+    from bson import ObjectId
+    uid  = cu['sub']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    if not user:
+        raise HTTPException(status_code=404, detail='Usuário não encontrado')
+    if not user.get('email'):
+        raise HTTPException(status_code=400, detail='Nenhum e-mail associado à conta')
+    if user.get('email_verified'):
+        return {'ok': True, 'message': 'E-mail já verificado'}
+
+    new_token   = secrets.token_urlsafe(32)
+    new_expires = datetime.now(timezone.utc) + timedelta(hours=72)
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'verification_token': new_token, 'verification_expires': new_expires}}
+    )
+    sent = await send_verification_email(user['email'], user['username'], user.get('display_name', user['username']), new_token)
+    if not sent:
+        raise HTTPException(status_code=500, detail='Falha ao enviar e-mail. Tente novamente.')
+    return {'ok': True, 'message': f'E-mail de verificação reenviado para {user["email"]}'}
 
 # ── Google OAuth ───────────────────────────────────────────────────────────────
 @app.post('/api/auth/google')

@@ -49,6 +49,16 @@ export function useHabits() {
     const wasCompleted = habit.completions.includes(targetDate);
     const isToday = targetDate === today;
 
+    // Compute streaks BEFORE dispatch for milestone detection
+    const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90, 100, 200, 365];
+    let hitMilestone = null;
+    if (!wasCompleted && isToday) {
+      const oldStreak = calculateStreak(habit.completions, habit.frequency);
+      const newCompletions = [...habit.completions, targetDate];
+      const newStreak = calculateStreak(newCompletions, habit.frequency);
+      hitMilestone = STREAK_MILESTONES.find(m => oldStreak < m && newStreak >= m) || null;
+    }
+
     dispatch({
       type: ACTIONS.TOGGLE_COMPLETION,
       payload: { habitId, date: targetDate, timestamp: new Date().toISOString() },
@@ -79,12 +89,29 @@ export function useHabits() {
         },
       });
 
+      // Streak milestone celebration
+      if (hitMilestone) {
+        dispatch({ type: ACTIONS.SET_CONFETTI, payload: { active: true } });
+        setTimeout(() => {
+          dispatch({ type: ACTIONS.SET_CONFETTI, payload: { active: false } });
+        }, 5000);
+        dispatch({
+          type: ACTIONS.ADD_TOAST,
+          payload: {
+            type: 'achievement',
+            title: `🔥 ${hitMilestone} dias!`,
+            message: habit.name,
+            description: `Sequência incrível! Você manteve ${habit.name} por ${hitMilestone} dias seguidos!`,
+          },
+        });
+      }
+
       // Check if all done today (after this toggle)
       const otherTodayHabits = todayHabits.filter(h => h.id !== habitId);
       const allOthersDone = otherTodayHabits.every(h => h.completions.includes(today));
 
-      if (allOthersDone && otherTodayHabits.length > 0) {
-        // Trigger confetti for perfect day!
+      if (allOthersDone && otherTodayHabits.length > 0 && !hitMilestone) {
+        // Trigger confetti for perfect day (only if no milestone confetti already)
         dispatch({ type: ACTIONS.SET_CONFETTI, payload: { active: true } });
         setTimeout(() => {
           dispatch({ type: ACTIONS.SET_CONFETTI, payload: { active: false } });

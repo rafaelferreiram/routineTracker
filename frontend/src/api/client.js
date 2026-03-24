@@ -5,7 +5,8 @@
 const BASE = '/api';
 
 export function getToken() {
-  return localStorage.getItem('rq_token');
+  // Check both storages - sessionStorage takes precedence for "no remember me"
+  return sessionStorage.getItem('rq_token') || localStorage.getItem('rq_token');
 }
 
 export async function apiCall(method, path, body) {
@@ -32,8 +33,8 @@ export const api = {
   loginEmail: (email, password) =>
     apiCall('POST', '/auth/login-email', { email, password }),
 
-  register: (username, password) =>
-    apiCall('POST', '/auth/register', { username, password }),
+  register: (username, password, email) =>
+    apiCall('POST', '/auth/register', { username, password, ...(email ? { email } : {}) }),
 
   googleAuth: (sessionId) =>
     apiCall('POST', '/auth/google', { session_id: sessionId }),
@@ -43,6 +44,12 @@ export const api = {
 
   saveData: (data) =>
     apiCall('PUT', '/data', { data }),
+
+  verifyEmail: (token) =>
+    apiCall('GET', `/auth/verify-email?token=${encodeURIComponent(token)}`),
+
+  resendVerification: () =>
+    apiCall('POST', '/auth/resend-verification'),
 
   // Profile API
   getProfile: () =>

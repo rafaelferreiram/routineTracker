@@ -18,8 +18,8 @@ const NAV_KEYS = [
   { id: 'profile',      labelKey: 'nav.profile',   icon: null,  section: 'bottom' },
 ];
 
-// Bottom tabs: Today, Habits, AI, Medals, Profile (like Instagram with AI in center)
-const BOTTOM_TABS = ['today', 'habits', 'ai', 'achievements', 'profile'];
+// Bottom tabs: Today, Habits, AI, Medals, Menu (hamburger replaces Profile in footer)
+const BOTTOM_TABS = ['today', 'habits', 'ai', 'achievements', 'menu'];
 
 // Avatar component - uses Google photo or initial as fallback
 function Avatar({ picture, initial, size = 36, levelColor, accentColor, className = '' }) {
@@ -311,8 +311,8 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
           {BOTTOM_TABS.map(tabId => {
             const item = NAV_KEYS.find(n => n.id === tabId);
             const isActive = activeTab === tabId;
-            const isProfile = tabId === 'profile';
             const isAI = tabId === 'ai';
+            const isMenu = tabId === 'menu';
             
             // AI button in center - special style
             if (isAI) {
@@ -338,6 +338,24 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                 </button>
               );
             }
+
+            // Hamburger menu button (replaces profile tab)
+            if (isMenu) {
+              return (
+                <button key={tabId}
+                  data-testid="mobile-nav-menu"
+                  onClick={() => setShowMenu(true)}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90"
+                >
+                  <div className="flex flex-col items-center justify-center gap-[4px]">
+                    <span className="block w-[18px] h-[2px] rounded-full bg-white/70" />
+                    <span className="block w-[18px] h-[2px] rounded-full bg-white/70" />
+                    <span className="block w-[11px] h-[2px] rounded-full bg-white/50 self-start" />
+                  </div>
+                  <span className="text-[10px] font-medium leading-none text-[#4b5563]">Menu</span>
+                </button>
+              );
+            }
             
             return (
               <button key={tabId}
@@ -345,29 +363,9 @@ export default function Navbar({ activeTab, setActiveTab, onExport, onShowOnboar
                 onClick={() => setActiveTab(tabId)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-150 active:scale-90 relative"
               >
-                {isProfile ? (
-                  // Profile tab shows user avatar (Instagram-style)
-                  <div 
-                    className="rounded-full overflow-hidden flex items-center justify-center"
-                    style={{ 
-                      width: 28, 
-                      height: 28,
-                      border: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
-                      background: picture ? 'transparent' : `${levelColor || accentColor}22`,
-                    }}
-                  >
-                    {picture ? (
-                      <img src={picture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-xs font-bold" style={{ color: levelColor || accentColor }}>{initial}</span>
-                    )}
-                  </div>
-                ) : (
-                  // Regular tabs with icons
-                  <span className={`text-[22px] leading-none transition-all duration-200 ${isActive ? '' : 'opacity-40 grayscale'}`}>
-                    {item?.icon}
-                  </span>
-                )}
+                <span className={`text-[22px] leading-none transition-all duration-200 ${isActive ? '' : 'opacity-40 grayscale'}`}>
+                  {item?.icon}
+                </span>
                 <span className="text-[10px] font-medium leading-none"
                   style={{ color: isActive ? 'var(--text-primary, #fff)' : 'var(--text-subtle, #4b5563)' }}>
                   {item ? t(item.labelKey) : tabId}

@@ -81,7 +81,29 @@
 - [x] Language persistence via localStorage
 - [x] Fallback to English for missing translations
 
-### Collaborative Events (NEW - 2026-03-24)
+### Login & Auth UX (NEW - 2026-03-24)
+- [x] "Lembrar-me neste dispositivo" checkbox in login (checked by default)
+  - Checked: token stored in localStorage (persistent across browser restarts)
+  - Unchecked: token stored in sessionStorage (clears when browser closes)
+- [x] getToken() in client.js checks both sessionStorage and localStorage
+
+### Email Verification with Resend (NEW - 2026-03-24)
+- [x] Optional email field in signup form
+- [x] Email verification token generated on registration (72h expiry)
+- [x] Beautiful dark-themed HTML email template matching app design
+- [x] POST /api/auth/register sends verification email via Resend
+- [x] GET /api/auth/verify-email?token=xxx verifies token + marks email_verified=True
+- [x] POST /api/auth/resend-verification resends email (auth required)
+- [x] VerifyEmailPage component for handling ?verify_email=TOKEN URL
+- [x] VerifyEmailBanner shown in-app for users with unverified emails
+- [x] Login/login-email endpoints return emailVerified field
+- [x] Note: Resend in test mode - email only reaches verified domain; for prod, user must verify domain at resend.com/domains
+
+### Confetti for Streak Milestones (NEW - 2026-03-24)
+- [x] Milestone detection in useHabits.toggleCompletion
+- [x] Milestones: 7, 14, 21, 30, 60, 90, 100, 200, 365 days
+- [x] Triggers SET_CONFETTI + ADD_TOAST with milestone message
+- [x] Perfect day confetti only triggers if no milestone confetti already shown
 - [x] Dedicated `shared_events` MongoDB collection
 - [x] Full CRUD API: GET/POST/PUT/DELETE /api/events
 - [x] Invite friends by username: POST /api/events/{id}/invite

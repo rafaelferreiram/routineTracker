@@ -16,7 +16,11 @@ export default function LoginScreen({ onBack }) {
   const [error, setError]             = useState('');
   const [loading, setLoading]         = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [signupSuccess, setSignupSuccess] = useState(null); // { email, emailSent }
+  const [signupSuccess, setSignupSuccess] = useState(null);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent]   = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   const knownUsers = users.slice(0, 6);
 
@@ -59,6 +63,33 @@ export default function LoginScreen({ onBack }) {
     setError('');
     setMode('login');
     setSignupSuccess(null);
+    setForgotSent(false);
+    setForgotEmail('');
+    setForgotError('');
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    setForgotError('');
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setForgotError(data.detail || 'Erro ao enviar e-mail.');
+      } else {
+        setForgotSent(true);
+      }
+    } catch {
+      setForgotError('Erro de conexão. Tente novamente.');
+    } finally {
+      setForgotLoading(false);
+    }
   }
 
   const isGabriela = selectedUser?.username === 'gabriela' ||
@@ -107,6 +138,117 @@ export default function LoginScreen({ onBack }) {
               className="flex-1 py-3 rounded-xl text-sm font-semibold bg-[#22c55e] text-black hover:bg-[#16a34a] transition-all"
               data-testid="continue-to-app-btn">
               Continuar para o app →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Forgot Password States ──────────────────────────────────────────────────
+  if (mode === 'forgot') {
+    if (forgotSent) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: '#080808' }}>
+          <div className="w-full max-w-sm text-center">
+            <div className="mb-6">
+              <div className="w-20 h-20 rounded-2xl bg-[#f59e0b15] border border-[#f59e0b30] flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl">📬</span>
+              </div>
+              <h2 className="text-white font-bold text-2xl mb-2">E-mail enviado!</h2>
+              <p className="text-[#9ca3af] text-sm leading-relaxed">
+                Se <span className="text-[#f59e0b] font-medium">{forgotEmail}</span> estiver cadastrado, você receberá um link para redefinir sua senha.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#1f1f1f] bg-[#111] p-5 text-left space-y-3 mb-6">
+              <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Próximos passos:</p>
+              {[
+                { num: '1', text: 'Verifique sua caixa de entrada (e spam)' },
+                { num: '2', text: 'Clique em "Redefinir Senha" no e-mail' },
+                { num: '3', text: 'Crie uma nova senha e faça login!' },
+              ].map(s => (
+                <div key={s.num} className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-[#f59e0b15] border border-[#f59e0b30] flex items-center justify-center text-[#f59e0b] text-xs font-bold flex-shrink-0 mt-0.5">
+                    {s.num}
+                  </div>
+                  <p className="text-[#d1d5db] text-sm">{s.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[#4b5563] text-xs mb-4">
+              O link é válido por 1 hora.
+            </p>
+
+            <button
+              data-testid="back-to-login-btn"
+              onClick={handleBack}
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-[#f59e0b] text-black hover:bg-[#d97706] transition-all"
+            >
+              ← Voltar ao login
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: '#080808' }}>
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <img src="https://static.prod-images.emergentagent.com/jobs/7c35102d-0122-480a-a772-76b2c409d53e/images/c2ad3e66b2aca02f2e8da438696dcf1dd640baa086f3996f3beb40a89fca2916.png" alt="RoutineTracker" className="w-16 h-16 mx-auto mb-3" />
+            <h1 className="text-white font-bold text-2xl tracking-tight">Esqueci minha senha</h1>
+            <p className="text-[#4b5563] text-sm mt-1">Digite seu e-mail para receber o link de redefinição</p>
+          </div>
+
+          <div className="rounded-3xl border border-[#1f1f1f] overflow-hidden" style={{ background: '#111111' }}>
+            <form onSubmit={handleForgotPassword} className="p-6 space-y-4">
+              <div>
+                <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
+                  E-mail
+                </label>
+                <input
+                  data-testid="forgot-email-input"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => { setForgotEmail(e.target.value); setForgotError(''); }}
+                  placeholder="seu@email.com"
+                  autoComplete="email"
+                  required
+                  className="w-full px-4 py-3.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-base outline-none placeholder-[#374151] focus:border-[#374151] transition-colors"
+                />
+              </div>
+
+              {forgotError && (
+                <p data-testid="forgot-error" className="text-[#f87171] text-xs bg-[#f871711a] border border-[#f8717133] rounded-xl px-3 py-2.5">
+                  {forgotError}
+                </p>
+              )}
+
+              <button
+                data-testid="forgot-submit-btn"
+                type="submit"
+                disabled={forgotLoading || !forgotEmail.trim()}
+                className="w-full py-4 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 bg-[#f59e0b] text-black"
+              >
+                {forgotLoading ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Enviando...
+                  </>
+                ) : 'Enviar link de redefinição'}
+              </button>
+            </form>
+          </div>
+
+          <div className="mt-4 text-center">
+            <button
+              data-testid="back-to-login-from-forgot"
+              onClick={handleBack}
+              className="text-[#4b5563] hover:text-white text-sm transition-colors py-2"
+            >
+              ← Voltar ao login
             </button>
           </div>
         </div>
@@ -325,6 +467,20 @@ export default function LoginScreen({ onBack }) {
                     Lembrar-me neste dispositivo
                   </span>
                 </label>
+              )}
+
+              {/* Forgot password link — only on login modes */}
+              {(mode === 'login' || mode === 'other' || selectedUser) && (
+                <div className="text-right -mt-1">
+                  <button
+                    type="button"
+                    data-testid="forgot-password-link"
+                    onClick={() => setMode('forgot')}
+                    className="text-[#6b7280] hover:text-[#f59e0b] text-xs transition-colors"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
               )}
 
               {error && (

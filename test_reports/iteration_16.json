@@ -1,0 +1,69 @@
+{
+  "summary": "Tested all 3 new features: (1) Remember-me checkbox - PASS, (2) Email verification with Resend - mostly PASS with 1 critical bug, (3) Streak confetti code review - PASS (hard to auto-test, code reviewed). Backend: 20/20 tests passed. Frontend: login/signup UI all correct, 1 critical integration bug found in login response.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/auth/login AND /api/auth/login-email",
+        "issue": "Response does NOT include `emailVerified` field. Bug impact: `VerifyEmailBanner` (main.jsx:178) condition `currentUser.emailVerified === false` is always `false` for returning users (undefined !== false), so the banner NEVER shows after re-login. Only works during the initial registration session.",
+        "priority": "HIGH"
+      },
+      {
+        "endpoint": "N/A",
+        "issue": "`resend` package (v2.26.0) is installed but NOT in /app/backend/requirements.txt. Could cause deployment failures on fresh installs.",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Email verification banner for returning users",
+        "issue": "VerifyEmailBanner (bottom yellow bar) never shows for users who log in after their initial registration session. Root cause: login endpoint doesn't return emailVerified field → currentUser.emailVerified is undefined (not false) → banner condition fails. Fix: add emailVerified to login response in server.py.",
+        "affected_selectors": ["[data-testid='verify-email-banner']", "text=Confirme seu e-mail"]
+      },
+      {
+        "flow": "Signup with email → verification success screen",
+        "issue": "Verification success screen ('Verifique seu e-mail') only shows when emailSent=true. In Resend test mode, only owner email (rafah.26ferreira@hotmail.com) receives emails, so emailSent=false for all other emails, and verification screen is never shown. Users are silently logged in instead. In production (Resend not in test mode) this would work correctly.",
+        "affected_selectors": ["[data-testid='continue-to-app-btn']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_email_verification.py",
+    "/app/test_reports/pytest/pytest_results_email_verify.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix /api/auth/login and /api/auth/login-email to include emailVerified field in response. In server.py lines ~479-490 and ~535+, add: 'emailVerified': user.get('email_verified') to the user dict",
+    "Add `resend>=2.0.0` to /app/backend/requirements.txt",
+    "Optional: Change verification success screen trigger from `emailSent` to `email provided` - so users always see the verification prompt even if email delivery failed temporarily"
+  ],
+  "critical_code_review_comments": [
+    "server.py lines 479-490 (login response) and ~535 (login-email response): Both login endpoints are missing `emailVerified: user.get('email_verified')` in the returned user object. This breaks the VerifyEmailBanner display for returning users who log back in.",
+    "requirements.txt: `resend` package is missing - should add `resend>=2.0.0` for production deployments",
+    "LoginScreen.jsx line 40-43: Verification success screen shown only when emailSent=true. Better UX would be to show it whenever email is provided, not just when send succeeds - users who provide email should always be told about verification regardless of delivery status",
+    "useHabits.js lines 53-107: Streak confetti implementation looks correct - properly detects milestones [7,14,21,30,60,90,100,200,365], dispatches SET_CONFETTI and ADD_TOAST. Cannot auto-test without 7+ day data."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_email_verification.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "85% (remember-me, signup flows, verifyEmailPage all working; banner broken for returning users)"
+  },
+  "test_credentials": "admin/@dm1n, testuser2/Test123! (email: rafah.26ferreira@hotmail.com)",
+  "seed_data_creation": "Created ~8 test users via backend tests (usernames: emvf{RUN_ID}*, noeml{RUN_ID}* etc.) and 2 via frontend signup tests. Restarted backend twice to reset rate limiter.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Email verification features are mostly implemented. The critical fix needed is: add `emailVerified: user.get('email_verified')` to the login response in both login endpoints (lines ~479-490 and ~535+ in server.py). After fix, test that VerifyEmailBanner appears when logging in as testuser2 (rafah.26ferreira@hotmail.com, email not yet verified). The verification success screen (after signup with email) can only be fully tested with the owner email rafah.26ferreira@hotmail.com in Resend test mode. Streak confetti in useHabits.js was code-reviewed and looks correctly implemented - it triggers at milestones [7,14,21,30,60,90,100,200,365] days. The VerifyEmailPage (invalid token) renders correctly showing error state. Remember-me feature: checked=localStorage, unchecked=sessionStorage - both working correctly.",
+  "rca_of_bugs": {
+    "email_verified_missing_in_login": {
+      "bug": "VerifyEmailBanner never shows for returning users",
+      "root_cause": "Login endpoint (POST /api/auth/login, lines 479-490) builds the user response dict without including `email_verified` field from MongoDB. The register endpoint (lines 768-778) correctly includes `emailVerified`, but login does not.",
+      "reproduction": "1) Register as testuser2 with email. 2) Clear browser storage (localStorage.clear()). 3) Log back in as testuser2. 4) The yellow 'Confirme seu e-mail' banner does NOT appear, even though email is unverified.",
+      "fix": "In server.py, add to login response: 'emailVerified': user.get('email_verified') in both /api/auth/login (line ~488) and /api/auth/login-email (~line 540)"
+    }
+  }
+}

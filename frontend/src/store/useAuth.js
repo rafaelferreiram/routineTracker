@@ -6,9 +6,34 @@ const TOKEN_KEY       = 'rq_token';
 const SESSION_KEY     = 'rq_session';
 const KNOWN_USERS_KEY = 'rq_known_users';
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Storage helpers (supports both localStorage and sessionStorage) ───────────
+function getStorage() {
+  // sessionStorage token means "don't remember me" session
+  return sessionStorage.getItem(TOKEN_KEY) ? 'session' : 'local';
+}
+
+function saveAuth(token, user, rememberMe) {
+  const primary   = rememberMe ? localStorage : sessionStorage;
+  const secondary = rememberMe ? sessionStorage : localStorage;
+  // Clear from the other storage to avoid conflicts
+  secondary.removeItem(TOKEN_KEY);
+  secondary.removeItem(SESSION_KEY);
+  primary.setItem(TOKEN_KEY, token);
+  primary.setItem(SESSION_KEY, JSON.stringify(user));
+}
+
+function clearAuth() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
 function loadSession() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+  try {
+    const s = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
 }
 
 function loadKnownUsers() {
@@ -62,15 +87,13 @@ export function AuthProvider({ children }) {
     setUsers(known);
   }, [currentUser]);
 
-  async function login(username, password) {
+  async function login(username, password, rememberMe = true) {
     try {
-      // Check if input looks like an email
       const isEmail = username.includes('@');
       const data = isEmail 
         ? await api.loginEmail(username, password)
         : await api.login(username, password);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+      saveAuth(data.token, data.user, rememberMe);
       persistKnownUser(data.user);
       setCurrentUser(data.user);
       setUsers(loadKnownUsers());
@@ -80,31 +103,28 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signup(username, password) {
+  async function signup(username, password, email = null, rememberMe = true) {
     try {
-      const data = await api.register(username, password);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+      const data = await api.register(username, password, email);
+      saveAuth(data.token, data.user, rememberMe);
       persistKnownUser(data.user);
       setCurrentUser(data.user);
       setUsers(loadKnownUsers());
-      return { ok: true };
+      return { ok: true, emailSent: data.emailSent, email: data.user?.email };
     } catch (err) {
       return { error: err.message || 'Signup failed' };
     }
   }
 
   function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(SESSION_KEY);
+    clearAuth();
     setCurrentUser(null);
   }
 
   async function loginWithGoogle(sessionId) {
     try {
       const data = await api.googleAuth(sessionId);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+      saveAuth(data.token, data.user, true); // always remember for Google login
       persistKnownUser(data.user);
       setCurrentUser(data.user);
       setUsers(loadKnownUsers());

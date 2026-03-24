@@ -512,10 +512,10 @@ export const translations = {
       de: 'Perfekte Tage',
     },
     medals: {
-      en: 'medals',
-      pt: 'medalhas',
-      es: 'medallas',
-      de: 'Medaillen',
+      en: 'trophies',
+      pt: 'troféus',
+      es: 'trofeos',
+      de: 'Trophäen',
     },
     tapTars: {
       en: 'Tap TARS on the bottom bar',
@@ -636,7 +636,7 @@ export const translations = {
     habits: { en: 'Habits', pt: 'Hábitos', es: 'Hábitos', de: 'Gewohnheiten' },
     stats: { en: 'Stats', pt: 'Estatísticas', es: 'Estadísticas', de: 'Statistiken' },
     journal: { en: 'Journal', pt: 'Diário', es: 'Diario', de: 'Tagebuch' },
-    medals: { en: 'Medals', pt: 'Medalhas', es: 'Medallas', de: 'Medaillen' },
+    medals: { en: 'Trophies', pt: 'Troféus', es: 'Trofeos', de: 'Trophäen' },
     events: { en: 'Events', pt: 'Eventos', es: 'Eventos', de: 'Events' },
     friends: { en: 'Friends', pt: 'Amigos', es: 'Amigos', de: 'Freunde' },
     customize: { en: 'Customize', pt: 'Personalizar', es: 'Personalizar', de: 'Anpassen' },
@@ -839,7 +839,7 @@ export const translations = {
   // ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════════════════
   achievements: {
-    title: { en: 'Achievements', pt: 'Conquistas', es: 'Logros', de: 'Erfolge' },
+    title: { en: 'Trophies', pt: 'Troféus', es: 'Trofeos', de: 'Trophäen' },
     unlocked: { en: 'Unlocked', pt: 'Desbloqueado', es: 'Desbloqueado', de: 'Freigeschaltet' },
     locked: { en: 'Locked', pt: 'Bloqueado', es: 'Bloqueado', de: 'Gesperrt' },
     progress: { en: 'Progress', pt: 'Progresso', es: 'Progreso', de: 'Fortschritt' },

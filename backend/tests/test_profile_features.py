@@ -5,7 +5,7 @@ import pytest
 import requests
 import time
 
-BASE_URL = "https://friend-events-2.preview.emergentagent.com"
+BASE_URL = "https://streak-trophies.preview.emergentagent.com"
 
 class TestProfileEndpoints:
     """Profile management endpoint tests"""

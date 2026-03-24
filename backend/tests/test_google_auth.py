@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://friend-events-2.preview.emergentagent.com"
+BASE_URL = "https://streak-trophies.preview.emergentagent.com"
 
 
 class TestHealthEndpoint:

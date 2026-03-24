@@ -1020,7 +1020,7 @@ export function StoreProvider({ children, username, defaultTheme }) {
     }
   }, [state.habits, state.achievements, state.profile]);
 
-  const value = { state, dispatch };
+  const value = { state, dispatch, synced };
 
   return createElement(StoreContext.Provider, { value }, children);
 }

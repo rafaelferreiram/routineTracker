@@ -4,7 +4,7 @@ import { getTodayString, isHabitApplicableToday, isCompletedToday, getLast7Days,
 import { calculateXPGain, computeStats, getLevelFromXP, getLevelProgress, getLevelTitle, getLevelIcon } from '../utils/gamification.js';
 
 export function useHabits() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, synced } = useStore();
   const { habits, profile, achievements, settings, toasts, confetti, levelUpPending, events, moods } = state;
 
   // ─── Computed Values ───────────────────────────────────────────────────────
@@ -190,6 +190,9 @@ export function useHabits() {
     confetti,
     events: events || [],
     moods: moods || {},
+
+    // Sync state
+    synced,
 
     // New state
     freezeShields,

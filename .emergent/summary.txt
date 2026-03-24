@@ -1,234 +1,127 @@
 <analysis>**original_problem_statement**:
-The user wants to build a habit-tracking application named RoutineTracker.
+The user wants to continue evolving their RoutineTracker application with several new features and fixes.
 
 **PRODUCT REQUIREMENTS**:
-1.  **Database & Data Import**: Set up a database and import user data.
-2.  **Mobile UI/UX**: Improve mobile experience with a bottom tab bar, consistent themes, and a PWA install button.
-3.  **Authentication**: Implement custom auth, Google Social Login, password management, and profile pictures.
-4.  **Onboarding**: Create a multi-step, practical onboarding carousel.
-5.  **Event Memories**: Allow users to add memories (mood, text, photos) to past events, with support for multi-day photo uploads.
-6.  **AI Assistant (TARS)**:
-    *   Create a global AI assistant, named TARS (inspired by Interstellar), accessible from the main navigation.
-    *   The assistant should handle text-to-text and voice-to-voice (STT/TTS) conversations.
-    *   It must act as a general-purpose assistant, able to answer general knowledge questions and provide real-time weather information.
-    *   **Crucially, TARS must be able to perform actions within the app (function calling), including:**
-        *   Creating and editing habits.
-        *   Creating and editing events.
-        *   Searching for real-world places (e.g., restaurants) based on user requests.
-        *   Adding these searched places and other activities to an event's itinerary.
-    *   The AI should use the user's provided OpenAI API key, but automatically fall back to the Emergent LLM Key if the user's key runs into quota/limit issues.
-7.  **Event Itinerary**: For multi-day events, provide an Itinerary tab where users can plan activities for each day, assisted by TARS.
-8.  **Calendar Export**: Allow users to export an event's itinerary to their native calendar via a  file download.
-9.  **UI Polish**:
-    *   Add a fire animation to habit streak badges to make them more engaging.
-    *   Update the onboarding experience to introduce the TARS assistant.
-    *   Use a specific user-provided image for the TARS icon.
-10. **Future/On Hold**: Friends system, email verification (pending API key), push notifications.
+1.  **Internationalization (i18n)**: Implement a language switching system to support English, Portuguese (Brazil), Spanish, and German. This should apply to all user-facing text, including the landing page and onboarding process.
+2.  **Admin Panel Experience**: Create a dedicated and separate interface for the admin user (/). This dashboard should be purely for monitoring and management, with no access to user-level features like habits or trackers. It must be minimalist, modern, and PWA-responsive.
+3.  **User Feature Toggling**: The admin panel should allow an administrator to enable or disable specific features (e.g., Habits, Events, TARS AI) for individual users, with a clear visual indicator of the status.
+4.  **Google Login Correction**: Fix the Google social login to correctly associate logins with existing accounts. The system should prioritize matching by  first, and then fall back to email to prevent the creation of duplicate users.
+5.  **Security & Analytics**: Implement server-side protection against DDoS attacks and enhance the admin panel with an analytics dashboard showing key metrics like user growth, engagement, and popular habits.
 
 **User's preferred language**: Portuguese. The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-The RoutineTracker is a full-stack React/FastAPI/MongoDB application. Key features include a production MongoDB Atlas database, a functional workaround for Google Login, a mobile-friendly UI with an Instagram-style bottom bar, a PWA install button, and a multi-step onboarding carousel.
-
-Most recently, a powerful AI assistant named TARS was integrated. TARS is capable of general conversation, providing real-time weather, and performing actions within the app like creating habits and events using OpenAI's function calling. The UI was updated with a new icon for TARS on the navigation bar, a global chat modal, a fire animation for habit streaks, and an updated onboarding flow. The backend supports voice-to-voice interaction and automatically falls back to an Emergent LLM key if the user's OpenAI key has insufficient quota.
+The application is a full-stack React/FastAPI/MongoDB solution. Key features implemented include:
+*   A complete, role-based **Admin System** with a dedicated, responsive dashboard (). The admin can view analytics, manage users, and toggle features for them.
+*   **Enhanced security** on the backend () with DDoS protection and rate-limiting middleware.
+*   A backend fix for the **Google Authentication flow** to prioritize  lookup over email, preventing duplicate account creation.
+*   An **improved onboarding flow** that saves its completion status to the user's database profile, ensuring it only appears once per user.
+*   The agent has begun the **Internationalization (i18n)** task by creating the core structure: , , and a  component. The  has been added to , and the  has been partially refactored to use the new system.
 
 **Last working item**:
-- **Last item agent was working**: Implementing the AI's ability to modify an event's itinerary. The user wants to ask TARS something like, Find a restaurant near Times Square and add it to my NYC trip itinerary. The agent implemented the backend logic for  and  functions.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: backend testing agent (to create a test case that calls the  endpoint with a prompt to add an item to an itinerary and verifies the database is updated correctly).
-- **User Testing Done**: N
+-   **Last item agent was working**: Implementing a site-wide internationalization (i18n) system. The foundational files and context provider were created, and the agent started refactoring the  to consume translations from a central file.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: Frontend testing agent. The agent should be instructed to test the language selector by switching between all four languages (en, pt, es, de) and verifying that all text on the currently translated pages updates correctly and persists across reloads.
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: TARS cannot find existing events to modify them (P0)**
-    -   **Description**: When TARS attempts to execute the  or  function, it fails to locate the target event within the user's data document, even if the event name is correct. The AI incorrectly reports to the user that the event does not exist. This is a blocker for the core AI action-taking functionality.
-    -   **Attempted fixes**: The agent confirmed via  that the event data exists in the database. The issue lies in the MongoDB query logic within the  helper in . The current implementation for finding the event to update is flawed.
+-   **Issue 1: Google Login Data Mismatch in Production (P0)**
+    -   **Description**: The user's production site () may still suffer from a data mismatch where Google Login creates a new, empty account instead of logging into the existing one. While a robust fix has been implemented in  to prioritize  lookup, this fix has **not been deployed or verified in the user's production environment**.
+    -   **Attempted fixes**: The backend authentication logic was completely rewritten. This was tested successfully in the preview environment.
     -   **Next debug checklist**:
-        1.  Inspect the , , and  logic inside the  in .
-        2.  The query to find and update a specific event inside the  array is incorrect. It needs to use MongoDB's  to correctly target the sub-document in the array based on the event title.
-        3.  Modify the  or  calls. For example, to add to an itinerary, the query should look like: .
-    -   **Why fix this issue and what will be achieved with the fix?**: This will unlock the primary requested feature for the TARS assistant: allowing it to intelligently and dynamically manage a user's events and itineraries based on conversation.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: backend
-    -   **Blocked on other issue**: None
+        1.  Confirm with the user that the latest backend code has been deployed to their production server.
+        2.  Instruct the user to clear all browser cache and cookies for  before attempting to log in with Google again.
+        3.  If the issue persists, the problem likely lies with the production database state (e.g., existing duplicate users). The  script can be used to investigate this.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for users on the live production site, making the primary login method unusable and causing data fragmentation.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Both (Verification on the live production site is required).
+    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
-- None. The P0 issue above is the only active task.
+-   **Task 1: Complete Internationalization (i18n) Implementation (P0 - current focus)**
+    -   **Where to resume**: The core i18n files exist. The next step is to populate  with all text strings from the application and continue refactoring all components (, , , , etc.) to use the  hook instead of hardcoded text.
+    -   **What will be achieved with this?**: The application will be fully multilingual, providing a native experience in English, Portuguese, Spanish, and German.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
     *   **P1**: Implement daily push notifications to remind users about their habits.
 *   **Future Tasks**:
     *   **P2**: Implement a Remember me option for persistent login sessions.
-    *   **P2**: Implement a full friends system (add/view friends).
-    *   **P2**: Add a confetti/celebration effect for streak milestones (e.g., 7, 30, 100 days).
-    *   **P2**: Give TARS a persistent conversation history/memory.
-    *   **P2**: Enable TARS to proactively analyze user habits and provide personalized suggestions.
-    *   **P3**: Implement email verification with Resend (Blocked: pending user API key).
+    *   **P2**: Implement a full friends system (UI part).
+    *   **P2**: Add a confetti/celebration effect for streak milestones.
+    *   **P2**: Give TARS a persistent conversation history.
+    *   **P2**: Enable TARS to proactively provide personalized suggestions.
+    - **P3**: Implement email verification with Resend (Blocked: pending user API key).
 
 **Completed work in this session**
-- **TARS AI Assistant**: Implemented a global AI assistant named TARS with a custom icon, UI theme, and personality based on *Interstellar*.
-- **AI Function Calling**: Enabled TARS to perform actions: creating/editing habits, creating events, and searching for places.
-- **AI Integrations**:
-    - Integrated OpenAI GPT-4o, Whisper (STT), and TTS for full text and voice interaction.
-    - Implemented a robust fallback from the user's OpenAI key to the Emergent LLM Key on quota errors.
-    - Integrated a keyless, real-time weather API (Open-Meteo) to answer weather queries.
-- **Event Itinerary & Calendar Export**: Implemented a feature to plan multi-day events with AI help and export the itinerary as a  calendar file.
-- **UI/UX Enhancements**:
-    - Added a fire animation for habit streaks for better user engagement.
-    - Updated the onboarding flow to introduce the TARS assistant.
-    - Added a prominent TARS button to the main bottom navigation bar.
-
-**Earlier issues found/mentioned but not fixed**
--   **Issue 1: Root Cause of Google Auth Failure**
-    -   **Debug checklist**: Logs show an  error from the Emergent Auth service. A workaround (login with email/password) is in place.
-    -   **Why to solve this issue and what will be achieved with this?**: To restore the intended one-click Google Sign-In UX.
-    -   **Should Test frontend/backend/both after fix**: both
-    -   **Is recurring issue?**: Y
-
-**Known issue recurrence from previous fork**
-- **Issue**: Unification of  user and Google login.
-- **Recurrence count**: 4+
-- **Status**: RESOLVED (via workaround). The user can access the correct account with email/password.
+-   **Admin Dashboard Redesign**: Created a completely separate, minimalist, and responsive UI for the admin user, fully isolated from the standard user habit-tracking interface.
+-   **Admin System & RBAC**: Implemented backend logic for admin roles, user management (enabling/disabling users and features like Habits, Events, TARS), password resets, and analytics.
+-   **Security Enhancements**: Integrated a global middleware in  for advanced DDoS protection and rate limiting.
+-   **Onboarding Flow Fix**: Corrected the onboarding logic to save completion status to the database, ensuring it only shows once per user and syncs across devices.
+-   **PWA Install Prompt**: Added a custom, user-friendly prompt to encourage PWA installation after onboarding.
+-   **PWA Responsiveness**: Completed and verified the UI adjustments for iPhones with notches/safe areas.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **AI Function Calling**: The core of the new TARS feature. The backend uses the usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit SDK to define tools (e.g., , ) that the LLM can choose to call. The backend then executes these functions and returns the result to the LLM to formulate a user-facing response. This logic is in .
-- **API Key Fallback**: The backend is architected to first attempt API calls with the user's . If a  or  is caught, it automatically re-attempts the call using the .
-- **Speech-to-Text / Text-to-Speech**: A full voice-in, voice-out loop is implemented. The frontend records audio, sends it to a  endpoint (using Whisper), which returns text. The response from the chat AI is sent to , which returns an audio file that the frontend plays automatically.
-- **Dynamic  File Generation**: The frontend  component contains JavaScript logic to construct a valid iCalendar () file string from the itinerary data and trigger a browser download, allowing users to add events to their native calendars.
+-   **Internationalization (i18n)**: Using a React Context () and a central translation object () to manage multilingual text across the application.
+-   **Role-Based Access Control (RBAC)**: A simple  flag on the user model is used to protect backend admin endpoints and, crucially, to render a completely different UI on the frontend ( vs. the main app).
+-   **DDoS Protection & Rate Limiting**: A custom middleware in  tracks request timestamps per IP to block malicious actors based on high-velocity request patterns.
+-   **Conditional Root Rendering**: The main  component now acts as a router, deciding at the highest level whether to render the admin experience or the user experience based on the  flag.
 
 **key DB schema**
--   **user_data**: The  array within the user's data document now contains an optional  field.
-    -   
+-   **users_c (collection)**:
+    -    (boolean): Identifies admin users.
+    -    (boolean): For soft-deleting/disabling users.
+    -    (datetime): Tracks the last login time.
+    -    (string): The primary key for Google authentication.
+    -    (boolean): Tracks if the user has seen the onboarding carousel.
+    -    (object): Enables/disables features per user (e.g., ).
+-   **analytics_events_c (collection)**: A new time-series collection with a TTL index to store analytics data (logins, signups).
 
 **All files of reference**
-*   **/app/backend/server.py**: **CRITICAL FILE**. Contains all new AI endpoints, function calling logic, and the bug in the event lookup query.
-*   **/app/frontend/src/components/AIChat.jsx**: The new UI for the TARS assistant.
-*   **/app/frontend/src/components/EventItinerary.jsx**: The UI for planning an event's itinerary.
-*   **/app/frontend/src/components/Navbar.jsx**: Contains the TARS icon and logic to open the chat modal.
-*   **/app/frontend/src/components/OnboardingCarousel.jsx**: Contains the updated onboarding slide for TARS.
-*   **/app/frontend/public/tars-icon.png**: The user-provided icon for TARS.
+-   **/app/frontend/src/i18n/translations.js**: The central file where all text strings for all languages must be added.
+-   **/app/frontend/src/i18n/LanguageContext.jsx**: The core of the i18n system.
+-   **/app/frontend/src/App.jsx**: Handles the top-level conditional rendering for Admin vs. User.
+-   **/app/frontend/src/components/AdminDashboard.jsx**: The entry point for the entire admin interface.
+-   **/app/backend/server.py**: Contains the updated Google Auth logic, and all admin, security, and analytics endpoints.
 
 **Critical Info for New Agent**
-*   **MUST reply in Portuguese.**
-*   The highest priority (P0) is to fix the AI's ability to find and modify existing events. The bug is in the database query logic within  inside the  definition. You need to correctly use MongoDB's  to update a specific event within the  array.
-*   The user's OpenAI API key is stored in  and should be used as the primary key. The code already handles falling back to the Emergent key on quota errors.
-
-**documents and test reports created in this job**
-*    (updated)
-*   
-*   
+-   Your immediate task is to **complete the internationalization (i18n) implementation**. This involves methodically going through every component, replacing all hardcoded English/Portuguese text with translation keys, and populating the  file with the corresponding text for all four languages (en, pt, es, de).
+-   The Admin Panel is now a completely separate application view rendered by . Do not add admin-related UI elements to the regular user components like .
+-   The P0 Google Login issue requires user action (deployment) to be fully resolved. Once the i18n task is complete, you should guide the user through verifying the fix in their production environment.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request (LATEST/CURRENT)**: TARS should be able to create/edit events/itineraries by searching for real places (e.g., restaurants) and adding them to the user's plan. (IN PROGRESS)
-2.  **Request**: Use a new, specific image for the TARS icon with a white background. (DONE)
-3.  **Request**: Use a different specific image for the TARS icon and add a fire animation to habit streaks. (DONE)
-4.  **Request**: Change the AI assistant's name from Roti to TARS (from Interstellar) and find a suitable icon. (DONE)
-5.  **Complaint/Request**: User was frustrated that the AI could not answer a basic weather question. Requested it be a general-purpose assistant. (DONE)
-6.  **Request**: Update the onboarding to explain the AI assistant and add an icon for it to the footer bar to open a global chat with voice-to-voice and text-to-text capabilities. (DONE)
-7.  **Confirmation**: User agrees with the plan to implement a fallback to the Emergent LLM Key when their API key fails. (DONE)
-8.  **Update**: User has added credits to their OpenAI account and asks the agent to test their key again. (DONE)
-9.  **Question**: User asked if the integration was working with their provided API key. (Agent investigated and found it was failing due to quota issues).
-10. **Request**: Allow exporting the event itinerary to the user's native calendar as a  file with a summary in the description. (DONE)
+1.  **Request (LATEST)**: Apply language switching (i18n) for English, Portuguese, Spanish, and German to the entire site.
+2.  **Request**: Redesign the admin experience to be completely separate from the user app (no habits/tracker). It should be a minimalist, modern, and responsive PWA for monitoring and managing users, including toggling their features.
+3.  **Confirmation**: Continue finalize por favor (Please continue and finalize).
+4.  **Request**: Add DDoS protection and the suggested analytics system.
+5.  **Request**: Create an  user with a management dashboard and fix the Google login issue by using the Google user ID.
+6.  **Request**: Improve the PWA installation to be more automatic and fix the onboarding to show only once per user by saving the status in the database.
+7.  **User Confirmation**: User approved the plan to fix PWA responsiveness and then investigate the Google login issue. (Completed).
+8.  Older messages related to completed tasks.
 
 **Project Health Check:**
-*   **Broken**: The AI's ability to modify existing events/itineraries is broken due to a faulty database query in .
-*   **Mocked**: Google Authentication (uses Emergent's mock auth service, has a stable workaround).
+*   **Broken**: Google Login on the production domain (). An implemented code fix is **pending user deployment and verification**.
+*   **Mocked**: None.
 
 **3rd Party Integrations**
-*   **OpenAI (GPT-4o, Whisper, TTS)**: Integrated via usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit Python SDK. Uses the user's API Key with an automatic fallback to the **Emergent LLM Key**.
-*   **Open-Meteo**: Integrated for real-time weather data (no API key required).
+*   **OpenAI (GPT-4o, Whisper, TTS)**: Uses user's key with fallback to **Emergent LLM Key**.
+*   **Google Maps JavaScript API**: For frontend place search and map rendering.
+*   **Google Places API**: For backend place search used by TARS.
 *   **MongoDB Atlas**: Production database.
-*   **Emergent-managed Google Auth**: Implemented but unreliable; a workaround is active.
-*   **Resend**: Playbook received, but implementation is on hold pending a user-provided API key.
+*   **Emergent-managed Google Auth**: Used for social login.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES, for earlier features.
-- **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: [, ]
-- **Known regressions**: None.
+-   **Testing agent used after significant changes**: YES. A comprehensive test suite was run for the Admin Panel, security features, and Google Auth fix, with all tests passing.
+-   **Test files created**:  and earlier.
 
 **Credentials to test flow:**
-*   **User Login**:  / 
-*   **OpenAI API Key**: Stored as  in .
-
-**What agent forgot to execute**
-- The agent correctly identified that the AI's function calling for editing/updating events was failing but did not pinpoint and fix the root cause, which is the incorrect MongoDB query structure in . It requires using  to modify a document within a nested array.</analysis>
+*   **Admin Login**:  / 
+*   **User Login**:  / </analysis>

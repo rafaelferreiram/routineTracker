@@ -26,9 +26,9 @@ JWT_ALG    = 'HS256'
 JWT_DAYS   = 90
 # Use user's OpenAI key or fallback to Emergent LLM Key
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-46676Cb71D8D39eA36')
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # Google Maps API Key
-GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyDLQT29DB2Lt7yxkCTzEG5LCYk4V8zOB14')
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title='RoutineTracker API')
@@ -55,13 +55,81 @@ data_c.create_index('user_id')
 # ── Security ───────────────────────────────────────────────────────────────────
 bearer = HTTPBearer()
 
-# Simple in-memory rate limiter
+# ═══════════════════════════════════════════════════════════════════════════════
+# ═══ ADVANCED DDoS PROTECTION & SECURITY SYSTEM ════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Rate limiting storage
 rate_limit_store = defaultdict(list)
+blocked_ips = {}  # IP -> unblock_timestamp
+suspicious_activity = defaultdict(int)  # IP -> violation count
+request_analytics = defaultdict(list)  # endpoint -> timestamps for analytics
+
+# Configuration
 RATE_LIMIT_WINDOW = 60  # seconds
-RATE_LIMIT_MAX_REQUESTS = 30  # max requests per window for auth endpoints
+RATE_LIMIT_MAX_REQUESTS = 30  # max requests per window for general endpoints
+DDOS_BLOCK_DURATION = 300  # 5 minutes block for DDoS attempts
+DDOS_THRESHOLD = 100  # requests per minute to trigger DDoS protection
+SUSPICIOUS_THRESHOLD = 5  # violations before IP gets blocked
+MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB max request size
+
+# Analytics collection for admin dashboard
+analytics_c = db['analytics']
+analytics_c.create_index([('type', 1), ('timestamp', -1)])
+analytics_c.create_index('timestamp', expireAfterSeconds=30*24*60*60)  # 30 days TTL
+
+def log_analytics_event(event_type: str, data: dict = None):
+    """Log analytics event for admin dashboard."""
+    try:
+        analytics_c.insert_one({
+            'type': event_type,
+            'timestamp': datetime.now(timezone.utc),
+            'data': data or {},
+        })
+    except Exception as e:
+        print(f'[ANALYTICS] Error logging event: {e}')
+
+def is_ip_blocked(ip: str) -> bool:
+    """Check if IP is currently blocked."""
+    if ip in blocked_ips:
+        if time.time() < blocked_ips[ip]:
+            return True
+        else:
+            del blocked_ips[ip]
+            suspicious_activity[ip] = 0
+    return False
+
+def block_ip(ip: str, duration: int = DDOS_BLOCK_DURATION):
+    """Block an IP for specified duration."""
+    blocked_ips[ip] = time.time() + duration
+    log_analytics_event('ip_blocked', {'ip': ip, 'duration': duration})
+    print(f'[SECURITY] Blocked IP: {ip} for {duration} seconds')
+
+def check_ddos_protection(request: Request):
+    """Check for DDoS attacks and block suspicious IPs."""
+    ip = request.client.host if request.client else 'unknown'
+    
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        raise HTTPException(status_code=403, detail='Access temporarily blocked. Try again later.')
+    
+    # Track requests for DDoS detection
+    now = time.time()
+    key = f"ddos:{ip}"
+    rate_limit_store[key] = [t for t in rate_limit_store[key] if now - t < 60]
+    rate_limit_store[key].append(now)
+    
+    # Check for DDoS (too many requests in short time)
+    if len(rate_limit_store[key]) > DDOS_THRESHOLD:
+        block_ip(ip, DDOS_BLOCK_DURATION)
+        raise HTTPException(status_code=429, detail='Too many requests. Access blocked temporarily.')
 
 def check_rate_limit(ip: str, endpoint: str = 'default', max_requests: int = RATE_LIMIT_MAX_REQUESTS):
-    """Simple rate limiting by IP address."""
+    """Enhanced rate limiting with violation tracking."""
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        raise HTTPException(status_code=403, detail='Access temporarily blocked.')
+    
     key = f"{ip}:{endpoint}"
     now = time.time()
     
@@ -69,9 +137,57 @@ def check_rate_limit(ip: str, endpoint: str = 'default', max_requests: int = RAT
     rate_limit_store[key] = [t for t in rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
     
     if len(rate_limit_store[key]) >= max_requests:
+        # Track violation
+        suspicious_activity[ip] += 1
+        
+        # Log analytics
+        log_analytics_event('rate_limit_exceeded', {'ip': ip, 'endpoint': endpoint})
+        
+        # Block if too many violations
+        if suspicious_activity[ip] >= SUSPICIOUS_THRESHOLD:
+            block_ip(ip)
+            raise HTTPException(status_code=403, detail='Access blocked due to repeated violations.')
+        
         raise HTTPException(status_code=429, detail='Too many requests. Please try again later.')
     
     rate_limit_store[key].append(now)
+
+# Middleware for global security
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Global security middleware for DDoS protection and request validation."""
+    ip = request.client.host if request.client else 'unknown'
+    
+    # Check if IP is blocked
+    if is_ip_blocked(ip):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Access temporarily blocked. Try again later."}
+        )
+    
+    # Track request for analytics
+    endpoint = request.url.path
+    request_analytics[endpoint].append(time.time())
+    
+    # Clean old analytics data (keep last hour)
+    now = time.time()
+    for ep in list(request_analytics.keys()):
+        request_analytics[ep] = [t for t in request_analytics[ep] if now - t < 3600]
+    
+    # DDoS check for all requests
+    try:
+        check_ddos_protection(request)
+    except HTTPException as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    
+    # Log page view for analytics (only for main endpoints)
+    if endpoint in ['/', '/api/data', '/api/habits']:
+        log_analytics_event('page_view', {'endpoint': endpoint, 'ip_hash': hash(ip) % 10000})
+    
+    response = await call_next(request)
+    return response
 
 def hash_pw(pw: str) -> str:
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -239,6 +355,88 @@ def sync_setup_password(req: SyncDataReq):
         'username': user['username']
     }
 
+
+@app.get('/api/sync/diagnose')
+def sync_diagnose(email: str, secret: str):
+    """Diagnose account issues for an email. Protected by secret."""
+    if secret != SYNC_SECRET:
+        raise HTTPException(status_code=403, detail='Invalid sync secret')
+    
+    import re
+    email_lower = email.lower().strip()
+    
+    results = {
+        'email_searched': email_lower,
+        'users_found': [],
+        'user_data_found': [],
+    }
+    
+    # Search for users with this email (multiple strategies)
+    users_exact = list(users_c.find({'email': email_lower}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1, 'google_id': 1, 'created_at': 1}))
+    users_regex = list(users_c.find({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1, 'google_id': 1, 'created_at': 1}))
+    
+    # Combine and dedupe
+    seen_ids = set()
+    for u in users_exact + users_regex:
+        uid = str(u['_id'])
+        if uid not in seen_ids:
+            seen_ids.add(uid)
+            results['users_found'].append({
+                'id': uid,
+                'username': u.get('username'),
+                'email': u.get('email'),
+                'auth_provider': u.get('auth_provider', 'password'),
+                'google_id': u.get('google_id'),
+                'created_at': str(u.get('created_at', 'unknown'))
+            })
+    
+    # Also search by username (email prefix)
+    email_prefix = email_lower.split('@')[0]
+    users_by_username = list(users_c.find({'username': email_prefix}, {'_id': 1, 'username': 1, 'email': 1, 'auth_provider': 1}))
+    for u in users_by_username:
+        uid = str(u['_id'])
+        if uid not in seen_ids:
+            seen_ids.add(uid)
+            results['users_found'].append({
+                'id': uid,
+                'username': u.get('username'),
+                'email': u.get('email', 'NOT SET'),
+                'auth_provider': u.get('auth_provider', 'password'),
+                'note': 'Found by username match'
+            })
+    
+    # Get user_data for each found user
+    for user_info in results['users_found']:
+        uid = user_info['id']
+        data_doc = data_c.find_one({'user_id': uid})
+        if data_doc:
+            data = data_doc.get('data', {})
+            results['user_data_found'].append({
+                'user_id': uid,
+                'username': user_info['username'],
+                'habits_count': len(data.get('habits', [])),
+                'events_count': len(data.get('events', [])),
+                'total_xp': data.get('profile', {}).get('totalXP', 0),
+                'synced_at': str(data_doc.get('synced_at', 'never'))
+            })
+    
+    # Summary
+    results['summary'] = {
+        'total_users_found': len(results['users_found']),
+        'total_data_docs': len(results['user_data_found']),
+        'recommendation': ''
+    }
+    
+    if len(results['users_found']) == 0:
+        results['summary']['recommendation'] = 'No user found with this email. The user needs to register first or sync data using /api/sync/import with user_info.'
+    elif len(results['users_found']) == 1:
+        results['summary']['recommendation'] = 'Single user found. Google login should work if email matches exactly.'
+    else:
+        results['summary']['recommendation'] = f'Multiple users found ({len(results["users_found"])}). This may cause issues. Consider merging accounts or deleting duplicates.'
+    
+    return results
+
+
 @app.post('/api/auth/login')
 def login(req: AuthReq, request: Request):
     # Rate limit login attempts
@@ -249,18 +447,36 @@ def login(req: AuthReq, request: Request):
     user = users_c.find_one({'username': username})
     if not user:
         raise HTTPException(status_code=400, detail='User not found')
+    
+    # Check if user is disabled
+    if user.get('disabled'):
+        raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+    
+    if not user.get('password_hash'):
+        raise HTTPException(status_code=400, detail='Esta conta não tem senha. Use o login com Google.')
+    
     if not check_pw(req.password, user['password_hash']):
         raise HTTPException(status_code=400, detail='Wrong password')
+    
+    # Update last login timestamp
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'last_login_at': datetime.now(timezone.utc)}}
+    )
+    
+    is_admin = user.get('is_admin', False)
+    
     token = make_token(str(user['_id']), user['username'])
     return {
         'token': token,
         'user': {
             'id': str(user['_id']),
             'username': user['username'],
-            'displayName': user['display_name'],
+            'displayName': user.get('display_name', user['username']),
             'email': user.get('email', ''),
             'picture': user.get('picture', ''),
             'theme': user.get('theme', {}),
+            'isAdmin': is_admin,
         }
     }
 
@@ -285,11 +501,21 @@ def login_email(req: EmailLoginReq, request: Request):
     if not user:
         raise HTTPException(status_code=400, detail='Email não encontrado')
     
+    # Check if user is disabled
+    if user.get('disabled'):
+        raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+    
     if not user.get('password_hash'):
         raise HTTPException(status_code=400, detail='Esta conta não tem senha. Use o login com Google.')
     
     if not check_pw(req.password, user['password_hash']):
         raise HTTPException(status_code=400, detail='Senha incorreta')
+    
+    # Update last login timestamp
+    users_c.update_one(
+        {'_id': user['_id']},
+        {'$set': {'last_login_at': datetime.now(timezone.utc)}}
+    )
     
     token = make_token(str(user['_id']), user['username'])
     return {
@@ -391,58 +617,71 @@ def google_auth(req: GoogleAuthReq):
     email_lower  = google_email.lower()
     name         = g.get('name', google_email.split('@')[0])
     picture      = g.get('picture', '')
-    google_id    = g.get('sub', g.get('id', ''))
+    google_id    = g.get('sub', g.get('id', ''))  # Google's unique user ID
 
     print(f'[GOOGLE AUTH] Google returned: email={google_email}, name={name}, google_id={google_id}, picture={picture[:50] if picture else "None"}')
 
+    if not google_id:
+        print(f'[GOOGLE AUTH] WARNING: No google_id (sub) returned from Google!')
+    
     if not email_lower:
         raise HTTPException(status_code=400, detail='No email from Google')
 
-    # 2. Find existing user by email (case-insensitive search) - Multiple strategies
+    # 2. Find existing user - PRIORITY ORDER:
+    #    1. google_id (most reliable - never changes)
+    #    2. email (fallback for older accounts)
     import re
     
     user = None
+    found_by = None
     
-    # Strategy 1: Exact lowercase match
-    user = users_c.find_one({'email': email_lower})
-    print(f'[GOOGLE AUTH] Search 1 (exact lowercase): {user is not None}')
+    # PRIORITY 1: Search by google_id (most reliable identifier)
+    if google_id:
+        user = users_c.find_one({'google_id': google_id})
+        if user:
+            found_by = 'google_id'
+            print(f'[GOOGLE AUTH] ✓ Found user by google_id: {user["username"]}')
     
-    # Strategy 2: Exact original case match
+    # PRIORITY 2: Search by email (case-insensitive)
     if not user:
-        user = users_c.find_one({'email': google_email})
-        print(f'[GOOGLE AUTH] Search 2 (exact original): {user is not None}')
+        user = users_c.find_one({'email': email_lower})
+        if user:
+            found_by = 'email_exact'
+            print(f'[GOOGLE AUTH] ✓ Found user by email (exact): {user["username"]}')
     
-    # Strategy 3: Case-insensitive regex
     if not user:
         user = users_c.find_one({'email': re.compile(f'^{re.escape(email_lower)}$', re.IGNORECASE)})
-        print(f'[GOOGLE AUTH] Search 3 (regex): {user is not None}')
-    
-    # Strategy 4: Search by google_id if we've seen this user before
-    if not user and google_id:
-        user = users_c.find_one({'google_id': google_id})
-        print(f'[GOOGLE AUTH] Search 4 (google_id): {user is not None}')
+        if user:
+            found_by = 'email_regex'
+            print(f'[GOOGLE AUTH] ✓ Found user by email (regex): {user["username"]}')
     
     if user:
-        print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}')
+        # Check if user is disabled
+        if user.get('disabled'):
+            raise HTTPException(status_code=403, detail='Conta desativada. Entre em contato com o administrador.')
+        
+        print(f'[GOOGLE AUTH] Found existing user: id={user["_id"]}, username={user["username"]}, email={user.get("email")}, found_by={found_by}')
         
         # Existing user — update Google info but keep their username and ID
         uid      = str(user['_id'])
         username = user['username']
-        display  = name  # Use Google's display name
+        display  = user.get('display_name') or name  # Keep existing display name if set
         theme    = user.get('theme', {'accentColor': '#22c55e', 'bgColor': '#080808', 'bgCard': '#111111', 'bgBorder': '#1f1f1f'})
         
-        # Update user with Google info and picture
-        users_c.update_one(
-            {'_id': user['_id']},
-            {'$set': {
-                'picture':        picture,
-                'google_id':      google_id,
-                'display_name':   display,
-                'email':          email_lower,  # Ensure email is set
-                'last_google_at': datetime.now(timezone.utc),
-            }}
-        )
-        print(f'[GOOGLE AUTH] Updated existing user {username} with id {uid}, picture updated')
+        # Update user with Google info - ALWAYS set google_id for future lookups
+        update_data = {
+            'picture':        picture,
+            'google_id':      google_id,  # CRITICAL: Always save google_id
+            'email':          email_lower,  # Ensure email is set
+            'last_login_at':  datetime.now(timezone.utc),
+        }
+        
+        # Only update display_name if not already set
+        if not user.get('display_name'):
+            update_data['display_name'] = name
+        
+        users_c.update_one({'_id': user['_id']}, {'$set': update_data})
+        print(f'[GOOGLE AUTH] Updated existing user {username} with google_id={google_id}')
         
         # Verify user_data exists for this user
         existing_data = data_c.find_one({'user_id': uid})
@@ -458,7 +697,7 @@ def google_auth(req: GoogleAuthReq):
             })
     else:
         # New user — derive username from email
-        print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}')
+        print(f'[GOOGLE AUTH] No existing user found, creating new user for email: {email_lower}, google_id: {google_id}')
         base = email_lower.split('@')[0]
         base = ''.join(c for c in base if c.isalnum() or c == '_')[:20] or 'user'
         username = base
@@ -474,13 +713,14 @@ def google_auth(req: GoogleAuthReq):
             'display_name':  display,
             'email':         email_lower,
             'picture':       picture,
-            'google_id':     google_id,
+            'google_id':     google_id,  # CRITICAL: Save google_id for future lookups
             'auth_provider': 'google',
             'theme':         theme,
             'created_at':    datetime.now(timezone.utc),
+            'last_login_at': datetime.now(timezone.utc),
         })
         uid = str(ins.inserted_id)
-        print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}')
+        print(f'[GOOGLE AUTH] Created new user: id={uid}, username={username}, google_id={google_id}')
         
         # Create initial user_data document
         data_c.insert_one({
@@ -520,6 +760,7 @@ def google_auth(req: GoogleAuthReq):
             'picture':     picture,
             'theme':       theme,
             'authProvider': 'google',
+            'googleId':    google_id,  # Return google_id for debugging
         }
     }
 
@@ -537,6 +778,520 @@ def save_data(req: DataReq, cu: dict = Depends(get_current_user)):
         upsert=True,
     )
     return {'ok': True}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ ADMIN PANEL ENDPOINTS ════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD_HASH = hash_pw('@dm1n')  # Password: @dm1n
+
+def get_admin_user(cu: dict = Depends(get_current_user)):
+    """Dependency that verifies the user is an admin."""
+    if cu.get('username') != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail='Admin access required')
+    return cu
+
+# Create admin user on startup if not exists
+def ensure_admin_exists():
+    admin = users_c.find_one({'username': ADMIN_USERNAME})
+    if not admin:
+        print('[ADMIN] Creating admin user...')
+        users_c.insert_one({
+            'username': ADMIN_USERNAME,
+            'display_name': 'Administrador',
+            'password_hash': ADMIN_PASSWORD_HASH,
+            'is_admin': True,
+            'created_at': datetime.now(timezone.utc),
+        })
+        print('[ADMIN] Admin user created: admin/@dm1n')
+    else:
+        # Ensure admin has is_admin flag
+        if not admin.get('is_admin'):
+            users_c.update_one({'username': ADMIN_USERNAME}, {'$set': {'is_admin': True}})
+
+ensure_admin_exists()
+
+@app.get('/api/admin/stats')
+def admin_get_stats(cu: dict = Depends(get_admin_user)):
+    """Get platform statistics for admin dashboard."""
+    from bson import ObjectId
+    
+    # Total users (excluding admin)
+    total_users = users_c.count_documents({'username': {'$ne': ADMIN_USERNAME}})
+    
+    # Active users (logged in last 7 days)
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    active_users = users_c.count_documents({
+        'username': {'$ne': ADMIN_USERNAME},
+        'last_login_at': {'$gte': week_ago}
+    })
+    
+    # Users created today
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    new_users_today = users_c.count_documents({
+        'username': {'$ne': ADMIN_USERNAME},
+        'created_at': {'$gte': today_start}
+    })
+    
+    # Users by auth provider
+    google_users = users_c.count_documents({'auth_provider': 'google'})
+    password_users = total_users - google_users
+    
+    # Disabled users
+    disabled_users = users_c.count_documents({'disabled': True})
+    
+    # Total habits across all users
+    pipeline = [
+        {'$project': {'habits_count': {'$size': {'$ifNull': ['$data.habits', []]}}}},
+        {'$group': {'_id': None, 'total': {'$sum': '$habits_count'}}}
+    ]
+    habits_result = list(data_c.aggregate(pipeline))
+    total_habits = habits_result[0]['total'] if habits_result else 0
+    
+    # Total events across all users
+    pipeline = [
+        {'$project': {'events_count': {'$size': {'$ifNull': ['$data.events', []]}}}},
+        {'$group': {'_id': None, 'total': {'$sum': '$events_count'}}}
+    ]
+    events_result = list(data_c.aggregate(pipeline))
+    total_events = events_result[0]['total'] if events_result else 0
+    
+    # Daily login counts for last 7 days
+    daily_logins = []
+    for i in range(7):
+        day_start = (datetime.now(timezone.utc) - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        count = users_c.count_documents({
+            'username': {'$ne': ADMIN_USERNAME},
+            'last_login_at': {'$gte': day_start, '$lt': day_end}
+        })
+        daily_logins.append({
+            'date': day_start.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    
+    return {
+        'total_users': total_users,
+        'active_users': active_users,
+        'new_users_today': new_users_today,
+        'google_users': google_users,
+        'password_users': password_users,
+        'disabled_users': disabled_users,
+        'total_habits': total_habits,
+        'total_events': total_events,
+        'daily_logins': list(reversed(daily_logins)),
+    }
+
+@app.get('/api/admin/users')
+def admin_get_users(
+    cu: dict = Depends(get_admin_user),
+    skip: int = 0,
+    limit: int = 50,
+    search: str = None,
+    filter_type: str = None  # 'google', 'password', 'disabled'
+):
+    """Get list of all users with their stats."""
+    from bson import ObjectId
+    
+    query = {'username': {'$ne': ADMIN_USERNAME}}
+    
+    if search:
+        query['$or'] = [
+            {'username': {'$regex': search, '$options': 'i'}},
+            {'email': {'$regex': search, '$options': 'i'}},
+            {'display_name': {'$regex': search, '$options': 'i'}},
+        ]
+    
+    if filter_type == 'google':
+        query['auth_provider'] = 'google'
+    elif filter_type == 'password':
+        query['password_hash'] = {'$exists': True}
+        query['auth_provider'] = {'$ne': 'google'}
+    elif filter_type == 'disabled':
+        query['disabled'] = True
+    
+    # Get users
+    users_cursor = users_c.find(query, {
+        '_id': 1, 'username': 1, 'display_name': 1, 'email': 1, 
+        'picture': 1, 'auth_provider': 1, 'google_id': 1,
+        'created_at': 1, 'last_login_at': 1, 'disabled': 1,
+        'disabled_features': 1
+    }).sort('created_at', -1).skip(skip).limit(limit)
+    
+    users_list = []
+    for u in users_cursor:
+        uid = str(u['_id'])
+        
+        # Get user data stats
+        user_data = data_c.find_one({'user_id': uid}, {'_id': 0, 'data': 1})
+        data = user_data.get('data', {}) if user_data else {}
+        
+        users_list.append({
+            'id': uid,
+            'username': u.get('username'),
+            'displayName': u.get('display_name'),
+            'email': u.get('email'),
+            'picture': u.get('picture'),
+            'authProvider': u.get('auth_provider', 'password'),
+            'googleId': u.get('google_id'),
+            'createdAt': u.get('created_at').isoformat() if u.get('created_at') else None,
+            'lastLoginAt': u.get('last_login_at').isoformat() if u.get('last_login_at') else None,
+            'disabled': u.get('disabled', False),
+            'disabledFeatures': u.get('disabled_features', []),
+            'stats': {
+                'habits': len(data.get('habits', [])),
+                'events': len(data.get('events', [])),
+                'totalXP': data.get('profile', {}).get('totalXP', 0),
+                'achievements': len(data.get('achievements', [])),
+            }
+        })
+    
+    total = users_c.count_documents(query)
+    
+    return {
+        'users': users_list,
+        'total': total,
+        'skip': skip,
+        'limit': limit,
+    }
+
+class AdminUserAction(BaseModel):
+    user_id: str
+    action: str  # 'disable', 'enable', 'reset_password', 'toggle_feature'
+    new_password: str = None
+    feature: str = None
+
+@app.post('/api/admin/user/action')
+def admin_user_action(req: AdminUserAction, cu: dict = Depends(get_admin_user)):
+    """Perform admin action on a user."""
+    from bson import ObjectId
+    
+    try:
+        user = users_c.find_one({'_id': ObjectId(req.user_id)})
+    except:
+        raise HTTPException(status_code=400, detail='Invalid user ID')
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    if user.get('username') == ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail='Cannot modify admin user')
+    
+    if req.action == 'disable':
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled': True, 'disabled_at': datetime.now(timezone.utc)}}
+        )
+        return {'ok': True, 'message': f'User {user["username"]} disabled'}
+    
+    elif req.action == 'enable':
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled': False}, '$unset': {'disabled_at': ''}}
+        )
+        return {'ok': True, 'message': f'User {user["username"]} enabled'}
+    
+    elif req.action == 'reset_password':
+        if not req.new_password:
+            raise HTTPException(status_code=400, detail='New password required')
+        
+        is_valid, error = validate_password(req.new_password)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error)
+        
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'password_hash': hash_pw(req.new_password)}}
+        )
+        return {'ok': True, 'message': f'Password reset for {user["username"]}'}
+    
+    elif req.action == 'toggle_feature':
+        if not req.feature:
+            raise HTTPException(status_code=400, detail='Feature name required')
+        
+        current_features = user.get('disabled_features', [])
+        
+        if req.feature in current_features:
+            # Enable feature
+            current_features.remove(req.feature)
+            message = f'Feature {req.feature} enabled for {user["username"]}'
+        else:
+            # Disable feature
+            current_features.append(req.feature)
+            message = f'Feature {req.feature} disabled for {user["username"]}'
+        
+        users_c.update_one(
+            {'_id': ObjectId(req.user_id)},
+            {'$set': {'disabled_features': current_features}}
+        )
+        return {'ok': True, 'message': message, 'disabledFeatures': current_features}
+    
+    else:
+        raise HTTPException(status_code=400, detail=f'Unknown action: {req.action}')
+
+@app.get('/api/admin/user/{user_id}')
+def admin_get_user_detail(user_id: str, cu: dict = Depends(get_admin_user)):
+    """Get detailed info for a specific user."""
+    from bson import ObjectId
+    
+    try:
+        user = users_c.find_one({'_id': ObjectId(user_id)})
+    except:
+        raise HTTPException(status_code=400, detail='Invalid user ID')
+    
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    uid = str(user['_id'])
+    user_data = data_c.find_one({'user_id': uid}, {'_id': 0, 'data': 1, 'updated_at': 1})
+    data = user_data.get('data', {}) if user_data else {}
+    
+    return {
+        'user': {
+            'id': uid,
+            'username': user.get('username'),
+            'displayName': user.get('display_name'),
+            'email': user.get('email'),
+            'picture': user.get('picture'),
+            'authProvider': user.get('auth_provider', 'password'),
+            'googleId': user.get('google_id'),
+            'createdAt': user.get('created_at').isoformat() if user.get('created_at') else None,
+            'lastLoginAt': user.get('last_login_at').isoformat() if user.get('last_login_at') else None,
+            'disabled': user.get('disabled', False),
+            'disabledFeatures': user.get('disabled_features', []),
+        },
+        'data': {
+            'habits': data.get('habits', []),
+            'events': data.get('events', []),
+            'profile': data.get('profile', {}),
+            'settings': data.get('settings', {}),
+            'achievements': data.get('achievements', []),
+            'lastUpdated': user_data.get('updated_at').isoformat() if user_data and user_data.get('updated_at') else None,
+        }
+    }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ ANALYTICS & METRICS ENDPOINTS ═════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/analytics')
+def admin_get_analytics(
+    cu: dict = Depends(get_admin_user),
+    period: str = '7d'  # '24h', '7d', '30d', '90d'
+):
+    """Get comprehensive analytics for admin dashboard."""
+    
+    # Calculate date range
+    now = datetime.now(timezone.utc)
+    if period == '24h':
+        start_date = now - timedelta(hours=24)
+        interval = 'hour'
+    elif period == '7d':
+        start_date = now - timedelta(days=7)
+        interval = 'day'
+    elif period == '30d':
+        start_date = now - timedelta(days=30)
+        interval = 'day'
+    else:  # 90d
+        start_date = now - timedelta(days=90)
+        interval = 'week'
+    
+    # 1. User Growth Chart
+    user_growth = []
+    if interval == 'hour':
+        for i in range(24):
+            hour_start = now - timedelta(hours=23-i)
+            hour_end = hour_start + timedelta(hours=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': hour_start, '$lt': hour_end}
+            })
+            user_growth.append({
+                'label': hour_start.strftime('%H:00'),
+                'value': count
+            })
+    elif interval == 'day':
+        days = 7 if period == '7d' else 30
+        for i in range(days):
+            day_start = (now - timedelta(days=days-1-i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': day_start, '$lt': day_end}
+            })
+            user_growth.append({
+                'label': day_start.strftime('%d/%m'),
+                'value': count
+            })
+    else:  # week
+        for i in range(12):  # 12 weeks
+            week_start = now - timedelta(weeks=11-i)
+            week_end = week_start + timedelta(weeks=1)
+            count = users_c.count_documents({
+                'username': {'$ne': ADMIN_USERNAME},
+                'created_at': {'$gte': week_start, '$lt': week_end}
+            })
+            user_growth.append({
+                'label': f'W{i+1}',
+                'value': count
+            })
+    
+    # 2. Login Activity (by hour of day)
+    login_by_hour = [0] * 24
+    users_with_login = list(users_c.find(
+        {'last_login_at': {'$gte': start_date}},
+        {'last_login_at': 1}
+    ))
+    for u in users_with_login:
+        if u.get('last_login_at'):
+            hour = u['last_login_at'].hour
+            login_by_hour[hour] += 1
+    
+    # 3. Popular Habits (aggregate from all users)
+    habit_counts = defaultdict(int)
+    all_user_data = list(data_c.find({}, {'data.habits': 1}))
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            name = habit.get('name', 'Unknown')
+            habit_counts[name] += 1
+    
+    popular_habits = sorted(
+        [{'name': k, 'count': v} for k, v in habit_counts.items()],
+        key=lambda x: x['count'],
+        reverse=True
+    )[:10]
+    
+    # 4. Category Distribution
+    category_counts = defaultdict(int)
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            category = habit.get('category', 'Other')
+            category_counts[category] += 1
+    
+    category_distribution = [
+        {'category': k, 'count': v}
+        for k, v in sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+    
+    # 5. Completion Rate (average across all users)
+    total_completions = 0
+    total_expected = 0
+    for doc in all_user_data:
+        habits = doc.get('data', {}).get('habits', [])
+        for habit in habits:
+            completions = habit.get('completions', [])
+            total_completions += len(completions)
+            # Estimate expected (7 days * habit count)
+            total_expected += 7
+    
+    avg_completion_rate = (total_completions / total_expected * 100) if total_expected > 0 else 0
+    
+    # 6. Security Events
+    security_events = list(analytics_c.find(
+        {'type': {'$in': ['ip_blocked', 'rate_limit_exceeded']}, 'timestamp': {'$gte': start_date}},
+        {'_id': 0, 'type': 1, 'timestamp': 1, 'data': 1}
+    ).sort('timestamp', -1).limit(50))
+    
+    # Convert timestamps
+    for event in security_events:
+        event['timestamp'] = event['timestamp'].isoformat()
+    
+    # 7. Real-time metrics
+    active_ips = len([k for k in rate_limit_store.keys() if k.startswith('ddos:')])
+    blocked_count = len(blocked_ips)
+    
+    # 8. Engagement metrics
+    users_with_habits = data_c.count_documents({'data.habits.0': {'$exists': True}})
+    users_with_events = data_c.count_documents({'data.events.0': {'$exists': True}})
+    total_users = users_c.count_documents({'username': {'$ne': ADMIN_USERNAME}})
+    
+    return {
+        'period': period,
+        'userGrowth': user_growth,
+        'loginByHour': [
+            {'hour': f'{h:02d}:00', 'count': login_by_hour[h]}
+            for h in range(24)
+        ],
+        'popularHabits': popular_habits,
+        'categoryDistribution': category_distribution,
+        'avgCompletionRate': round(avg_completion_rate, 1),
+        'securityEvents': security_events,
+        'realTimeMetrics': {
+            'activeConnections': active_ips,
+            'blockedIPs': blocked_count,
+            'requestsLastHour': sum(len(v) for v in request_analytics.values()),
+        },
+        'engagement': {
+            'usersWithHabits': users_with_habits,
+            'usersWithEvents': users_with_events,
+            'totalUsers': total_users,
+            'habitAdoptionRate': round((users_with_habits / total_users * 100) if total_users > 0 else 0, 1),
+            'eventAdoptionRate': round((users_with_events / total_users * 100) if total_users > 0 else 0, 1),
+        }
+    }
+
+@app.get('/api/admin/security')
+def admin_get_security_status(cu: dict = Depends(get_admin_user)):
+    """Get current security status and blocked IPs."""
+    now = time.time()
+    
+    # Clean expired blocks
+    for ip in list(blocked_ips.keys()):
+        if now >= blocked_ips[ip]:
+            del blocked_ips[ip]
+    
+    # Get blocked IPs with remaining time
+    blocked_list = [
+        {'ip': ip, 'remaining_seconds': int(blocked_ips[ip] - now)}
+        for ip in blocked_ips
+    ]
+    
+    # Get suspicious IPs (not yet blocked but with violations)
+    suspicious_list = [
+        {'ip': ip, 'violations': count}
+        for ip, count in suspicious_activity.items()
+        if count > 0 and ip not in blocked_ips
+    ]
+    
+    # Recent security events
+    recent_events = list(analytics_c.find(
+        {'type': {'$in': ['ip_blocked', 'rate_limit_exceeded']}},
+        {'_id': 0}
+    ).sort('timestamp', -1).limit(20))
+    
+    for event in recent_events:
+        event['timestamp'] = event['timestamp'].isoformat()
+    
+    return {
+        'blockedIPs': blocked_list,
+        'suspiciousIPs': suspicious_list,
+        'totalBlocked': len(blocked_list),
+        'totalSuspicious': len(suspicious_list),
+        'recentEvents': recent_events,
+        'config': {
+            'rateLimitWindow': RATE_LIMIT_WINDOW,
+            'rateLimitMaxRequests': RATE_LIMIT_MAX_REQUESTS,
+            'ddosThreshold': DDOS_THRESHOLD,
+            'blockDuration': DDOS_BLOCK_DURATION,
+            'suspiciousThreshold': SUSPICIOUS_THRESHOLD,
+        }
+    }
+
+class UnblockIPRequest(BaseModel):
+    ip: str
+
+@app.post('/api/admin/security/unblock')
+def admin_unblock_ip(req: UnblockIPRequest, cu: dict = Depends(get_admin_user)):
+    """Manually unblock an IP address."""
+    if req.ip in blocked_ips:
+        del blocked_ips[req.ip]
+        suspicious_activity[req.ip] = 0
+        log_analytics_event('ip_unblocked', {'ip': req.ip, 'admin': cu['username']})
+        return {'ok': True, 'message': f'IP {req.ip} unblocked'}
+    return {'ok': False, 'message': 'IP not found in blocked list'}
 
 # ── Friends Collection ──────────────────────────────────────────────────────────
 friends_c = db['friends']

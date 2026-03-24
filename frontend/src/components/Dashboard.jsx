@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getGreeting, getFormattedDate, getTodayString, getDayLabel, isHabitApplicableOnDate, getLastNDays } from '../utils/dateUtils.js';
 import { getLevelColor } from '../utils/gamification.js';
 import ProgressRing from './ProgressRing.jsx';
@@ -39,6 +40,7 @@ function getDayCompletion(habits, dateStr, today) {
 // ─── Category Summary Card ────────────────────────────────────────────────────
 
 function CategoryCard({ category, dateHabits, selectedDate }) {
+  const { t } = useLanguage();
   const catHabits = dateHabits.filter(h => h.category === category.name);
   const completed = catHabits.filter(h => h.completions.includes(selectedDate)).length;
   const total = catHabits.length;
@@ -76,7 +78,7 @@ function CategoryCard({ category, dateHabits, selectedDate }) {
           </span>
         </>
       ) : (
-        <span className="text-[10px] text-slate-600 leading-none">rest day</span>
+        <span className="text-[10px] text-slate-600 leading-none">{t('dashboard.restDay')}</span>
       )}
     </div>
   );
@@ -127,6 +129,7 @@ function getHealthPct(habits, key, dateStr) {
 const HEALTH_CHART_RANGES = RANGES.slice(0, 4); // 1W, 1M, 3M, 6M
 
 function HealthGrowthChart({ habits, achievements }) {
+  const { t } = useLanguage();
   const [rangeIdx, setRangeIdx] = useState(0);
   const [hover, setHover] = useState(null);
   const svgRef = useRef(null);
@@ -200,19 +203,19 @@ function HealthGrowthChart({ habits, achievements }) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div>
-          <p className="text-white font-semibold text-sm">Health Metrics</p>
-          <p className="text-[#4b5563] text-xs mt-0.5">Daily goal completion rate</p>
+          <p className="text-white font-semibold text-sm">{t('dashboard.healthMetrics')}</p>
+          <p className="text-[#4b5563] text-xs mt-0.5">{t('dashboard.dailyGoal')}</p>
         </div>
         <RangeSelector ranges={HEALTH_CHART_RANGES} activeIdx={rangeIdx} onSelect={(i) => { setRangeIdx(i); setHover(null); }} accent="#34d399" />
       </div>
 
       {/* Stats row */}
       <div className="flex items-center gap-4 px-4 pb-2">
-        <div><p className="text-white font-bold text-base leading-none">{avg}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Avg</p></div>
+        <div><p className="text-white font-bold text-base leading-none">{avg}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">{t('dashboard.avg')}</p></div>
         <div className="w-px h-5" style={{ background: 'var(--bg-inner-border)' }} />
-        <div><p className="text-white font-bold text-base leading-none">{peak}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">Peak</p></div>
+        <div><p className="text-white font-bold text-base leading-none">{peak}%</p><p className="text-[#4b5563] text-[10px] mt-0.5">{t('dashboard.peak')}</p></div>
         <div className="w-px h-5" style={{ background: 'var(--bg-inner-border)' }} />
-        <div><p className="font-bold text-base leading-none" style={{ color: '#34d399' }}>{perfect}</p><p className="text-[#4b5563] text-[10px] mt-0.5">Perfect</p></div>
+        <div><p className="font-bold text-base leading-none" style={{ color: '#34d399' }}>{perfect}</p><p className="text-[#4b5563] text-[10px] mt-0.5">{t('dashboard.perfect')}</p></div>
         {hoverData && (
           <>
             <div className="flex-1" />
@@ -285,7 +288,7 @@ function HealthGrowthChart({ habits, achievements }) {
 
       {/* Health medals */}
       <div className="px-4 pb-4 pt-3 border-t" style={{ borderColor: 'var(--bg-inner-border, #1a1a1a)' }}>
-        <p className="text-[#4b5563] text-[10px] font-semibold uppercase tracking-wider mb-2">Health Medals</p>
+        <p className="text-[#4b5563] text-[10px] font-semibold uppercase tracking-wider mb-2">{t('dashboard.healthMedals')}</p>
         <div className="flex flex-wrap gap-1.5">
           {HEALTH_MEDALS.map(ach => {
             const unlocked = unlockedSet.has(ach.id);
@@ -312,6 +315,7 @@ function HealthGrowthChart({ habits, achievements }) {
 // ─── Mini Calendar ────────────────────────────────────────────────────────────
 
 function MiniCalendar({ habits, selectedDate, onSelectDate }) {
+  const { t } = useLanguage();
   const today = getTodayString();
   const todayObj = new Date();
 
@@ -347,8 +351,8 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
       style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
     >
       <div className="mb-1">
-        <h3 className="text-white font-semibold text-base">📅 Pick a Date</h3>
-        <p className="text-slate-500 text-xs mt-0.5">Select any past date to view or log habits</p>
+        <h3 className="text-white font-semibold text-base">{t('dashboard.pickDate')}</h3>
+        <p className="text-slate-500 text-xs mt-0.5">{t('dashboard.pickDateDesc')}</p>
       </div>
 
       <div className="flex items-center justify-between mt-4 mb-3">
@@ -434,16 +438,17 @@ function MiniCalendar({ habits, selectedDate, onSelectDate }) {
 // ─── Mood Tracker ─────────────────────────────────────────────────────────────
 
 const MOODS = [
-  { key: 'crushing', emoji: '🚀', label: 'Crushing it', score: 5, color: '#22c55e', glow: 'rgba(34,197,94,0.4)' },
-  { key: 'great',    emoji: '😄', label: 'Great',       score: 4, color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
-  { key: 'good',     emoji: '🙂', label: 'Good',        score: 3, color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
-  { key: 'meh',      emoji: '😐', label: 'Meh',         score: 2, color: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
-  { key: 'rough',    emoji: '😩', label: 'Rough',       score: 1, color: '#ef4444', glow: 'rgba(239,68,68,0.4)' },
+  { key: 'crushing', emoji: '🚀', label: 'Crushing it', labelKey: 'moods.crushingIt', score: 5, color: '#22c55e', glow: 'rgba(34,197,94,0.4)' },
+  { key: 'great',    emoji: '😄', label: 'Great',       labelKey: 'moods.great',      score: 4, color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
+  { key: 'good',     emoji: '🙂', label: 'Good',        labelKey: 'moods.good',       score: 3, color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
+  { key: 'meh',      emoji: '😐', label: 'Meh',         labelKey: 'moods.meh',        score: 2, color: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
+  { key: 'rough',    emoji: '😩', label: 'Rough',       labelKey: 'moods.rough',      score: 1, color: '#ef4444', glow: 'rgba(239,68,68,0.4)' },
 ];
 
 function MoodTracker({ moods, logMood, addToast }) {
   const today = getTodayString();
   const todayMood = moods[today];
+  const { t } = useLanguage();
   const [hoveredKey, setHoveredKey] = useState(null);
   const [justLogged, setJustLogged] = useState(false);
 
@@ -463,7 +468,7 @@ function MoodTracker({ moods, logMood, addToast }) {
     logMood(today, mood);
     setJustLogged(true);
     setTimeout(() => setJustLogged(false), 1200);
-    addToast({ type: 'xp', title: `Mood logged!`, message: `${mood.emoji} ${mood.label}`, reasons: [] });
+    addToast({ type: 'xp', title: t('dashboard.moodLogged'), message: `${mood.emoji} ${t(mood.labelKey)}`, reasons: [] });
   };
 
   return (
@@ -475,9 +480,9 @@ function MoodTracker({ moods, logMood, addToast }) {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-white font-semibold text-sm">How are you feeling?</p>
+            <p className="text-white font-semibold text-sm">{t('dashboard.howFeeling')}</p>
             <p className="text-[#4b5563] text-xs mt-0.5">
-              {todayMood ? `Today: ${todayMood.emoji} ${todayMood.label}` : 'Log your mood for today'}
+              {todayMood ? `${t('dashboard.todayMoodPrefix')} ${todayMood.emoji} ${t(MOODS.find(m => m.key === todayMood.key)?.labelKey || 'moods.good')}` : t('dashboard.logMood')}
             </p>
           </div>
           {todayMood && (
@@ -519,7 +524,7 @@ function MoodTracker({ moods, logMood, addToast }) {
                   className="text-[10px] font-semibold leading-none text-center"
                   style={{ color: isSelected ? m.color : '#4b5563' }}
                 >
-                  {m.label}
+                  {t(m.labelKey)}
                 </span>
               </button>
             );
@@ -529,7 +534,7 @@ function MoodTracker({ moods, logMood, addToast }) {
 
       {/* 14-day strip */}
       <div className="px-5 pb-4">
-        <p className="text-[10px] font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Last 14 days</p>
+        <p className="text-[10px] font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('dashboard.last14Days')}</p>
         <div className="flex gap-1">
           {strip.map(({ date, mood, isToday }) => {
             const m = mood ? MOODS.find(x => x.key === mood.key) : null;
@@ -585,11 +590,18 @@ export default function Dashboard({ setActiveTab }) {
     accentColor,
   } = useHabits();
 
+  const { t } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(getTodayString);
 
   const today = getTodayString();
-  const greeting = getGreeting();
+  const greetingKey = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'dashboard.goodMorning';
+    if (h < 18) return 'dashboard.goodAfternoon';
+    return 'dashboard.goodEvening';
+  })();
+  const greeting = t(greetingKey);
   const formattedDate = getFormattedDate();
   const levelColor = getLevelColor(currentLevel);
   const isViewingToday = selectedDate === today;
@@ -642,10 +654,10 @@ export default function Dashboard({ setActiveTab }) {
         </h1>
         <p className="text-slate-400 text-sm mt-2">
           {allDoneToday
-            ? "You've crushed all your habits today — legendary!"
+            ? t('dashboard.crushedAll')
             : todayHabits.length === 0
-            ? "Add your first habit to start your journey!"
-            : `${completedToday.length} of ${todayHabits.length} habits done. Keep going!`}
+            ? t('dashboard.addFirstPrompt')
+            : `${completedToday.length} ${t('dashboard.of')} ${todayHabits.length} ${t('dashboard.habitsDone')}`}
         </p>
       </div>
 
@@ -662,12 +674,12 @@ export default function Dashboard({ setActiveTab }) {
             style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)' }}
           >
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[#4b5563] text-xs font-semibold uppercase tracking-wider">Upcoming</span>
+              <span className="text-[#4b5563] text-xs font-semibold uppercase tracking-wider">{t('dashboard.upcoming')}</span>
               <button
                 onClick={() => setActiveTab('events')}
                 className="text-[#4b5563] hover:text-[#22c55e] text-xs transition-colors"
               >
-                All →
+                {t('dashboard.allEvents')} →
               </button>
             </div>
             <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
@@ -683,7 +695,7 @@ export default function Dashboard({ setActiveTab }) {
                     <div>
                       <p className="text-white text-xs font-semibold leading-none truncate max-w-[100px]">{event.title}</p>
                       <p className="text-[10px] mt-0.5 font-medium" style={{ color: days <= 7 ? '#fbbf24' : event.color }}>
-                        {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days}d away`}
+                        {days === 0 ? t('dashboard.todayExcl') : days === 1 ? t('dashboard.tomorrow') : `${days}${t('dashboard.daysAway')}`}
                       </p>
                     </div>
                   </div>
@@ -715,7 +727,7 @@ export default function Dashboard({ setActiveTab }) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-base">🎯</span>
-              <span className="text-white text-sm font-semibold">Focus Habit</span>
+              <span className="text-white text-sm font-semibold">{t('dashboard.focusHabit')}</span>
               <span className="text-[10px] text-[#4b5563] bg-white/5 px-2 py-0.5 rounded-full">2× XP</span>
             </div>
             {focusHabitId && focusHabitDate === today && (
@@ -723,7 +735,7 @@ export default function Dashboard({ setActiveTab }) {
                 onClick={clearFocusHabit}
                 className="text-[#4b5563] hover:text-white text-xs transition-colors"
               >
-                clear
+                {t('dashboard.clear')}
               </button>
             )}
           </div>
@@ -738,14 +750,14 @@ export default function Dashboard({ setActiveTab }) {
                 <span className="text-xl">{fh.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-white'}`}>{fh.name}</p>
-                  <p className="text-[10px] text-[#4b5563] mt-0.5">{isDone ? '✓ Done — 2× XP earned!' : 'Complete this first for bonus XP'}</p>
+                  <p className="text-[10px] text-[#4b5563] mt-0.5">{isDone ? `✓ ${t('dashboard.doneBonus')}` : t('dashboard.completeFirst')}</p>
                 </div>
                 {isDone && <span className="text-[#22c55e] text-lg">✓</span>}
               </div>
             );
           })() : (
             <div>
-              <p className="text-[#4b5563] text-xs mb-2">Pick one habit to focus on today for 2× XP:</p>
+              <p className="text-[#4b5563] text-xs mb-2">{t('dashboard.pickFocus')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {todayHabits.filter(h => !h.completions.includes(today)).slice(0, 6).map(h => (
                   <button
@@ -759,7 +771,7 @@ export default function Dashboard({ setActiveTab }) {
                   </button>
                 ))}
                 {todayHabits.filter(h => !h.completions.includes(today)).length === 0 && (
-                  <p className="text-[#22c55e] text-xs">All done — great work! 🎉</p>
+                  <p className="text-[#22c55e] text-xs">{t('dashboard.allDoneGreat')}</p>
                 )}
               </div>
             </div>
@@ -801,21 +813,21 @@ export default function Dashboard({ setActiveTab }) {
 
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-bold text-lg">
-              {isViewingToday ? "Today's Progress" : getDayLabel(selectedDate)}
+              {isViewingToday ? t('dashboard.todayProgress') : getDayLabel(selectedDate)}
             </h3>
-            <p className="text-slate-400 text-sm">{completionPercentSelected}% complete</p>
+            <p className="text-slate-400 text-sm">{completionPercentSelected}% {t('dashboard.complete')}</p>
             <div className="mt-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <div
                   className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: '#22c55e' }}
                 />
-                <span className="text-slate-300 text-sm">{completedOnSelected.length} completed</span>
+                <span className="text-slate-300 text-sm">{completedOnSelected.length} {t('dashboard.completedCount')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-slate-600 flex-shrink-0" />
                 <span className="text-slate-400 text-sm">
-                  {selectedDateHabits.length - completedOnSelected.length} remaining
+                  {selectedDateHabits.length - completedOnSelected.length} {t('dashboard.remaining')}
                 </span>
               </div>
             </div>
@@ -832,17 +844,17 @@ export default function Dashboard({ setActiveTab }) {
         >
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">⚡</span>
-            <h3 className="text-white font-bold text-lg">XP & Level</h3>
+            <h3 className="text-white font-bold text-lg">{t('dashboard.xpLevel')}</h3>
           </div>
           <XPBar totalXP={profile.totalXP || 0} compact={true} />
           <div className="mt-4 grid grid-cols-2 gap-3 text-center">
             <div className="rounded-2xl bg-white/5 p-3">
               <p className="text-white font-bold text-xl">{stats.currentLongestStreak}</p>
-              <p className="text-slate-400 text-xs">🔥 Best streak</p>
+              <p className="text-slate-400 text-xs">{t('dashboard.bestStreak')}</p>
             </div>
             <div className="rounded-2xl bg-white/5 p-3">
               <p className="text-white font-bold text-xl">{stats.completionRateLast7}%</p>
-              <p className="text-slate-400 text-xs">📈 7-day rate</p>
+              <p className="text-slate-400 text-xs">{t('dashboard.sevenDayRate')}</p>
             </div>
           </div>
         </div>
@@ -852,7 +864,7 @@ export default function Dashboard({ setActiveTab }) {
       {streakHighlights.length > 0 && (
         <div>
           <h3 className="text-white font-semibold text-base mb-3 flex items-center gap-2">
-            🔥 Active Streaks
+            🔥 {t('dashboard.activeStreaks')}
           </h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {streakHighlights.map(habit => (
@@ -869,7 +881,7 @@ export default function Dashboard({ setActiveTab }) {
                   <p className="font-black text-2xl leading-none" style={{ color: habit.color }}>
                     {habit.streak}
                   </p>
-                  <p className="text-slate-400 text-xs">day streak</p>
+                  <p className="text-slate-400 text-xs">{t('dashboard.dayStreak')}</p>
                 </div>
                 <p className="text-white text-xs font-medium truncate w-full px-1">{habit.name}</p>
               </div>
@@ -901,14 +913,14 @@ export default function Dashboard({ setActiveTab }) {
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-base">🕐</span>
-              <span className="text-white text-sm font-semibold">On This Day</span>
-              <span className="text-[#4b5563] text-xs">· 1 week ago</span>
+              <span className="text-white text-sm font-semibold">{t('dashboard.onThisDay')}</span>
+              <span className="text-[#4b5563] text-xs">· {t('dashboard.weekAgo')}</span>
             </div>
             <p className="text-[#9ca3af] text-sm">
-              You completed{' '}
-              <span className="text-white font-semibold">{weekAgoDone.length}/{weekAgoHabits.length} habits</span>
+              {t('dashboard.youCompleted')}{' '}
+              <span className="text-white font-semibold">{weekAgoDone.length}/{weekAgoHabits.length} {t('dashboard.habitsLower')}</span>
               {' '}({weekAgoPct}%)
-              {weekAgoPct === 100 ? ' — a perfect day! ⭐' : weekAgoPct >= 75 ? ' — solid effort! 💪' : '.'}
+              {weekAgoPct === 100 ? ` ${t('dashboard.aPerfectDay')}` : weekAgoPct >= 75 ? ` ${t('dashboard.solidEffort')}` : '.'}
             </p>
             {weekAgoDone.length > 0 && (
               <div className="flex gap-1 mt-2">
@@ -934,7 +946,7 @@ export default function Dashboard({ setActiveTab }) {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-semibold text-base flex items-center gap-2">
             {allDoneOnSelected ? '🎉' : '📋'}{' '}
-            {isViewingToday ? "Today's Habits" : `Habits — ${getDayLabel(selectedDate)}`}
+            {isViewingToday ? t('dashboard.todaysHabits') : `${t('dashboard.habitsLabel')} — ${getDayLabel(selectedDate)}`}
           </h3>
           <div className="flex items-center gap-2">
             {!isViewingToday && (
@@ -942,7 +954,7 @@ export default function Dashboard({ setActiveTab }) {
                 onClick={() => setSelectedDate(today)}
                 className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10"
               >
-                ← Today
+                ← {t('dashboard.today')}
               </button>
             )}
             {isViewingToday && (
@@ -950,7 +962,7 @@ export default function Dashboard({ setActiveTab }) {
                 onClick={() => setShowAddModal(true)}
                 className="flex items-center gap-1 text-primary-lighter text-sm hover:text-white transition-colors font-medium"
               >
-                <span>+</span> Add
+                <span>+</span> {t('dashboard.add')}
               </button>
             )}
           </div>
@@ -963,19 +975,19 @@ export default function Dashboard({ setActiveTab }) {
           >
             <div className="text-4xl mb-3">🌱</div>
             <h4 className="text-white font-semibold mb-1">
-              {habits.length === 0 ? 'No habits yet!' : 'No habits scheduled this day'}
+              {habits.length === 0 ? t('dashboard.noHabitsYet') : t('dashboard.noHabitsScheduled')}
             </h4>
             <p className="text-slate-400 text-sm mb-4 max-w-xs mx-auto">
               {habits.length === 0
-                ? 'Add your first habit to start building better routines!'
-                : 'All your habits are scheduled for other days. Rest up!'}
+                ? t('dashboard.addFirstHabitDesc')
+                : t('dashboard.restUp')}
             </p>
             {habits.length === 0 && (
               <button
                 onClick={() => setShowAddModal(true)}
                 className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary to-primary-light text-white font-semibold text-sm shadow-lg shadow-primary/30 hover:scale-105 transition-all"
               >
-                ✨ Add First Habit
+                {t('dashboard.addFirstBtn')}
               </button>
             )}
           </div>
@@ -997,7 +1009,7 @@ export default function Dashboard({ setActiveTab }) {
                           className="text-xs px-2 py-0.5 rounded-full font-semibold"
                           style={{ background: `${cat.color}25`, color: cat.color }}
                         >
-                          ✓ Done
+                          ✓ {t('dashboard.done')}
                         </span>
                       )}
                     </div>
@@ -1027,11 +1039,11 @@ export default function Dashboard({ setActiveTab }) {
                 }}
               >
                 <p className="text-emerald-400 font-bold">
-                  🎉 {isViewingToday ? 'Perfect Day!' : 'All done!'} You crushed all {selectedDateHabits.length} habits!
+                  {isViewingToday ? t('dashboard.perfectDay') : t('dashboard.allDoneCrushed')} {t('dashboard.crushedHabits')} {selectedDateHabits.length} {t('dashboard.habitsWord')}
                 </p>
                 {isViewingToday && (
                   <p className="text-emerald-500 text-sm mt-1">
-                    +25 bonus XP awarded · Keep the streak alive!
+                    {t('dashboard.bonusXP')}
                   </p>
                 )}
               </div>

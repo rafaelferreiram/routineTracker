@@ -4,11 +4,13 @@ import './index.css';
 import App from './App.jsx';
 import { StoreProvider } from './store/useStore.js';
 import { AuthProvider, useAuth } from './store/useAuth.js';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import LandingPage from './components/LandingPage.jsx';
 
 function AppShell() {
   const { currentUser, loginWithGoogle } = useAuth();
+  const { t } = useLanguage();
   const [showAuth, setShowAuth] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const hasProcessedOAuth = useRef(false);
@@ -45,7 +47,7 @@ function AppShell() {
           alt="RoutineTracker" 
           className="w-16 h-16 mb-4 animate-pulse" 
         />
-        <p className="text-white text-lg font-medium">Entrando com Google...</p>
+        <p className="text-white text-lg font-medium">{t('common.loading')}</p>
         <span className="mt-4 w-6 h-6 border-2 border-[#22c55e]/30 border-t-[#22c55e] rounded-full animate-spin" />
       </div>
     );
@@ -71,8 +73,10 @@ function AppShell() {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </LanguageProvider>
   </StrictMode>
 );

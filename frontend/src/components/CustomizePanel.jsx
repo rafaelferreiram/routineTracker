@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useHabits } from '../hooks/useHabits.js';
 import { useAuth } from '../store/useAuth.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { THEMES } from '../utils/themes.js';
+import LanguageSelector from './LanguageSelector.jsx';
 
 const ACCENT_PRESETS = [
   { label: 'Green',   value: '#22c55e' },
@@ -42,6 +44,7 @@ function Field({ label, hint, children }) {
 export default function CustomizePanel({ onExport }) {
   const { profile, settings, accentColor, updateSettings, updateProfile, habits, addHabit, updateHabit, deleteHabit } = useHabits();
   const { currentUser, logout } = useAuth();
+  const { t } = useLanguage();
 
   const appName = settings.appName || 'RoutineTracker';
   const appIcon = settings.appIcon || '⚡';
@@ -123,13 +126,13 @@ export default function CustomizePanel({ onExport }) {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-white font-bold text-2xl">Customize</h2>
-        <p className="text-[#6b7280] text-sm mt-1">Make RoutineTracker yours</p>
+        <h2 className="text-white font-bold text-2xl">{t('settings.title')}</h2>
+        <p className="text-[#6b7280] text-sm mt-1">{t('settings.subtitle')}</p>
       </div>
 
       {/* ── Appearance ── */}
-      <Section title="🎨  Appearance">
-        <Field label="Theme">
+      <Section title={`🎨  ${t('settings.appearance')}`}>
+        <Field label={t('settings.theme')}>
           <div className="grid grid-cols-5 gap-2">
             {Object.values(THEMES).map(t => {
               const isActive = (settings.theme || 'dark') === t.id;
@@ -157,7 +160,7 @@ export default function CustomizePanel({ onExport }) {
           </div>
         </Field>
 
-        <Field label="Accent Color" hint="Used across charts, buttons, progress bars and indicators.">
+        <Field label={t('settings.accentColor')} hint={t('settings.accentHint')}>
           <div className="flex flex-wrap gap-2.5 mb-3">
             {ACCENT_PRESETS.map(preset => {
               const isActive = accentColor === preset.value;
@@ -191,7 +194,7 @@ export default function CustomizePanel({ onExport }) {
                 value={customHex}
                 onChange={e => setCustomHex(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomHex()}
-                placeholder="Custom hex e.g. #ff6b35"
+                placeholder={t('settings.customHex')}
                 maxLength={7}
                 className="flex-1 bg-transparent text-white placeholder-[#4b5563] text-sm outline-none"
               />
@@ -201,7 +204,7 @@ export default function CustomizePanel({ onExport }) {
               className="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{ background: `${accentColor}20`, border: `1px solid ${accentColor}40`, color: accentColor }}
             >
-              Apply
+              {t('common.apply')}
             </button>
           </div>
           {/* Live preview bar */}
@@ -211,9 +214,14 @@ export default function CustomizePanel({ onExport }) {
         </Field>
       </Section>
 
+      {/* ── Language ── */}
+      <Section title={`🌐  ${t('settings.language')}`}>
+        <LanguageSelector />
+      </Section>
+
       {/* ── Branding ── */}
-      <Section title="✏️  Branding">
-        <Field label="App Name">
+      <Section title={`✏️  ${t('settings.branding')}`}>
+        <Field label={t('settings.appName')}>
           <div className="flex gap-2">
             <input
               value={appNameInput}
@@ -227,12 +235,12 @@ export default function CustomizePanel({ onExport }) {
               className="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{ background: `${accentColor}20`, border: `1px solid ${accentColor}40`, color: accentColor }}
             >
-              {savedFlash === 'appName' ? '✓ Saved' : 'Save'}
+              {savedFlash === 'appName' ? `✓ ${t('common.saved')}` : t('common.save')}
             </button>
           </div>
         </Field>
 
-        <Field label="App Icon">
+        <Field label={t('settings.appIcon')}>
           <div className="relative">
             <button
               onClick={() => setShowIconPicker(v => !v)}
@@ -264,8 +272,8 @@ export default function CustomizePanel({ onExport }) {
       </Section>
 
       {/* ── Profile ── */}
-      <Section title="👤  Profile">
-        <Field label="Your Name">
+      <Section title={`👤  ${t('nav.profile')}`}>
+        <Field label={t('settings.yourName')}>
           <div className="flex gap-2">
             <input
               value={nameInput}
@@ -279,11 +287,11 @@ export default function CustomizePanel({ onExport }) {
               className="px-3 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{ background: `${accentColor}20`, border: `1px solid ${accentColor}40`, color: accentColor }}
             >
-              {savedFlash === 'name' ? '✓ Saved' : 'Save'}
+              {savedFlash === 'name' ? `✓ ${t('common.saved')}` : t('common.save')}
             </button>
           </div>
         </Field>
-        <Field label="Joined">
+        <Field label={t('settings.joined')}>
           <p className="text-[#6b7280] text-sm">
             {profile.joinDate
               ? new Date(profile.joinDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -293,7 +301,7 @@ export default function CustomizePanel({ onExport }) {
       </Section>
 
       {/* ── Data ── */}
-      <Section title="💾  Data">
+      <Section title={`💾  ${t('settings.data')}`}>
         <div className="flex flex-col gap-2">
           {onExport && (
             <button
@@ -303,8 +311,8 @@ export default function CustomizePanel({ onExport }) {
             >
               <span className="text-lg">📦</span>
               <div>
-                <p className="text-white font-semibold text-sm">Backup & Restore</p>
-                <p className="text-[#4b5563] text-xs">Export or import your data as JSON</p>
+                <p className="text-white font-semibold text-sm">{t('settings.backupRestore')}</p>
+                <p className="text-[#4b5563] text-xs">{t('settings.exportImport')}</p>
               </div>
             </button>
           )}
@@ -319,16 +327,16 @@ export default function CustomizePanel({ onExport }) {
             <span className="text-lg">{resetConfirm ? '⚠️' : '🗑️'}</span>
             <div>
               <p className={`font-semibold text-sm ${resetConfirm ? 'text-red-400' : 'text-white'}`}>
-                {resetConfirm ? 'Tap again to confirm — all data will be lost!' : 'Reset All Data'}
+                {resetConfirm ? t('settings.resetConfirm') : t('settings.resetData')}
               </p>
-              <p className="text-[#4b5563] text-xs">Clear habits, completions, XP and achievements</p>
+              <p className="text-[#4b5563] text-xs">{t('settings.clearData')}</p>
             </div>
           </button>
         </div>
       </Section>
 
       {/* ── Categories ── */}
-      <Section title="🗂️  Categories">
+      <Section title={`🗂️  ${t('settings.categories')}`}>
         <div className="flex flex-wrap gap-2 mb-3">
           {categories.map(cat => (
             <div key={cat.name} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm"
@@ -355,7 +363,7 @@ export default function CustomizePanel({ onExport }) {
             value={newCatName}
             onChange={e => setNewCatName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCategory()}
-            placeholder="Category name..."
+            placeholder={t('settings.categoryName')}
             className="flex-1 px-3 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-sm outline-none placeholder-[#374151]"
             maxLength={24}
           />
@@ -363,13 +371,13 @@ export default function CustomizePanel({ onExport }) {
             disabled={!newCatName.trim()}
             className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
             style={{ background: 'var(--accent, #22c55e)', color: '#000' }}>
-            Add
+            {t('common.add')}
           </button>
         </div>
       </Section>
 
       {/* Account */}
-      <Section title="Account">
+      <Section title={t('settings.account')}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
@@ -386,7 +394,7 @@ export default function CustomizePanel({ onExport }) {
             className="px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
             style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-border)', color: '#6b7280' }}
           >
-            Sign Out
+            {t('common.signOut')}
           </button>
         </div>
       </Section>

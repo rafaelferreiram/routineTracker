@@ -8,6 +8,7 @@
 - All existing habits, achievements, XP, events, and seed data preserved
 - Account rafael linked with Google email ferreira.rafah@gmail.com
 - App renamed from RoutineQuest to RoutineTracker with new custom logo
+- Internationalization (i18n) for English, Portuguese (Brazil), Spanish, and German
 
 ## Architecture
 
@@ -16,236 +17,111 @@
 - **Backend**: FastAPI (port 8001, supervisor-managed at /app/backend)
 - **Database**: MongoDB (local instance via MONGO_URL)
 - **Auth**: JWT (python-jose, bcrypt hashing, 90-day tokens) + Google OAuth
+- **i18n**: React Context (LanguageContext) + central translations file
 
 ### Key Files
-- `/app/backend/server.py` - FastAPI REST API with auth, profile, friends endpoints
+- `/app/backend/server.py` - FastAPI REST API with auth, profile, admin, DDoS protection
 - `/app/backend/.env` - MONGO_URL, DB_NAME, JWT_SECRET
 - `/app/frontend/src/api/client.js` - API client helper
 - `/app/frontend/src/store/useAuth.js` - JWT + Google auth
 - `/app/frontend/src/store/useStore.js` - State store with API sync
-- `/app/frontend/src/main.jsx` - App shell with auth gate and routing
-- `/app/frontend/src/components/LoginScreen.jsx` - Login/signup UI with Google
-- `/app/frontend/src/components/LandingPage.jsx` - Public landing page
-- `/app/frontend/src/components/ProfilePanel.jsx` - Profile management with photo upload and password change
+- `/app/frontend/src/main.jsx` - App shell with LanguageProvider, auth gate, routing
+- `/app/frontend/src/i18n/translations.js` - Central translation strings for EN/PT/ES/DE
+- `/app/frontend/src/i18n/LanguageContext.jsx` - Language provider and useLanguage hook
+- `/app/frontend/src/components/LanguageSelector.jsx` - Flag-based language switcher
+- `/app/frontend/src/components/LoginScreen.jsx` - Login/signup UI with i18n
+- `/app/frontend/src/components/LandingPage.jsx` - Public landing page with i18n
+- `/app/frontend/src/components/Dashboard.jsx` - Main dashboard with full i18n
+- `/app/frontend/src/components/Navbar.jsx` - Navigation with i18n (NAV_KEYS)
+- `/app/frontend/src/components/OnboardingCarousel.jsx` - Onboarding with i18n (SLIDE_KEYS)
+- `/app/frontend/src/components/CustomizePanel.jsx` - Settings with LanguageSelector
+- `/app/frontend/src/components/ProfilePanel.jsx` - Profile management with i18n
+- `/app/frontend/src/components/PWAInstallPrompt.jsx` - PWA install with i18n
+- `/app/frontend/src/components/AdminDashboard.jsx` - Admin panel (separate view)
 
-## Core Requirements (Static)
+## Implemented Features
 
-### Security
-- [x] bcrypt password hashing (salt rounds auto)
+### Core
+- [x] Habit tracking (CRUD, daily/weekly/specific days, categories, emoji icons)
+- [x] XP & leveling system with gamification
+- [x] Achievement/medal system
+- [x] Streak tracking and bonuses
+- [x] Growth chart with daily/weekly/monthly views
+- [x] Mood tracker (5 moods, 14-day history strip)
+- [x] Calendar date picker for viewing past days
+- [x] Focus Habit with 2x XP bonus
+- [x] On This Day (1 week ago recall)
+- [x] Health metrics chart with completion rate
+
+### Security & Auth
+- [x] bcrypt password hashing
 - [x] JWT tokens (90-day expiry)
-- [x] HTTPS in production (nginx proxy)
-- [x] No plaintext passwords anywhere
-- [x] Password strength validation (6+ chars, letter, number)
+- [x] Google OAuth via Emergent-managed Google Auth
+- [x] Google Auth fix: prioritize google_id lookup over email
+- [x] DDoS protection middleware (rate limiting)
+- [x] Password change with current password verification
 
-### Database
-- [x] MongoDB users collection (with unique username index)
-- [x] MongoDB user_data collection (full state blob per user)
-- [x] Both rafael and gabriela seeded on backend startup
-- [x] Email linking for Google OAuth
+### Admin System
+- [x] Role-based access control (isAdmin flag)
+- [x] Separate AdminDashboard.jsx (completely isolated from user app)
+- [x] User management (enable/disable accounts)
+- [x] Feature toggling per user (Habits, Events, TARS)
+- [x] Analytics dashboard (user growth, engagement, peak hours)
+- [x] Password reset for users
 
-### Accessibility
-- [x] Cloud-accessible from any device
-- [x] Data persists to MongoDB
-- [x] localStorage cache for instant loads
-- [x] API sync after mount (background)
+### Internationalization (i18n) - COMPLETE
+- [x] React Context-based language system (LanguageContext)
+- [x] Central translations file with 500+ keys for EN/PT/ES/DE
+- [x] Language selector component with flag buttons
+- [x] Landing page fully translated
+- [x] Login/Signup screen fully translated
+- [x] Onboarding carousel fully translated (SLIDE_KEYS)
+- [x] Navigation (desktop sidebar + mobile tabs) fully translated
+- [x] Dashboard fully translated (greeting, progress, moods, streaks, focus habit, etc.)
+- [x] Customize panel fully translated with LanguageSelector
+- [x] Profile panel fully translated (account, security, password modal)
+- [x] PWA install prompt fully translated
+- [x] Language persistence via localStorage
+- [x] Fallback to English for missing translations
 
-### Responsive Design
-- [x] Desktop sidebar (lg:flex, hidden on mobile)
-- [x] Mobile bottom navigation (lg:hidden)
-- [x] iOS safe area insets (env(safe-area-inset-bottom))
-- [x] Touch-friendly targets (min 44px)
-- [x] PWA manifest with custom logo
+### Other Features
+- [x] PWA support with install prompt
+- [x] Safe area support for iPhone notch
+- [x] Onboarding carousel (one-time, saved to DB)
+- [x] Profile panel (name, photo, password change)
+- [x] Events/trips tracking with countdown
+- [x] TARS AI assistant (text + voice)
+- [x] Journal panel
+- [x] Friends system (backend)
+- [x] Export/Import data
+- [x] Theme customization (dark/light, accent colors)
+- [x] Custom categories
 
-## API Endpoints
+## Pending Issues
+- **P0**: Google Login on production (routine-tracker.com) - fix implemented but pending user deployment/verification
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | /api/health | Health check |
-| POST | /api/auth/login | Login → JWT + user info |
-| POST | /api/auth/register | Create new account |
-| POST | /api/auth/google | Google OAuth → JWT + user info |
-| GET | /api/data | Get user's full state |
-| PUT | /api/data | Save user's full state |
-| GET | /api/profile | Get user profile with hasPassword flag |
-| PUT | /api/profile | Update profile (picture, display_name) |
-| POST | /api/profile/change-password | Change user password |
-| GET | /api/friends | Get friends list |
-| POST | /api/friends/add | Add friend by username |
-| DELETE | /api/friends/:id | Remove friend |
-| GET | /api/users/search | Search users by username |
+## Upcoming Tasks
+- **P1**: Daily push notifications for habit reminders
+- **P2**: "Remember me" option for persistent sessions
+- **P2**: Full friends system UI
+- **P2**: Confetti effect for streak milestones
+- **P2**: TARS persistent conversation history
+- **P2**: TARS proactive suggestions
+- **P3**: Email verification with Resend (blocked: pending API key)
+- **P3**: AdminDashboard i18n (currently hardcoded)
 
-## User Accounts
-
-| Username | Password | Level | XP | Email |
-|----------|----------|-------|-----|-------|
-| rafael | admin | 10 | 3,685 | ferreira.rafah@gmail.com |
-| gabriela | gabriela | 1 | 0 | - |
-
-## What's Been Implemented
-
-### 2026-03-23 - Google Maps Places Integration
-- New PlaceSearch.jsx component for searching real-world places
-- Google Maps JavaScript API + Places API integration
-- Features:
-  - Search by location (e.g., "Times Square, NYC")
-  - Filter by type: Restaurantes, Cafés, Atrações, Museus, Parques, Shopping, Hotéis, Bares
-  - Results show photos, ratings (stars), price levels ($-$$$$), and open/closed status
-  - Interactive mini-map with dark theme and place markers
-  - "Ver no Maps" button opens Google Maps in new tab
-  - "Adicionar ao Roteiro" with time picker modal
-- EventItinerary.jsx updated to 3-column layout:
-  - Left: Roteiro (day-by-day activities)
-  - Middle: Buscar Lugares (Google Maps search)
-  - Right: Assistente IA (chat)
-- Mobile-friendly with tab navigation for each section
-- API key stored in environment variable (VITE_GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY)
-- **TARS integration**: Backend `search_places` function now uses Google Places API (geocoding + nearbySearch) to return real places with ratings, prices, and Google Maps links
-
-### 2026-03-23 - TARS AI Assistant with Function Calling (P0 Bug Fixed)
-- Renamed AI assistant from "Roti" to "TARS" (Interstellar reference)
-- Custom TARS robot icon from user-provided image (/public/tars-icon.png)
-- Dark space-themed button in navbar
-- Personality includes "Humor: 75%" setting (movie reference)
-- AIChat.jsx component for general AI conversation
-- Voice-to-voice and text-to-text interaction
-- **System Actions via Function Calling:**
-  - `create_habit` - Create new habits with emoji and frequency
-  - `edit_habit` - Edit existing habits
-  - `create_event` - Create events/trips
-  - `search_places` - Search for restaurants, attractions, etc.
-  - `add_to_itinerary` - Add activities to event itineraries (**BUG FIXED**)
-  - `get_event_itinerary` - View event itineraries
-- Real-time weather via Open-Meteo API
-- OpenAI fallback to Emergent LLM Key
-- **P0 Bug Fix (2026-03-23)**: Fixed MongoDB query in `add_to_itinerary` using `array_filters` to correctly update events in nested arrays. Also fixed user data access path (`data.events` instead of `events`).
-
-### 2026-03-23 - Fire Animation for Streaks
-- Added CSS keyframe animations for fire effect (fireFlicker, fireGlow, fireBounce)
-- StreakBadge.jsx updated with fire-animation class
-- StreakPill component shows animated fire emoji with glow effect
-- Streaks 2+ days get flickering fire animation
-- Progressive glow intensity based on streak length (3d, 7d, 14d, 30d+)
-
-### 2026-03-23 - Event Itinerary with AI Assistant
-- New EventItinerary.jsx component for planning multi-day event itineraries
-- AI chat assistant (GPT-4o via Emergent LLM Key) that organizes activities into event days
-- Voice input support via OpenAI Whisper for hands-free planning
-- Two-column layout on desktop (itinerary + AI chat), stacked on mobile
-- "Planejar Roteiro" button only appears for multi-day events
-- Manual activity addition with time and title
-- Itinerary data persisted in event.itinerary array
-- Backend endpoints: /api/ai/itinerary and /api/ai/transcribe
-- **Calendar Export**: Download .ics file with each activity as separate event
-  - Each event includes TL;DR summary of the day's activities in description
-  - Works with iPhone Calendar, Google Calendar, Outlook, and any iCalendar-compatible app
-
-### 2026-03-23 - Event Memories with Photos per Day
-- Enhanced EventsPanel.jsx with support for single-day and multi-day (period) events
-- Event creation form with toggle between "1 dia" and "Período"
-- EventReviewModal now supports photos organized by day for multi-day events
-- Each day of a multi-day event can have up to 2 photos
-- Date tabs UI for navigating between days in the review modal
-- Correct calculation of max photos (days × 2)
-- Mobile-responsive design with horizontally scrollable date tabs
-- Minimalist design consistent with the rest of the app
-
-### 2026-03-23 - Profile Management & Rebranding
-- Added profile photo upload (base64 stored in database)
-- Added change password functionality with strength validation
-- Added profile info endpoint with hasPassword flag
-- Rebranded from RoutineQuest to RoutineTracker
-- Generated custom app logo (checkmark with progress circle)
-- Updated PWA manifest with new logo and theme color
-- Fixed app name across all UI components
-
-### 2026-03-23 - Google OAuth Bug Fix
-- Fixed account unification bug where Google login created new empty account
-- Improved email lookup to be case-insensitive
-- Added detailed logging for debugging auth flow
-- Preserved existing user data when linking Google account
-
-### 2026-03-22 - Google Social Login
-- Added "Continue with Google" button on login screen
-- Backend route `/api/auth/google` exchanges Emergent session_id for JWT
-- Creates new user or links existing user by email
-- Uses Emergent Auth service (auth.emergentagent.com) for Google OAuth flow
-
-### 2026-03-22 - Friends Feature
-- Search users by username (partial match)
-- Add/remove friends
-- View friends list with their data
-
-### 2026-03-22 - Landing Page
-- Public landing page for unauthenticated users
-- Feature showcase with app preview
-- Interactive chart preview with sample data
-- Responsive design for all devices
-
-### 2026-03-22 - Mobile Navigation
-- Hamburger menu with slide-in drawer
-- Bottom tab bar with 4 primary tabs
-- PWA-ready with manifest.json
-
-### 2026-03-22 - MVP Cloud Integration
-- Created FastAPI backend with JWT auth and MongoDB
-- bcrypt password hashing
-- localStorage + API dual-save strategy
-- User tiles preserved via localStorage migration
-- Seeded both users on backend startup
-
-## Prioritized Backlog
-
-### P0 (Critical - Blocking)
-- ~~TARS não consegue encontrar eventos existentes para modificá-los~~ ✅ FIXED (array_filters)
-
-### P1 (High Priority)
-- ~~Password change/reset functionality~~ ✅ DONE
-- ~~Profile photo/avatar upload~~ ✅ DONE
-- Push notifications for daily reminders
-
-### P2 (Medium Priority)
-- ~~Fire animation when completing streak habits~~ ✅ DONE
-- "Remember me" persistent login
-- Data export to PDF/CSV
-- TARS conversation memory/history persistence
-- TARS proactive habit analysis and suggestions
-
-### P3 (Nice to Have)
-- WhatsApp notifications
-- Two-factor authentication
-- Admin dashboard
-- Email verification with Resend (pending API key)
-
-## Next Tasks
-1. Push notifications for daily habit reminders (P1)
-2. Test Google Login in production with real Google account
-3. "Remember me" persistent login (P2)
-
-## Test Reports
-- `/app/test_reports/iteration_10.json` - Latest (19/19 tests - Full TARS + Google Places Integration)
-- `/app/test_reports/iteration_9.json` - Previous (6/6 tests - Google Maps PlaceSearch Integration)
-- `/app/test_reports/iteration_8.json` - Earlier (8/8 tests - TARS Function Calling - P0 Bug Fixed)
-- `/app/test_reports/iteration_7.json` - Earlier (8 backend + 9 frontend tests)
+## DB Schema
+- **users_c**: username, password_hash, displayName, email, google_id, isAdmin, isDisabled, settings (features, onboardingCompleted, theme), last_login_at, created_at
+- **user_data_c**: user_id, state blob (habits, completions, achievements, xp, moods, events, journal)
+- **analytics_events_c**: Time-series collection with TTL for analytics
 
 ## 3rd Party Integrations
-- **MongoDB Atlas**: Production database
-- **OpenAI GPT-4o**: AI chat, function calling
-- **OpenAI Whisper**: Speech-to-text
-- **OpenAI TTS**: Text-to-speech
-- **Open-Meteo API**: Real-time weather (no API key)
-- **Google Maps JavaScript API**: Place search, maps (Frontend)
-- **Google Places API**: Search restaurants, attractions, etc. (Backend + Frontend)
-- **Google Geocoding API**: Convert addresses to coordinates (Backend)
-- **Emergent-managed Google Auth**: Social login (workaround active)
+- OpenAI (GPT-4o, Whisper, TTS) - Emergent LLM Key
+- Google Maps JavaScript API
+- Google Places API
+- MongoDB Atlas (production)
+- Emergent-managed Google Auth
 
-## Known Issues
-- Google Login: Use o preview URL ou faça deploy para produção
-- Google Maps API deprecation warnings (PlacesService deprecated March 2025, but still functional)
-
-## Deploy Checklist
-Após fazer deploy para `routine-tracker.com`:
-1. O Google Auth vai usar o backend de produção
-2. Os dados serão sincronizados com o banco de produção
-3. Login com email `ferreira.rafah@gmail.com` / senha `admin` funcionará
-4. Google Login vai encontrar a conta existente pelo email e carregar os dados
-
+## Credentials
+- Admin: admin / @dm1n
+- User: ferreira.rafah@gmail.com / admin

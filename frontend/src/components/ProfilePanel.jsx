@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../store/useAuth.js';
 import { useHabits } from '../hooks/useHabits.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getLevelColor } from '../utils/gamification.js';
 import { api } from '../api/client.js';
 
@@ -14,6 +15,7 @@ function hexToRgb(hex) {
 export default function ProfilePanel() {
   const { currentUser, users, logout } = useAuth();
   const { profile, currentLevel, accentColor } = useHabits();
+  const { t } = useLanguage();
   const levelColor = getLevelColor(currentLevel);
   const fileInputRef = useRef(null);
 
@@ -101,19 +103,19 @@ export default function ProfilePanel() {
     setPasswordSuccess('');
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('As senhas não coincidem');
+      setPasswordError(t('profile.passwordMismatch'));
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordError('Nova senha deve ter no mínimo 6 caracteres');
+      setPasswordError(t('profile.passwordMinChars'));
       return;
     }
 
     setLoading(true);
     try {
       await api.changePassword(currentPassword, newPassword);
-      setPasswordSuccess('Senha alterada com sucesso!');
+      setPasswordSuccess(t('profile.passwordChanged'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -134,7 +136,7 @@ export default function ProfilePanel() {
     setProfileSuccess('');
 
     if (displayName.trim().length < 2) {
-      setProfileError('Nome deve ter pelo menos 2 caracteres');
+      setProfileError(t('profile.nameMinChars'));
       return;
     }
 
@@ -142,7 +144,7 @@ export default function ProfilePanel() {
     try {
       const res = await api.updateProfile({ display_name: displayName.trim() });
       setProfileInfo(prev => ({ ...prev, displayName: displayName.trim() }));
-      setProfileSuccess('Nome atualizado!');
+      setProfileSuccess(t('profile.nameUpdated'));
       setTimeout(() => setProfileSuccess(''), 3000);
     } catch (err) {
       setProfileError(err.message || 'Erro ao atualizar nome');
@@ -154,8 +156,8 @@ export default function ProfilePanel() {
   return (
     <div className="space-y-4 pb-4">
       <div>
-        <h2 className="text-white font-bold text-xl">Account</h2>
-        <p className="text-[#4b5563] text-sm mt-0.5">Manage your profile and switch users</p>
+        <h2 className="text-white font-bold text-xl">{t('profile.title')}</h2>
+        <p className="text-[#4b5563] text-sm mt-0.5">{t('profile.subtitle')}</p>
       </div>
 
       {/* Current user card */}
@@ -238,7 +240,7 @@ export default function ProfilePanel() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Seu nome"
+                placeholder={t('profile.yourName')}
                 className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] text-white text-sm outline-none focus:border-[#374151] transition-colors"
               />
               <button
@@ -247,10 +249,10 @@ export default function ProfilePanel() {
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
                 style={{ background: accentColor, color: '#000' }}
               >
-                Salvar
+                {t('profile.saveName')}
               </button>
             </form>
-            <p className="text-[#4b5563] text-xs mt-2">Clique na foto para alterar</p>
+            <p className="text-[#4b5563] text-xs mt-2">{t('profile.clickPhoto')}</p>
           </div>
         </div>
       </div>
@@ -259,7 +261,7 @@ export default function ProfilePanel() {
       {profileInfo?.hasPassword && (
         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
           <div className="px-5 py-3.5 border-b" style={{ borderColor: 'var(--bg-border, #1f1f1f)' }}>
-            <p className="text-white font-semibold text-sm">Security</p>
+            <p className="text-white font-semibold text-sm">{t('profile.security')}</p>
           </div>
           <div className="p-5">
             <button
@@ -270,7 +272,7 @@ export default function ProfilePanel() {
               <svg className="w-5 h-5 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              <span className="text-white">Alterar senha</span>
+              <span className="text-white">{t('profile.changePassword')}</span>
             </button>
           </div>
         </div>
@@ -280,7 +282,7 @@ export default function ProfilePanel() {
       {otherUsers.length > 0 && (
         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}>
           <div className="px-5 py-3.5 border-b" style={{ borderColor: 'var(--bg-border, #1f1f1f)' }}>
-            <p className="text-white font-semibold text-sm">Switch Account</p>
+            <p className="text-white font-semibold text-sm">{t('profile.switchAccount')}</p>
           </div>
           <div className="p-3 space-y-1">
             {otherUsers.map(user => {
@@ -311,7 +313,7 @@ export default function ProfilePanel() {
               );
             })}
             <p className="text-[#374151] text-[10px] px-3 pb-1">
-              Switching takes you back to the login screen
+              {t('profile.switchDesc')}
             </p>
           </div>
         </div>
@@ -327,7 +329,7 @@ export default function ProfilePanel() {
             style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)', color: '#f87171' }}
           >
             <span className="text-base">↩</span>
-            <span>Sign Out</span>
+            <span>{t('common.signOut')}</span>
           </button>
         </div>
       </div>
@@ -343,12 +345,12 @@ export default function ProfilePanel() {
             className="relative w-full max-w-sm rounded-2xl border p-6"
             style={{ background: 'var(--bg-card, #111111)', borderColor: 'var(--bg-border, #1f1f1f)' }}
           >
-            <h3 className="text-white font-bold text-lg mb-4">Alterar Senha</h3>
+            <h3 className="text-white font-bold text-lg mb-4">{t('profile.changePassword')}</h3>
             
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                  Senha Atual
+                  {t('profile.currentPassword')}
                 </label>
                 <input
                   type="password"
@@ -361,7 +363,7 @@ export default function ProfilePanel() {
               
               <div>
                 <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                  Nova Senha
+                  {t('profile.newPassword')}
                 </label>
                 <input
                   type="password"
@@ -372,20 +374,20 @@ export default function ProfilePanel() {
                 />
                 <div className="mt-2 space-y-1">
                   <p className={`text-xs flex items-center gap-1.5 ${newPassword.length >= 6 ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                    <span>{newPassword.length >= 6 ? '✓' : '○'}</span> Mínimo 6 caracteres
+                    <span>{newPassword.length >= 6 ? '✓' : '○'}</span> {t('auth.minChars')}
                   </p>
                   <p className={`text-xs flex items-center gap-1.5 ${/[a-zA-Z]/.test(newPassword) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                    <span>{/[a-zA-Z]/.test(newPassword) ? '✓' : '○'}</span> Pelo menos uma letra
+                    <span>{/[a-zA-Z]/.test(newPassword) ? '✓' : '○'}</span> {t('auth.atLeastLetter')}
                   </p>
                   <p className={`text-xs flex items-center gap-1.5 ${/[0-9]/.test(newPassword) ? 'text-[#22c55e]' : 'text-[#6b7280]'}`}>
-                    <span>{/[0-9]/.test(newPassword) ? '✓' : '○'}</span> Pelo menos um número
+                    <span>{/[0-9]/.test(newPassword) ? '✓' : '○'}</span> {t('auth.atLeastNumber')}
                   </p>
                 </div>
               </div>
               
               <div>
                 <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider block mb-1.5">
-                  Confirmar Nova Senha
+                  {t('profile.confirmNewPassword')}
                 </label>
                 <input
                   type="password"
@@ -422,7 +424,7 @@ export default function ProfilePanel() {
                   className="flex-1 py-3 rounded-xl text-sm font-medium border transition-all hover:bg-white/5"
                   style={{ borderColor: 'var(--bg-border, #1f1f1f)', color: '#9ca3af' }}
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -430,7 +432,7 @@ export default function ProfilePanel() {
                   className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
                   style={{ background: accentColor, color: '#000' }}
                 >
-                  {loading ? 'Alterando...' : 'Alterar'}
+                  {loading ? t('profile.changing') : t('profile.change')}
                 </button>
               </div>
             </form>

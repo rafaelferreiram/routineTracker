@@ -15,7 +15,7 @@ import time
 import json
 
 # Use preview endpoint for testing
-BASE_URL = os.environ.get('preview_endpoint', 'https://routine-i18n.preview.emergentagent.com')
+BASE_URL = os.environ.get('preview_endpoint', 'https://friend-events-2.preview.emergentagent.com')
 
 # Test credentials
 TEST_EMAIL = "ferreira.rafah@gmail.com"

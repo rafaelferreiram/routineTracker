@@ -824,35 +824,30 @@ export default function EventsPanel() {
                         {isToday ? 'Agora' : days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : `${days}d`}
                       </p>
                     </div>
+                    {/* Participant/invite button - always visible */}
+                    <button
+                      onClick={() => setInvitingEvent(event)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all"
+                      style={{
+                        background: (event.participants || []).length > 0 ? '#3b82f620' : 'var(--bg-border)',
+                        color: (event.participants || []).length > 0 ? '#3b82f6' : '#6b7280',
+                      }}
+                      title={isOwner ? 'Convidar amigos' : 'Ver participantes / Sair'}
+                      data-testid={`participants-btn-${event.id}`}>
+                      👥
+                    </button>
+                    {/* Edit/delete - hover only on desktop */}
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {isOwner && (
-                        <button
-                          onClick={() => setInvitingEvent(event)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#3b82f6] hover:text-white text-xs"
-                          style={{ background: 'var(--bg-border)' }}
-                          title="Convidar amigos"
-                          data-testid={`invite-btn-${event.id}`}>
-                          👥
-                        </button>
-                      )}
                       {isOwner && (
                         <button onClick={() => setEditingId(event.id)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-white text-xs"
                           style={{ background: 'var(--bg-border)' }}>✏</button>
                       )}
-                      {isOwner ? (
+                      {isOwner && (
                         <button onClick={() => handleDelete(event.id)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6b7280] hover:text-red-400 text-xs"
                           style={{ background: 'var(--bg-border)' }}
                           data-testid={`delete-event-${event.id}`}>✕</button>
-                      ) : (
-                        <button onClick={() => setInvitingEvent(event)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#3b82f6] text-xs"
-                          style={{ background: 'var(--bg-border)' }}
-                          title="Ver participantes / Sair"
-                          data-testid={`participants-btn-${event.id}`}>
-                          👥
-                        </button>
                       )}
                     </div>
                   </div>

@@ -3,7 +3,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://routine-i18n.preview.emergentagent.com"
+BASE_URL = "https://friend-events-2.preview.emergentagent.com"
 
 class TestHealth:
     def test_health(self):

@@ -1,127 +1,130 @@
 <analysis>**original_problem_statement**:
-The user wants to continue evolving their RoutineTracker application with several new features and fixes.
+The user has two primary feature requests:
+1.  **Events with Friends**: Implement a feature allowing users to add friends to events. The event should become visible to all invited friends, and any updates to the event should be synchronized for all participants.
+2.  **Landing Page Enhancement**: Add more detailed information to the landing page, including screenshots and examples of the system in use. The agent should use existing profile data for the screenshots but change the user's name to a generic one like Alex instead of Rafael.
 
-**PRODUCT REQUIREMENTS**:
-1.  **Internationalization (i18n)**: Implement a language switching system to support English, Portuguese (Brazil), Spanish, and German. This should apply to all user-facing text, including the landing page and onboarding process.
-2.  **Admin Panel Experience**: Create a dedicated and separate interface for the admin user (/). This dashboard should be purely for monitoring and management, with no access to user-level features like habits or trackers. It must be minimalist, modern, and PWA-responsive.
-3.  **User Feature Toggling**: The admin panel should allow an administrator to enable or disable specific features (e.g., Habits, Events, TARS AI) for individual users, with a clear visual indicator of the status.
-4.  **Google Login Correction**: Fix the Google social login to correctly associate logins with existing accounts. The system should prioritize matching by  first, and then fall back to email to prevent the creation of duplicate users.
-5.  **Security & Analytics**: Implement server-side protection against DDoS attacks and enhance the admin panel with an analytics dashboard showing key metrics like user growth, engagement, and popular habits.
+Additionally, the user is repeatedly blocked by a Git merge conflict and needs it resolved.
 
 **User's preferred language**: Portuguese. The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB solution. Key features implemented include:
-*   A complete, role-based **Admin System** with a dedicated, responsive dashboard (). The admin can view analytics, manage users, and toggle features for them.
-*   **Enhanced security** on the backend () with DDoS protection and rate-limiting middleware.
-*   A backend fix for the **Google Authentication flow** to prioritize  lookup over email, preventing duplicate account creation.
-*   An **improved onboarding flow** that saves its completion status to the user's database profile, ensuring it only appears once per user.
-*   The agent has begun the **Internationalization (i18n)** task by creating the core structure: , , and a  component. The  has been added to , and the  has been partially refactored to use the new system.
+The application is a full-stack React/FastAPI/MongoDB RoutineTracker.
+- A comprehensive **Internationalization (i18n)** system has been implemented across the entire user-facing application, supporting English, Portuguese, Spanish, and German.
+- A **critical bug** that caused the application to crash after login ( in ) has been identified and **fixed**.
+- The UI for the language selector has been refined to be a compact dropdown on the landing page and is neatly integrated into the hamburger menu for logged-in users.
+- The backend has existing, separate collections and API endpoints for  and , which will serve as the foundation for the new collaborative events feature.
 
 **Last working item**:
--   **Last item agent was working**: Implementing a site-wide internationalization (i18n) system. The foundational files and context provider were created, and the agent started refactoring the  to consume translations from a central file.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: Frontend testing agent. The agent should be instructed to test the language selector by switching between all four languages (en, pt, es, de) and verifying that all text on the currently translated pages updates correctly and persists across reloads.
--   **User Testing Done**: N
+-   **Last item agent was working**: The agent had just received the two new feature requests (Events with Friends & Landing Page enhancement) and had performed an initial exploration of the codebase (, ) to understand the existing structure for events and friends.
+-   **Status**: NOT STARTED
+-   **Agent Testing Done**: N/A
+-   **Which testing method agent to use?**: For Events with Friends, use both backend and frontend testing agents. For the landing page enhancements, use the screenshot tool.
+-   **User Testing Done**: N/A
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Google Login Data Mismatch in Production (P0)**
-    -   **Description**: The user's production site () may still suffer from a data mismatch where Google Login creates a new, empty account instead of logging into the existing one. While a robust fix has been implemented in  to prioritize  lookup, this fix has **not been deployed or verified in the user's production environment**.
-    -   **Attempted fixes**: The backend authentication logic was completely rewritten. This was tested successfully in the preview environment.
+-   **Issue 1: Git Merge Conflict in PR #7 (P0 - BLOCKER)**
+    -   **Description**: A recurring merge conflict in  and  is preventing the user from merging the  branch into . The  conflict is due to numerous duplicate entries.
+    -   **Attempted fixes**: The agent identified the cause and resolved the conflict in a local branch. However, the agent **cannot push to the user's remote repository** due to a lack of credentials. It has twice provided detailed, step-by-step instructions for the user to resolve this manually via the GitHub web UI, but the user has requested the agent to fix it again.
     -   **Next debug checklist**:
-        1.  Confirm with the user that the latest backend code has been deployed to their production server.
-        2.  Instruct the user to clear all browser cache and cookies for  before attempting to log in with Google again.
-        3.  If the issue persists, the problem likely lies with the production database state (e.g., existing duplicate users). The  script can be used to investigate this.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for users on the live production site, making the primary login method unusable and causing data fragmentation.
+        1.  Acknowledge to the user that you cannot push to their GitHub.
+        2.  Re-iterate the simple, correct solution: guide the user to click Resolve conflicts in their Pull Request on GitHub.
+        3.  Provide the clean, deduplicated content for  again.
+        4.  Explain that this is a manual step they must take, as it's a permissions issue outside the agent's control.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is blocking the user's development workflow and preventing important code from being merged.
+    -   **Status**: BLOCKED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: N/A (Git workflow issue)
+-   **Issue 2: Google Login Data Mismatch in Production (P1)**
+    -   **Description**: A backend fix was implemented to prevent duplicate account creation on Google login, but this has **not been verified on the user's live production domain** ().
     -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Both (Verification on the live production site is required).
-    -   **Blocked on other issue**: None.
+    -   **Should Test frontend/backend/both after fix?**: Both (requires user to deploy and test on production).
 
 **In progress Task List**:
--   **Task 1: Complete Internationalization (i18n) Implementation (P0 - current focus)**
-    -   **Where to resume**: The core i18n files exist. The next step is to populate  with all text strings from the application and continue refactoring all components (, , , , etc.) to use the  hook instead of hardcoded text.
-    -   **What will be achieved with this?**: The application will be fully multilingual, providing a native experience in English, Portuguese, Spanish, and German.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on something**: None.
+(None)
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   **P1**: Implement daily push notifications to remind users about their habits.
+    *   **P0**: Implement Events with Friends.
+        *   **Backend**: Update the  schema in  to include a  array (storing user IDs). Create new API endpoints for adding/removing friends from an event. Ensure event updates sync for all participants.
+        *   **Frontend**: Modify  and  to include a UI for selecting friends to invite and for displaying event participants.
+    *   **P0**: Enhance Landing Page.
+        *   Use the screenshot tool to capture images of the app's key features (Dashboard, Habits, etc.) using a test user account.
+        *   Add new sections to  to display these screenshots and write descriptive copy about the application's benefits.
+    *   **P1**: Implement daily push notifications.
 *   **Future Tasks**:
-    *   **P2**: Implement a Remember me option for persistent login sessions.
-    *   **P2**: Implement a full friends system (UI part).
-    *   **P2**: Add a confetti/celebration effect for streak milestones.
-    *   **P2**: Give TARS a persistent conversation history.
-    *   **P2**: Enable TARS to proactively provide personalized suggestions.
-    - **P3**: Implement email verification with Resend (Blocked: pending user API key).
+    *   Internationalize the .
+    *   Implement a Remember me option for persistent login.
+    *   Implement the UI for the friends system.
+    *   Add a confetti/celebration effect for streak milestones.
+    *   Give TARS a persistent conversation history and proactive suggestion capabilities.
+    *   Implement email verification with Resend (blocked on user API key).
 
 **Completed work in this session**
--   **Admin Dashboard Redesign**: Created a completely separate, minimalist, and responsive UI for the admin user, fully isolated from the standard user habit-tracking interface.
--   **Admin System & RBAC**: Implemented backend logic for admin roles, user management (enabling/disabling users and features like Habits, Events, TARS), password resets, and analytics.
--   **Security Enhancements**: Integrated a global middleware in  for advanced DDoS protection and rate limiting.
--   **Onboarding Flow Fix**: Corrected the onboarding logic to save completion status to the database, ensuring it only shows once per user and syncs across devices.
--   **PWA Install Prompt**: Added a custom, user-friendly prompt to encourage PWA installation after onboarding.
--   **PWA Responsiveness**: Completed and verified the UI adjustments for iPhones with notches/safe areas.
+-   **Full Internationalization (i18n) Implementation**: The entire user-facing application was successfully refactored to support English, Portuguese, Spanish, and German.
+-   **Critical Bug Fix**: Fixed a show-stopping bug where the app would crash after login ( in ) by adding the missing  hook to a sub-component.
+-   **UI Refinement (Language Selector)**: Redesigned the language selector to be a compact dropdown on the landing page and integrated it into the app's main navigation menu for a cleaner user experience.
+-   **Password Reset & Debugging**: Successfully reset a user's password via API calls to debug and confirm the post-login crash.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Admin Dashboard not Internationalized**: The  still contains hardcoded English/Portuguese strings. This was noted in a test report but deferred as the focus was on the main user application.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: Google Login Data Mismatch in Production.
+-   **Recurrence count**: 2
+-   **Status**: USER VERIFICATION PENDING
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Internationalization (i18n)**: Using a React Context () and a central translation object () to manage multilingual text across the application.
--   **Role-Based Access Control (RBAC)**: A simple  flag on the user model is used to protect backend admin endpoints and, crucially, to render a completely different UI on the frontend ( vs. the main app).
--   **DDoS Protection & Rate Limiting**: A custom middleware in  tracks request timestamps per IP to block malicious actors based on high-velocity request patterns.
--   **Conditional Root Rendering**: The main  component now acts as a router, deciding at the highest level whether to render the admin experience or the user experience based on the  flag.
+-   **Synchronized State (for Events)**: The new feature will require a mechanism to ensure that when one user updates a shared event, all other participants see the update. This will likely involve modifying the backend to fetch events where the user is a participant, not just the owner.
+-   **Git Conflict Resolution**: The agent has identified the root cause of the merge conflicts but is limited by platform permissions. The key is guiding the user to perform the resolution on GitHub's UI.
 
 **key DB schema**
--   **users_c (collection)**:
-    -    (boolean): Identifies admin users.
-    -    (boolean): For soft-deleting/disabling users.
-    -    (datetime): Tracks the last login time.
-    -    (string): The primary key for Google authentication.
-    -    (boolean): Tracks if the user has seen the onboarding carousel.
-    -    (object): Enables/disables features per user (e.g., ).
--   **analytics_events_c (collection)**: A new time-series collection with a TTL index to store analytics data (logins, signups).
+-   **events (collection)**: Will be modified.
+    -   : string (owner)
+    -   ...event details...
+    -   ****: (PROPOSED) Array of strings, where each string is a .
 
 **All files of reference**
--   **/app/frontend/src/i18n/translations.js**: The central file where all text strings for all languages must be added.
--   **/app/frontend/src/i18n/LanguageContext.jsx**: The core of the i18n system.
--   **/app/frontend/src/App.jsx**: Handles the top-level conditional rendering for Admin vs. User.
--   **/app/frontend/src/components/AdminDashboard.jsx**: The entry point for the entire admin interface.
--   **/app/backend/server.py**: Contains the updated Google Auth logic, and all admin, security, and analytics endpoints.
+-   **/app/backend/server.py**: To add new API endpoints for collaborative events.
+-   **/app/frontend/src/components/EventsPanel.jsx**: To add the UI for inviting friends.
+-   **/app/frontend/src/components/LandingPage.jsx**: To add new marketing/informational sections.
+-   **User's GitHub PR #7**: The location of the blocking merge conflict.
 
 **Critical Info for New Agent**
--   Your immediate task is to **complete the internationalization (i18n) implementation**. This involves methodically going through every component, replacing all hardcoded English/Portuguese text with translation keys, and populating the  file with the corresponding text for all four languages (en, pt, es, de).
--   The Admin Panel is now a completely separate application view rendered by . Do not add admin-related UI elements to the regular user components like .
--   The P0 Google Login issue requires user action (deployment) to be fully resolved. Once the i18n task is complete, you should guide the user through verifying the fix in their production environment.
+-   Your first action should be to address the user's request to fix the **Git merge conflict**. Since you cannot push, you must clearly and politely explain this limitation and guide the user through the resolution steps on GitHub's website. Provide the cleaned  content as part of your instructions. Do not attempt to resolve it locally again, as it will fail at the push step.
+-   Once the user confirms the conflict is resolved (or if they want to proceed anyway), prioritize the **two new P0 features**: Events with Friends and Landing Page Enhancement.
+-   The critical crash after login has been **fixed**. The root cause was a sub-component within  calling the translation function  without its own  hook. Remember this pattern: any component/sub-component using context needs to invoke the corresponding hook directly.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request (LATEST)**: Apply language switching (i18n) for English, Portuguese, Spanish, and German to the entire site.
-2.  **Request**: Redesign the admin experience to be completely separate from the user app (no habits/tracker). It should be a minimalist, modern, and responsive PWA for monitoring and managing users, including toggling their features.
-3.  **Confirmation**: Continue finalize por favor (Please continue and finalize).
-4.  **Request**: Add DDoS protection and the suggested analytics system.
-5.  **Request**: Create an  user with a management dashboard and fix the Google login issue by using the Google user ID.
-6.  **Request**: Improve the PWA installation to be more automatic and fix the onboarding to show only once per user by saving the status in the database.
-7.  **User Confirmation**: User approved the plan to fix PWA responsiveness and then investigate the Google login issue. (Completed).
-8.  Older messages related to completed tasks.
+1.  **Request (LATEST)**: User confirms to proceed with the plan for new features.
+2.  **Confirmation Sent**: Agent sent a plan to the user for approval.
+3.  **Request**: Add Events with Friends feature and enhance the landing page with screenshots and more info.
+4.  **Request**: Resolve merge conflicts in GitHub PR #7.
+5.  **Request**: Asking to continue and resolve the merge conflicts mentioned in the PR link.
+6.  **Bug Report**: User reported that the application is broken and doesn't load any page after login. **(This is now RESOLVED)**.
+7.  **UI Feedback/Request**: User reported that the language selector flags on the landing page looked bad and overlapped the logo. Requested a more minimalist design and to move the selector inside the hamburger menu within the app. **(This is now COMPLETED)**.
+8.  **Request**: Asking to resolve merge conflicts.
+9.  **Request**: User again mentions the merge conflict in .
+10. **Feedback**: User first mentions that a branch has conflicts that must be resolved.
 
 **Project Health Check:**
-*   **Broken**: Google Login on the production domain (). An implemented code fix is **pending user deployment and verification**.
-*   **Mocked**: None.
+-   **Broken**:
+    -   Git merge workflow due to unresolved conflicts in the user's remote repository (PR #7).
+    -   Google Login on the user's production domain () remains unverified.
+-   **Mocked**: None.
 
 **3rd Party Integrations**
-*   **OpenAI (GPT-4o, Whisper, TTS)**: Uses user's key with fallback to **Emergent LLM Key**.
-*   **Google Maps JavaScript API**: For frontend place search and map rendering.
-*   **Google Places API**: For backend place search used by TARS.
-*   **MongoDB Atlas**: Production database.
-*   **Emergent-managed Google Auth**: Used for social login.
+-   No new integrations required for the immediate tasks. The existing stack (Google Auth, OpenAI, MongoDB) is sufficient.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. A comprehensive test suite was run for the Admin Panel, security features, and Google Auth fix, with all tests passing.
--   **Test files created**:  and earlier.
+-   **Testing agent used after significant changes**: YES (for i18n).
+-   **Test files created**:  (latest).
+-   **Known regressions**: None from the work done in this session.
 
 **Credentials to test flow:**
-*   **Admin Login**:  / 
-*   **User Login**:  / </analysis>
+*   **Admin**:  / 
+*   **User**:  (password was reset to  for testing) or  / 
+*   **Another User**:  / </analysis>

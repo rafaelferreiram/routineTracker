@@ -1420,6 +1420,252 @@ def search_users(q: str, cu: dict = Depends(get_current_user)):
     
     return {'users': result}
 
+# ── Shared Events Collection ────────────────────────────────────────────────────
+shared_events_c = db['shared_events']
+shared_events_c.create_index([('owner_id', 1)])
+shared_events_c.create_index([('participants.user_id', 1)])
+
+class CreateSharedEventReq(BaseModel):
+    title: str
+    date: str
+    end_date: Optional[str] = None
+    emoji: str = '📅'
+    color: str = '#22c55e'
+    note: Optional[str] = ''
+
+class UpdateSharedEventReq(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    end_date: Optional[str] = None
+    emoji: Optional[str] = None
+    color: Optional[str] = None
+    note: Optional[str] = None
+    itinerary: Optional[List[Any]] = None
+    review: Optional[Any] = None
+
+class InviteToSharedEventReq(BaseModel):
+    username: str
+
+class MigrateEventsReq(BaseModel):
+    events: List[Any] = []
+
+def serialize_shared_event(event: dict, current_uid: str) -> dict:
+    """Serialize a shared event document for API response."""
+    created_at = event.get('created_at', '')
+    if hasattr(created_at, 'isoformat'):
+        created_at = created_at.isoformat()
+    return {
+        'id': event.get('id', ''),
+        'title': event.get('title', ''),
+        'date': event.get('date', ''),
+        'endDate': event.get('end_date', event.get('date', '')),
+        'emoji': event.get('emoji', '📅'),
+        'color': event.get('color', '#22c55e'),
+        'note': event.get('note', ''),
+        'itinerary': event.get('itinerary', []),
+        'review': event.get('review'),
+        'owner_id': event.get('owner_id', ''),
+        'owner_username': event.get('owner_username', ''),
+        'owner_display_name': event.get('owner_display_name', ''),
+        'participants': event.get('participants', []),
+        'is_owner': event.get('owner_id', '') == current_uid,
+        'created_at': created_at,
+    }
+
+@app.post('/api/events/migrate')
+def migrate_local_events(req: MigrateEventsReq, cu: dict = Depends(get_current_user)):
+    """Migrate events from local storage to shared events collection (one-time migration)."""
+    from bson import ObjectId
+    uid = cu['sub']
+    username = cu['username']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    display_name = user.get('display_name', username) if user else username
+
+    migrated = 0
+    for i, evt in enumerate(req.events):
+        if not evt.get('id') or not evt.get('date'):
+            continue
+        existing = shared_events_c.find_one({'original_id': evt.get('id'), 'owner_id': uid})
+        if existing:
+            continue
+        new_event = {
+            'id': f'evt_mig_{int(time.time() * 1000)}_{i}_{uid[:6]}',
+            'original_id': evt.get('id'),
+            'owner_id': uid,
+            'owner_username': username,
+            'owner_display_name': display_name,
+            'participants': [],
+            'title': evt.get('title', 'Evento'),
+            'date': evt.get('date', ''),
+            'end_date': evt.get('endDate') or evt.get('end_date') or evt.get('date', ''),
+            'emoji': evt.get('emoji', '📅'),
+            'color': evt.get('color', '#22c55e'),
+            'note': evt.get('note', ''),
+            'itinerary': evt.get('itinerary', []),
+            'review': evt.get('review'),
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc),
+        }
+        shared_events_c.insert_one(new_event)
+        new_event.pop('_id', None)
+        migrated += 1
+
+    return {'migrated': migrated}
+
+@app.get('/api/events')
+def get_shared_events(cu: dict = Depends(get_current_user)):
+    """Get all events for current user (as owner or participant)."""
+    uid = cu['sub']
+    events = list(shared_events_c.find({
+        '$or': [
+            {'owner_id': uid},
+            {'participants.user_id': uid}
+        ]
+    }))
+    return {'events': [serialize_shared_event(e, uid) for e in events]}
+
+@app.post('/api/events')
+def create_shared_event(req: CreateSharedEventReq, cu: dict = Depends(get_current_user)):
+    """Create a new collaborative event."""
+    from bson import ObjectId
+    uid = cu['sub']
+    username = cu['username']
+    user = users_c.find_one({'_id': ObjectId(uid)})
+    display_name = user.get('display_name', username) if user else username
+
+    event = {
+        'id': f'evt_{int(time.time() * 1000)}_{uid[:8]}',
+        'owner_id': uid,
+        'owner_username': username,
+        'owner_display_name': display_name,
+        'participants': [],
+        'title': req.title,
+        'date': req.date,
+        'end_date': req.end_date or req.date,
+        'emoji': req.emoji,
+        'color': req.color,
+        'note': req.note or '',
+        'itinerary': [],
+        'review': None,
+        'created_at': datetime.now(timezone.utc),
+        'updated_at': datetime.now(timezone.utc),
+    }
+    shared_events_c.insert_one(event)
+    event.pop('_id', None)
+    return {'event': serialize_shared_event(event, uid)}
+
+@app.put('/api/events/{event_id}')
+def update_shared_event(event_id: str, req: UpdateSharedEventReq, cu: dict = Depends(get_current_user)):
+    """Update an event. Participants can only update review field."""
+    uid = cu['sub']
+    event = shared_events_c.find_one({'id': event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail='Event not found')
+
+    is_owner = event['owner_id'] == uid
+    is_participant = any(p.get('user_id') == uid for p in event.get('participants', []))
+
+    if not is_owner and not is_participant:
+        raise HTTPException(status_code=403, detail='Access denied')
+
+    update_data = {'updated_at': datetime.now(timezone.utc)}
+    fields_set = req.__fields_set__
+
+    if is_owner:
+        if 'title' in fields_set: update_data['title'] = req.title
+        if 'date' in fields_set: update_data['date'] = req.date
+        if 'end_date' in fields_set: update_data['end_date'] = req.end_date
+        if 'emoji' in fields_set: update_data['emoji'] = req.emoji
+        if 'color' in fields_set: update_data['color'] = req.color
+        if 'note' in fields_set: update_data['note'] = req.note
+        if 'itinerary' in fields_set: update_data['itinerary'] = req.itinerary
+
+    # Both owner and participants can update review
+    if 'review' in fields_set:
+        update_data['review'] = req.review
+
+    if len(update_data) > 1:  # more than just updated_at
+        shared_events_c.update_one({'id': event_id}, {'$set': update_data})
+
+    updated = shared_events_c.find_one({'id': event_id})
+    updated.pop('_id', None)
+    return {'event': serialize_shared_event(updated, uid)}
+
+@app.delete('/api/events/{event_id}')
+def delete_shared_event(event_id: str, cu: dict = Depends(get_current_user)):
+    """Delete an event (owner only)."""
+    uid = cu['sub']
+    event = shared_events_c.find_one({'id': event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail='Event not found')
+    if event['owner_id'] != uid:
+        raise HTTPException(status_code=403, detail='Only the event owner can delete it')
+    shared_events_c.delete_one({'id': event_id})
+    return {'ok': True}
+
+@app.post('/api/events/{event_id}/invite')
+def invite_to_shared_event(event_id: str, req: InviteToSharedEventReq, cu: dict = Depends(get_current_user)):
+    """Invite a user to an event (owner only)."""
+    uid = cu['sub']
+    event = shared_events_c.find_one({'id': event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail='Event not found')
+    if event['owner_id'] != uid:
+        raise HTTPException(status_code=403, detail='Only the event owner can invite participants')
+
+    friend = users_c.find_one({'username': req.username.lower().strip()})
+    if not friend:
+        raise HTTPException(status_code=404, detail='Usuário não encontrado')
+
+    friend_id = str(friend['_id'])
+    if friend_id == uid:
+        raise HTTPException(status_code=400, detail='Você não pode se convidar')
+
+    if any(p.get('user_id') == friend_id for p in event.get('participants', [])):
+        raise HTTPException(status_code=400, detail='Usuário já é participante')
+
+    participant = {
+        'user_id': friend_id,
+        'username': friend['username'],
+        'display_name': friend.get('display_name', friend['username']),
+        'picture': friend.get('picture', '')
+    }
+    shared_events_c.update_one(
+        {'id': event_id},
+        {'$push': {'participants': participant}, '$set': {'updated_at': datetime.now(timezone.utc)}}
+    )
+    return {'message': f'{participant["display_name"]} adicionado ao evento', 'participant': participant}
+
+@app.delete('/api/events/{event_id}/leave')
+def leave_shared_event(event_id: str, cu: dict = Depends(get_current_user)):
+    """Leave an event (participant removes self)."""
+    uid = cu['sub']
+    event = shared_events_c.find_one({'id': event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail='Event not found')
+    if event['owner_id'] == uid:
+        raise HTTPException(status_code=400, detail='O criador não pode sair. Delete o evento.')
+    shared_events_c.update_one(
+        {'id': event_id},
+        {'$pull': {'participants': {'user_id': uid}}, '$set': {'updated_at': datetime.now(timezone.utc)}}
+    )
+    return {'ok': True}
+
+@app.delete('/api/events/{event_id}/participants/{user_id}')
+def remove_event_participant(event_id: str, user_id: str, cu: dict = Depends(get_current_user)):
+    """Remove a participant from an event (owner only)."""
+    uid = cu['sub']
+    event = shared_events_c.find_one({'id': event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail='Event not found')
+    if event['owner_id'] != uid:
+        raise HTTPException(status_code=403, detail='Only the event owner can remove participants')
+    shared_events_c.update_one(
+        {'id': event_id},
+        {'$pull': {'participants': {'user_id': user_id}}, '$set': {'updated_at': datetime.now(timezone.utc)}}
+    )
+    return {'ok': True}
+
 # ── Startup Seed ───────────────────────────────────────────────────────────────
 
 # ── Profile Management ─────────────────────────────────────────────────────────

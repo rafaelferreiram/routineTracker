@@ -64,6 +64,16 @@ export default function AdminDashboard() {
   const [resetPwd, setResetPwd] = useState('');
   const [showResetForm, setShowResetForm] = useState(false);
 
+  // Overview data explorer
+  const [overviewExpanded, setOverviewExpanded] = useState({ users: false, habits: false, events: false });
+  const [overviewSearch, setOverviewSearch] = useState({ users: '', habits: '', events: '' });
+  const [allHabits, setAllHabits] = useState(null);
+  const [allEvents, setAllEvents] = useState(null);
+  const [allHabitsPage, setAllHabitsPage] = useState(0);
+  const [allEventsPage, setAllEventsPage] = useState(0);
+  const [habitsLoading, setHabitsLoading] = useState(false);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
   const FEATURES = [
     { id: 'habits', label: 'Hábitos', icon: Target, desc: 'Criar e gerenciar hábitos' },
     { id: 'events', label: 'Eventos', icon: Calendar, desc: 'Criar eventos e viagens' },
@@ -145,6 +155,51 @@ export default function AdminDashboard() {
       setLogsLoading(false);
     }
   };
+
+  const loadAllHabits = useCallback(async () => {
+    if (!overviewExpanded.habits) return;
+    setHabitsLoading(true);
+    try {
+      const params = new URLSearchParams({ skip: allHabitsPage * 50, limit: 50 });
+      if (overviewSearch.habits) params.append('search', overviewSearch.habits);
+      const data = await apiCall('GET', `/admin/all-habits?${params.toString()}`);
+      setAllHabits(data);
+    } catch (err) {
+      console.error('Failed to load habits:', err);
+    } finally {
+      setHabitsLoading(false);
+    }
+  }, [overviewExpanded.habits, allHabitsPage, overviewSearch.habits]);
+
+  const loadAllEvents = useCallback(async () => {
+    if (!overviewExpanded.events) return;
+    setEventsLoading(true);
+    try {
+      const params = new URLSearchParams({ skip: allEventsPage * 50, limit: 50 });
+      if (overviewSearch.events) params.append('search', overviewSearch.events);
+      const data = await apiCall('GET', `/admin/all-events?${params.toString()}`);
+      setAllEvents(data);
+    } catch (err) {
+      console.error('Failed to load events:', err);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [overviewExpanded.events, allEventsPage, overviewSearch.events]);
+
+  useEffect(() => { loadAllHabits(); }, [loadAllHabits]);
+  useEffect(() => { loadAllEvents(); }, [loadAllEvents]);
+
+  useEffect(() => {
+    const t = setTimeout(() => { setAllHabitsPage(0); loadAllHabits(); }, 300);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overviewSearch.habits]);
+
+  useEffect(() => {
+    const t = setTimeout(() => { setAllEventsPage(0); loadAllEvents(); }, 300);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overviewSearch.events]);
 
   const performAction = async (userId, action, extra = {}) => {
     setActionLoading(true);
@@ -693,6 +748,188 @@ export default function AdminDashboard() {
                 })}
               </div>
             )}
+
+            {/* ── Data Explorer ── */}
+            <div className="space-y-2">
+              {/* Active Users panel */}
+              <div className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
+                <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#111] transition-all"
+                  onClick={() => setOverviewExpanded(s => ({ ...s, users: !s.users }))}>
+                  <div className="w-7 h-7 rounded-lg bg-[#22c55e]/15 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-3.5 h-3.5 text-[#22c55e]" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-white text-sm font-medium">Usuários Ativos</span>
+                    {stats && <span className="text-[#4b5563] text-xs ml-2">{stats.total_users} total</span>}
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-[#4b5563] transition-transform ${overviewExpanded.users ? 'rotate-180' : ''}`} />
+                </button>
+                {overviewExpanded.users && (
+                  <div className="border-t border-[#141414]">
+                    <div className="px-4 py-2 border-b border-[#141414]">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#4b5563]" />
+                        <input type="text" value={overviewSearch.users}
+                          onChange={e => setOverviewSearch(s => ({ ...s, users: e.target.value }))}
+                          placeholder="Buscar usuário..."
+                          className="w-full pl-7 pr-3 py-1.5 bg-[#111] border border-[#1a1a1a] rounded-lg text-xs text-white placeholder-[#4b5563] focus:outline-none focus:border-[#2a2a2a]" />
+                      </div>
+                    </div>
+                    <div className="divide-y divide-[#0f0f0f] max-h-80 overflow-y-auto">
+                      {users.filter(u => {
+                        const q = overviewSearch.users.toLowerCase();
+                        return !q || (u.displayName || u.username || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                      }).map(user => (
+                        <div key={user.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#111] cursor-pointer transition-all"
+                          onClick={() => setSelectedUser(user)}>
+                          {user.picture ? (
+                            <img src={user.picture} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+                              <span className="text-[#22c55e] text-xs font-bold">{(user.displayName || user.username)?.[0]?.toUpperCase()}</span>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-xs font-medium truncate">{user.displayName || user.username}</div>
+                            <div className="text-[#4b5563] text-[10px] truncate">{user.email || `@${user.username}`}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-[#22c55e] text-xs font-medium">{user.stats?.totalXP || 0} XP</div>
+                            <div className="text-[#4b5563] text-[10px]">{user.stats?.habits || 0}h · {user.stats?.events || 0}e</div>
+                          </div>
+                          {user.disabled && <Lock className="w-3 h-3 text-red-400 flex-shrink-0" />}
+                        </div>
+                      ))}
+                      {users.length === 0 && <div className="px-4 py-6 text-center text-[#4b5563] text-xs">Nenhum usuário encontrado</div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* All Habits panel */}
+              <div className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
+                <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#111] transition-all"
+                  onClick={() => setOverviewExpanded(s => ({ ...s, habits: !s.habits }))}>
+                  <div className="w-7 h-7 rounded-lg bg-[#f59e0b]/15 flex items-center justify-center flex-shrink-0">
+                    <Target className="w-3.5 h-3.5 text-[#f59e0b]" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-white text-sm font-medium">Todos os Hábitos</span>
+                    {stats && <span className="text-[#4b5563] text-xs ml-2">{stats.total_habits} total</span>}
+                  </div>
+                  {habitsLoading && <RefreshCw className="w-3 h-3 text-[#4b5563] animate-spin" />}
+                  <ChevronDown className={`w-4 h-4 text-[#4b5563] transition-transform ${overviewExpanded.habits ? 'rotate-180' : ''}`} />
+                </button>
+                {overviewExpanded.habits && (
+                  <div className="border-t border-[#141414]">
+                    <div className="px-4 py-2 border-b border-[#141414]">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#4b5563]" />
+                        <input type="text" value={overviewSearch.habits}
+                          onChange={e => setOverviewSearch(s => ({ ...s, habits: e.target.value }))}
+                          placeholder="Buscar hábito ou categoria..."
+                          className="w-full pl-7 pr-3 py-1.5 bg-[#111] border border-[#1a1a1a] rounded-lg text-xs text-white placeholder-[#4b5563] focus:outline-none focus:border-[#2a2a2a]" />
+                      </div>
+                    </div>
+                    <div className="divide-y divide-[#0f0f0f] max-h-80 overflow-y-auto">
+                      {allHabits?.habits?.map((habit, i) => (
+                        <div key={habit.id || i} className="px-4 py-2.5 flex items-center gap-3">
+                          <span className="text-base flex-shrink-0 w-6 text-center">{habit.emoji || '📋'}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-xs font-medium truncate">{habit.name}</div>
+                            <div className="text-[#4b5563] text-[10px]">{habit.category} · {habit.frequency}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-[#f59e0b] text-xs font-medium">{habit.completionsCount}×</div>
+                            <div className="text-[#4b5563] text-[10px] truncate max-w-[80px]">{habit.user?.displayName || habit.user?.username}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {!habitsLoading && !allHabits?.habits?.length && (
+                        <div className="px-4 py-6 text-center text-[#4b5563] text-xs">Nenhum hábito encontrado</div>
+                      )}
+                    </div>
+                    {allHabits && allHabits.total > 50 && (
+                      <div className="px-4 py-2 border-t border-[#141414] flex items-center justify-between">
+                        <span className="text-[10px] text-[#4b5563]">{allHabits.skip + 1}–{Math.min(allHabits.skip + 50, allHabits.total)} de {allHabits.total}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => setAllHabitsPage(p => Math.max(0, p - 1))} disabled={allHabitsPage === 0}
+                            className="w-6 h-6 rounded flex items-center justify-center bg-[#111] border border-[#1a1a1a] disabled:opacity-30">
+                            <ChevronLeft className="w-3 h-3 text-[#6b7280]" />
+                          </button>
+                          <button onClick={() => setAllHabitsPage(p => p + 1)} disabled={(allHabitsPage + 1) * 50 >= allHabits.total}
+                            className="w-6 h-6 rounded flex items-center justify-center bg-[#111] border border-[#1a1a1a] disabled:opacity-30">
+                            <ChevronRight className="w-3 h-3 text-[#6b7280]" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* All Events panel */}
+              <div className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
+                <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#111] transition-all"
+                  onClick={() => setOverviewExpanded(s => ({ ...s, events: !s.events }))}>
+                  <div className="w-7 h-7 rounded-lg bg-[#8b5cf6]/15 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-white text-sm font-medium">Todos os Eventos</span>
+                    {stats && <span className="text-[#4b5563] text-xs ml-2">{stats.total_events} total</span>}
+                  </div>
+                  {eventsLoading && <RefreshCw className="w-3 h-3 text-[#4b5563] animate-spin" />}
+                  <ChevronDown className={`w-4 h-4 text-[#4b5563] transition-transform ${overviewExpanded.events ? 'rotate-180' : ''}`} />
+                </button>
+                {overviewExpanded.events && (
+                  <div className="border-t border-[#141414]">
+                    <div className="px-4 py-2 border-b border-[#141414]">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#4b5563]" />
+                        <input type="text" value={overviewSearch.events}
+                          onChange={e => setOverviewSearch(s => ({ ...s, events: e.target.value }))}
+                          placeholder="Buscar evento..."
+                          className="w-full pl-7 pr-3 py-1.5 bg-[#111] border border-[#1a1a1a] rounded-lg text-xs text-white placeholder-[#4b5563] focus:outline-none focus:border-[#2a2a2a]" />
+                      </div>
+                    </div>
+                    <div className="divide-y divide-[#0f0f0f] max-h-80 overflow-y-auto">
+                      {allEvents?.events?.map((event, i) => (
+                        <div key={event.id || i} className="px-4 py-2.5 flex items-center gap-3">
+                          <span className="text-base flex-shrink-0 w-6 text-center">{event.emoji || '📅'}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-xs font-medium truncate">{event.title}</div>
+                            <div className="text-[#4b5563] text-[10px]">{event.date}{event.endDate && ` → ${event.endDate}`}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            {event.color && <div className="w-2.5 h-2.5 rounded-full mx-auto mb-0.5" style={{ background: event.color }} />}
+                            <div className="text-[#4b5563] text-[10px] truncate max-w-[80px]">{event.user?.displayName || event.user?.username}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {!eventsLoading && !allEvents?.events?.length && (
+                        <div className="px-4 py-6 text-center text-[#4b5563] text-xs">Nenhum evento encontrado</div>
+                      )}
+                    </div>
+                    {allEvents && allEvents.total > 50 && (
+                      <div className="px-4 py-2 border-t border-[#141414] flex items-center justify-between">
+                        <span className="text-[10px] text-[#4b5563]">{allEvents.skip + 1}–{Math.min(allEvents.skip + 50, allEvents.total)} de {allEvents.total}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => setAllEventsPage(p => Math.max(0, p - 1))} disabled={allEventsPage === 0}
+                            className="w-6 h-6 rounded flex items-center justify-center bg-[#111] border border-[#1a1a1a] disabled:opacity-30">
+                            <ChevronLeft className="w-3 h-3 text-[#6b7280]" />
+                          </button>
+                          <button onClick={() => setAllEventsPage(p => p + 1)} disabled={(allEventsPage + 1) * 50 >= allEvents.total}
+                            className="w-6 h-6 rounded flex items-center justify-center bg-[#111] border border-[#1a1a1a] disabled:opacity-30">
+                            <ChevronRight className="w-3 h-3 text-[#6b7280]" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

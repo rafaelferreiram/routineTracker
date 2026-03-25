@@ -1451,6 +1451,115 @@ def admin_get_user_detail(user_id: str, cu: dict = Depends(get_admin_user)):
         }
     }
 
+@app.get('/api/admin/all-habits')
+def admin_get_all_habits(
+    cu: dict = Depends(get_admin_user),
+    skip: int = 0,
+    limit: int = 50,
+    search: str = None,
+):
+    """Get all habits across all users with owner info."""
+    from bson import ObjectId
+
+    pipeline = [
+        {'$unwind': '$data.habits'},
+        {'$project': {'user_id': 1, 'habit': '$data.habits'}},
+    ]
+    if search:
+        pipeline.append({'$match': {'$or': [
+            {'habit.name': {'$regex': search, '$options': 'i'}},
+            {'habit.category': {'$regex': search, '$options': 'i'}},
+        ]}})
+
+    count_result = list(data_c.aggregate(pipeline + [{'$count': 'total'}]))
+    total = count_result[0]['total'] if count_result else 0
+
+    habits_raw = list(data_c.aggregate(pipeline + [{'$skip': skip}, {'$limit': limit}]))
+
+    user_ids = list({h['user_id'] for h in habits_raw})
+    users_map = {}
+    for uid in user_ids:
+        try:
+            u = users_c.find_one({'_id': ObjectId(uid)}, {'username': 1, 'display_name': 1, 'picture': 1})
+            if u:
+                users_map[uid] = {
+                    'username': u.get('username'),
+                    'displayName': u.get('display_name'),
+                    'picture': u.get('picture'),
+                }
+        except Exception:
+            pass
+
+    habits = []
+    for h in habits_raw:
+        uid = h['user_id']
+        habit = h.get('habit', {})
+        habits.append({
+            'id': habit.get('id'),
+            'name': habit.get('name', ''),
+            'category': habit.get('category', ''),
+            'emoji': habit.get('emoji', ''),
+            'frequency': habit.get('frequency', ''),
+            'completionsCount': len(habit.get('completions', [])),
+            'user': users_map.get(uid, {'username': uid}),
+        })
+
+    return {'habits': habits, 'total': total, 'skip': skip, 'limit': limit}
+
+
+@app.get('/api/admin/all-events')
+def admin_get_all_events(
+    cu: dict = Depends(get_admin_user),
+    skip: int = 0,
+    limit: int = 50,
+    search: str = None,
+):
+    """Get all events across all users with owner info."""
+    from bson import ObjectId
+
+    pipeline = [
+        {'$unwind': '$data.events'},
+        {'$project': {'user_id': 1, 'event': '$data.events'}},
+    ]
+    if search:
+        pipeline.append({'$match': {'event.title': {'$regex': search, '$options': 'i'}}})
+
+    count_result = list(data_c.aggregate(pipeline + [{'$count': 'total'}]))
+    total = count_result[0]['total'] if count_result else 0
+
+    events_raw = list(data_c.aggregate(pipeline + [{'$skip': skip}, {'$limit': limit}]))
+
+    user_ids = list({e['user_id'] for e in events_raw})
+    users_map = {}
+    for uid in user_ids:
+        try:
+            u = users_c.find_one({'_id': ObjectId(uid)}, {'username': 1, 'display_name': 1, 'picture': 1})
+            if u:
+                users_map[uid] = {
+                    'username': u.get('username'),
+                    'displayName': u.get('display_name'),
+                    'picture': u.get('picture'),
+                }
+        except Exception:
+            pass
+
+    events = []
+    for e in events_raw:
+        uid = e['user_id']
+        event = e.get('event', {})
+        events.append({
+            'id': event.get('id'),
+            'title': event.get('title', ''),
+            'date': event.get('date', ''),
+            'endDate': event.get('end_date', ''),
+            'emoji': event.get('emoji', ''),
+            'color': event.get('color', ''),
+            'user': users_map.get(uid, {'username': uid}),
+        })
+
+    return {'events': events, 'total': total, 'skip': skip, 'limit': limit}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ══ ANALYTICS & METRICS ENDPOINTS ═════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════

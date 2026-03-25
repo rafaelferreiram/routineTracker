@@ -86,6 +86,11 @@ analytics_c = db['analytics']
 analytics_c.create_index([('type', 1), ('timestamp', -1)])
 analytics_c.create_index('timestamp', expireAfterSeconds=30*24*60*60)  # 30 days TTL
 
+# Platform config and announcements
+platform_config_c = db['platform_config']
+announcements_c = db['announcements']
+announcements_c.create_index([('active', 1), ('expires_at', 1)])
+
 def log_analytics_event(event_type: str, data: dict = None):
     """Log analytics event for admin dashboard."""
     try:
@@ -1192,6 +1197,37 @@ def ensure_admin_exists():
 
 ensure_admin_exists()
 
+def ensure_platform_config_exists():
+    """Create default platform config document if missing."""
+    if not platform_config_c.find_one({'_id': 'main'}):
+        platform_config_c.insert_one({
+            '_id': 'main',
+            'maintenance_mode': False,
+            'maintenance_message': 'O sistema está em manutenção. Voltamos em breve!',
+            'globally_disabled_features': [],
+            'updated_at': datetime.now(timezone.utc),
+        })
+
+ensure_platform_config_exists()
+
+
+@app.get('/api/platform-status')
+def get_platform_status():
+    """Public endpoint — returns maintenance mode, global feature flags, and active announcements."""
+    config = platform_config_c.find_one({'_id': 'main'})
+    now = datetime.now(timezone.utc)
+    active_anns = list(announcements_c.find(
+        {'active': True, '$or': [{'expires_at': {'$gt': now}}, {'expires_at': None}]},
+        {'_id': 0}
+    ).sort('created_at', -1))
+    return {
+        'maintenance_mode': config.get('maintenance_mode', False) if config else False,
+        'maintenance_message': config.get('maintenance_message', '') if config else '',
+        'globally_disabled_features': config.get('globally_disabled_features', []) if config else [],
+        'announcements': active_anns,
+    }
+
+
 @app.get('/api/admin/stats')
 def admin_get_stats(cu: dict = Depends(get_admin_user)):
     """Get platform statistics for admin dashboard."""
@@ -1558,6 +1594,83 @@ def admin_get_all_events(
         })
 
     return {'events': events, 'total': total, 'skip': skip, 'limit': limit}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ PLATFORM CONFIG + ANNOUNCEMENTS ════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/platform-config')
+def admin_get_platform_config(cu: dict = Depends(get_admin_user)):
+    config = platform_config_c.find_one({'_id': 'main'}, {'_id': 0})
+    return config or {'maintenance_mode': False, 'maintenance_message': '', 'globally_disabled_features': []}
+
+
+class PlatformConfigUpdate(BaseModel):
+    maintenance_mode: bool = None
+    maintenance_message: str = None
+    globally_disabled_features: list = None
+
+
+@app.post('/api/admin/platform-config')
+def admin_update_platform_config(req: PlatformConfigUpdate, cu: dict = Depends(get_admin_user)):
+    update = {'updated_at': datetime.now(timezone.utc)}
+    if req.maintenance_mode is not None:
+        update['maintenance_mode'] = req.maintenance_mode
+    if req.maintenance_message is not None:
+        update['maintenance_message'] = req.maintenance_message
+    if req.globally_disabled_features is not None:
+        update['globally_disabled_features'] = req.globally_disabled_features
+    platform_config_c.update_one({'_id': 'main'}, {'$set': update}, upsert=True)
+    return {'ok': True, 'message': 'Configuração atualizada'}
+
+
+@app.get('/api/admin/announcements')
+def admin_get_announcements(cu: dict = Depends(get_admin_user)):
+    anns = list(announcements_c.find({}, {'_id': 0}).sort('created_at', -1))
+    return {'announcements': anns}
+
+
+class AnnouncementCreate(BaseModel):
+    message: str
+    type: str = 'info'   # 'info', 'warning', 'success'
+    expires_hours: int = None  # None = no expiry
+
+
+@app.post('/api/admin/announcements')
+def admin_create_announcement(req: AnnouncementCreate, cu: dict = Depends(get_admin_user)):
+    import uuid
+    expires_at = None
+    if req.expires_hours:
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=req.expires_hours)
+    doc = {
+        'id': str(uuid.uuid4()),
+        'message': req.message,
+        'type': req.type,
+        'active': True,
+        'expires_at': expires_at,
+        'created_at': datetime.now(timezone.utc),
+    }
+    announcements_c.insert_one(doc)
+    return {'ok': True, 'id': doc['id']}
+
+
+@app.delete('/api/admin/announcements/{ann_id}')
+def admin_delete_announcement(ann_id: str, cu: dict = Depends(get_admin_user)):
+    result = announcements_c.delete_one({'id': ann_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Announcement not found')
+    return {'ok': True}
+
+
+@app.patch('/api/admin/announcements/{ann_id}/toggle')
+def admin_toggle_announcement(ann_id: str, cu: dict = Depends(get_admin_user)):
+    ann = announcements_c.find_one({'id': ann_id})
+    if not ann:
+        raise HTTPException(status_code=404, detail='Announcement not found')
+    new_active = not ann.get('active', True)
+    announcements_c.update_one({'id': ann_id}, {'$set': {'active': new_active}})
+    return {'ok': True, 'active': new_active}
 
 
 # ══════════════════════════════════════════════════════════════════════════════

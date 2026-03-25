@@ -247,6 +247,45 @@ function ResetPasswordPage({ token, onDone }) {
   );
 }
 
+// ── Announcement banner (shown to logged-in non-admin users) ──────────────────
+function AnnouncementBanner({ announcements }) {
+  const [dismissed, setDismissed] = useState([]);
+  const visible = announcements.filter(a => !dismissed.includes(a.id));
+  if (!visible.length) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 flex flex-col gap-1 px-3 pt-2" style={{ maxWidth: 480, margin: '0 auto' }}>
+      {visible.map(ann => {
+        const color = ann.type === 'warning' ? '#f59e0b' : ann.type === 'success' ? '#22c55e' : '#3b82f6';
+        const bg    = ann.type === 'warning' ? 'rgba(245,158,11,0.08)' : ann.type === 'success' ? 'rgba(34,197,94,0.08)' : 'rgba(59,130,246,0.08)';
+        return (
+          <div key={ann.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs"
+            style={{ borderColor: `${color}30`, background: bg }}>
+            <span className="flex-1" style={{ color }}>{ann.message}</span>
+            <button onClick={() => setDismissed(d => [...d, ann.id])} className="text-[#4b5563] hover:text-white">×</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Maintenance screen ─────────────────────────────────────────────────────────
+function MaintenanceScreen({ message }) {
+  const { t } = useLanguage();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[#080808]">
+      <div className="w-full max-w-sm text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#f59e0b15] border border-[#f59e0b30] flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl">🔧</span>
+        </div>
+        <h2 className="text-white font-bold text-xl mb-2">{t('maintenance.title')}</h2>
+        <p className="text-[#9ca3af] text-sm">{message || t('maintenance.defaultMessage')}</p>
+      </div>
+    </div>
+  );
+}
+
 function AppShell() {
   const { currentUser, loginWithGoogle } = useAuth();
   const { t } = useLanguage();
@@ -254,7 +293,17 @@ function AppShell() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [verifyToken, setVerifyToken] = useState(null);
   const [resetToken, setResetToken]   = useState(null);
+  const [platformStatus, setPlatformStatus] = useState(null);
   const hasProcessedOAuth = useRef(false);
+
+  // Fetch platform status when user logs in
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/platform-status')
+      .then(r => r.json())
+      .then(setPlatformStatus)
+      .catch(() => {});
+  }, [currentUser]);
 
   // Handle Google OAuth callback, email verification token, AND reset password token in URL
   useEffect(() => {
@@ -319,8 +368,16 @@ function AppShell() {
 
   // If user is logged in, show app
   if (currentUser) {
+    // Maintenance gate — block non-admin users
+    if (platformStatus?.maintenance_mode && !currentUser.isAdmin) {
+      return <MaintenanceScreen message={platformStatus.maintenance_message} />;
+    }
     return (
       <StoreProvider username={currentUser.username} defaultTheme={{ ...currentUser.theme, displayName: currentUser.displayName }}>
+        {/* Announcement banner for non-admin users */}
+        {!currentUser.isAdmin && platformStatus?.announcements?.length > 0 && (
+          <AnnouncementBanner announcements={platformStatus.announcements} />
+        )}
         <App />
         {/* Email verification banner if not verified */}
         {currentUser.email && currentUser.emailVerified === false && <VerifyEmailBanner />}

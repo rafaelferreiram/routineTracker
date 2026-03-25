@@ -64,6 +64,13 @@ export default function AdminDashboard() {
   const [resetPwd, setResetPwd] = useState('');
   const [showResetForm, setShowResetForm] = useState(false);
 
+  // Platform / maintenance / announcements state
+  const [platformConfig, setPlatformConfig] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [platformLoading, setPlatformLoading] = useState(false);
+  const [newAnn, setNewAnn] = useState({ message: '', type: 'info', expires_hours: '' });
+  const [annCreating, setAnnCreating] = useState(false);
+
   // Overview data explorer
   const [overviewExpanded, setOverviewExpanded] = useState({ users: false, habits: false, events: false });
   const [overviewSearch, setOverviewSearch] = useState({ users: '', habits: '', events: '' });
@@ -189,6 +196,26 @@ export default function AdminDashboard() {
   useEffect(() => { loadAllHabits(); }, [loadAllHabits]);
   useEffect(() => { loadAllEvents(); }, [loadAllEvents]);
 
+  // Load platform config + announcements on mount
+  useEffect(() => {
+    const load = async () => {
+      setPlatformLoading(true);
+      try {
+        const [cfg, anns] = await Promise.all([
+          apiCall('GET', '/admin/platform-config'),
+          apiCall('GET', '/admin/announcements'),
+        ]);
+        setPlatformConfig(cfg);
+        setAnnouncements(anns.announcements || []);
+      } catch (err) {
+        console.error('Failed to load platform data:', err);
+      } finally {
+        setPlatformLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => { setAllHabitsPage(0); loadAllHabits(); }, 300);
     return () => clearTimeout(t);
@@ -228,6 +255,52 @@ export default function AdminDashboard() {
       setMessage({ type: 'error', text: err.message || 'Erro ao executar ação' });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const updatePlatformConfig = async (patch) => {
+    try {
+      await apiCall('POST', '/admin/platform-config', patch);
+      setPlatformConfig(prev => ({ ...prev, ...patch }));
+      setMessage({ type: 'success', text: 'Configuração salva' });
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao salvar configuração' });
+    }
+  };
+
+  const createAnnouncement = async () => {
+    if (!newAnn.message.trim()) return;
+    setAnnCreating(true);
+    try {
+      const body = { message: newAnn.message, type: newAnn.type };
+      if (newAnn.expires_hours) body.expires_hours = parseInt(newAnn.expires_hours);
+      const res = await apiCall('POST', '/admin/announcements', body);
+      const created = { id: res.id, ...body, active: true, created_at: new Date().toISOString() };
+      setAnnouncements(prev => [created, ...prev]);
+      setNewAnn({ message: '', type: 'info', expires_hours: '' });
+      setMessage({ type: 'success', text: 'Anúncio criado' });
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao criar anúncio' });
+    } finally {
+      setAnnCreating(false);
+    }
+  };
+
+  const deleteAnnouncement = async (id) => {
+    try {
+      await apiCall('DELETE', `/admin/announcements/${id}`);
+      setAnnouncements(prev => prev.filter(a => a.id !== id));
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao deletar anúncio' });
+    }
+  };
+
+  const toggleAnnouncement = async (id) => {
+    try {
+      const res = await apiCall('PATCH', `/admin/announcements/${id}/toggle`);
+      setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, active: res.active } : a));
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao atualizar anúncio' });
     }
   };
 
@@ -633,6 +706,7 @@ export default function AdminDashboard() {
             { id: 'analytics', label: 'Analíticos',  icon: TrendingUp },
             { id: 'users',     label: 'Usuários',    icon: Users },
             { id: 'security',  label: 'Segurança',   icon: Shield },
+            { id: 'platform',  label: 'Plataforma',  icon: Settings },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
@@ -1350,6 +1424,175 @@ export default function AdminDashboard() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── PLATFORM TAB ─────────────────────────────────────────────── */}
+        {activeSection === 'platform' && (
+          <div className="space-y-4">
+            {platformLoading && (
+              <div className="text-center py-8 text-[#4b5563] text-sm">Carregando...</div>
+            )}
+
+            {/* Maintenance mode */}
+            {platformConfig && (
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${platformConfig.maintenance_mode ? 'bg-red-500/15' : 'bg-[#1a1a1a]'}`}>
+                      <Settings className={`w-3.5 h-3.5 ${platformConfig.maintenance_mode ? 'text-red-400' : 'text-[#6b7280]'}`} />
+                    </div>
+                    <div>
+                      <div className="text-white text-sm font-medium">Modo Manutenção</div>
+                      <div className="text-[10px] text-[#4b5563]">Bloqueia o acesso de todos os usuários</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updatePlatformConfig({ maintenance_mode: !platformConfig.maintenance_mode })}
+                    className="relative flex-shrink-0 rounded-full transition-colors"
+                    style={{ width: 40, height: 22, background: platformConfig.maintenance_mode ? '#ef4444' : '#2a2a2a' }}
+                  >
+                    <span className="absolute top-0.5 rounded-full bg-white shadow transition-transform"
+                      style={{ width: 18, height: 18, transform: platformConfig.maintenance_mode ? 'translateX(19px)' : 'translateX(2px)' }} />
+                  </button>
+                </div>
+                {platformConfig.maintenance_mode && (
+                  <div className="flex gap-2">
+                    <input
+                      defaultValue={platformConfig.maintenance_message}
+                      onBlur={e => updatePlatformConfig({ maintenance_message: e.target.value })}
+                      placeholder="Mensagem de manutenção..."
+                      className="flex-1 px-3 py-2 bg-[#111] border border-red-500/20 rounded-xl text-white text-xs placeholder-[#4b5563] focus:outline-none focus:border-red-500/40"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Global feature toggles */}
+            {platformConfig && (
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] space-y-2">
+                <div className="text-white text-sm font-medium mb-3">Funcionalidades Globais</div>
+                {FEATURES.map(feature => {
+                  const isDisabled = platformConfig.globally_disabled_features?.includes(feature.id);
+                  const Icon = feature.icon;
+                  return (
+                    <div key={feature.id} className="flex items-center gap-3">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isDisabled ? 'bg-red-500/15' : 'bg-[#1a1a1a]'}`}>
+                        <Icon className={`w-3.5 h-3.5 ${isDisabled ? 'text-red-400' : 'text-[#6b7280]'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className={`text-xs font-medium ${isDisabled ? 'text-red-400' : 'text-white'}`}>{feature.label}</div>
+                        <div className="text-[10px] text-[#4b5563]">{feature.desc}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const current = platformConfig.globally_disabled_features || [];
+                          const next = isDisabled
+                            ? current.filter(f => f !== feature.id)
+                            : [...current, feature.id];
+                          updatePlatformConfig({ globally_disabled_features: next });
+                        }}
+                        className="relative flex-shrink-0 rounded-full transition-colors"
+                        style={{ width: 40, height: 22, background: isDisabled ? '#ef4444' : '#2a2a2a' }}
+                      >
+                        <span
+                          className="absolute top-0.5 rounded-full bg-white shadow transition-transform"
+                          style={{ width: 18, height: 18, transform: isDisabled ? 'translateX(19px)' : 'translateX(2px)' }}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Announcements */}
+            <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-3.5 h-3.5 text-[#3b82f6]" />
+                <span className="text-white text-sm font-medium">Anúncios</span>
+              </div>
+
+              {/* Create form */}
+              <div className="space-y-2 p-3 rounded-xl bg-[#111] border border-[#1a1a1a]">
+                <textarea
+                  value={newAnn.message}
+                  onChange={e => setNewAnn(s => ({ ...s, message: e.target.value }))}
+                  placeholder="Mensagem para todos os usuários..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl text-white text-xs placeholder-[#4b5563] focus:outline-none focus:border-[#2a2a2a] resize-none"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newAnn.type}
+                    onChange={e => setNewAnn(s => ({ ...s, type: e.target.value }))}
+                    className="flex-1 px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg text-white text-xs focus:outline-none"
+                  >
+                    <option value="info">Info</option>
+                    <option value="warning">Aviso</option>
+                    <option value="success">Sucesso</option>
+                  </select>
+                  <select
+                    value={newAnn.expires_hours}
+                    onChange={e => setNewAnn(s => ({ ...s, expires_hours: e.target.value }))}
+                    className="flex-1 px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg text-white text-xs focus:outline-none"
+                  >
+                    <option value="">Sem expiração</option>
+                    <option value="1">1 hora</option>
+                    <option value="6">6 horas</option>
+                    <option value="24">24 horas</option>
+                    <option value="72">3 dias</option>
+                  </select>
+                  <button
+                    onClick={createAnnouncement}
+                    disabled={annCreating || !newAnn.message.trim()}
+                    className="px-3 py-1.5 rounded-lg bg-[#3b82f6]/15 border border-[#3b82f6]/20 text-[#3b82f6] text-xs font-medium disabled:opacity-40"
+                  >
+                    Publicar
+                  </button>
+                </div>
+              </div>
+
+              {/* List */}
+              {announcements.length === 0 ? (
+                <div className="text-center py-4 text-[#4b5563] text-xs">Nenhum anúncio</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {announcements.map(ann => {
+                    const typeColor = ann.type === 'warning' ? '#f59e0b' : ann.type === 'success' ? '#22c55e' : '#3b82f6';
+                    return (
+                      <div key={ann.id} className={`p-3 rounded-xl flex items-start gap-2.5 border ${ann.active ? 'border-[#1a1a1a] bg-[#111]' : 'border-[#111] bg-[#0a0a0a] opacity-50'}`}>
+                        <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: typeColor }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white leading-relaxed">{ann.message}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] font-mono" style={{ color: typeColor }}>{ann.type}</span>
+                            {ann.expires_at && <span className="text-[9px] text-[#4b5563]">exp: {new Date(ann.expires_at).toLocaleDateString('pt-BR')}</span>}
+                            <span className="text-[9px] text-[#3a3a3a]">{new Date(ann.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => toggleAnnouncement(ann.id)}
+                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${ann.active ? 'bg-green-500/10 text-green-400' : 'bg-[#1a1a1a] text-[#4b5563]'}`}
+                            title={ann.active ? 'Desativar' : 'Ativar'}
+                          >
+                            {ann.active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                          </button>
+                          <button
+                            onClick={() => deleteAnnouncement(ann.id)}
+                            className="w-6 h-6 rounded-md flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

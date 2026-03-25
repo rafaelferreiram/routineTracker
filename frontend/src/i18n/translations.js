@@ -759,6 +759,19 @@ export const translations = {
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // MAINTENANCE
+  // ═══════════════════════════════════════════════════════════════════════════
+  maintenance: {
+    title: { en: 'Under Maintenance', pt: 'Em Manutenção', es: 'En Mantenimiento', de: 'Wartungsarbeiten' },
+    defaultMessage: {
+      en: "The system is under maintenance. We'll be back shortly!",
+      pt: 'O sistema está em manutenção. Voltamos em breve!',
+      es: 'El sistema está en mantenimiento. ¡Volvemos pronto!',
+      de: 'Das System wird gewartet. Wir sind bald zurück!',
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COMMON
   // ═══════════════════════════════════════════════════════════════════════════
   common: {

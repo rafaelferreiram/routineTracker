@@ -1660,6 +1660,41 @@ def admin_get_security_status(cu: dict = Depends(get_admin_user)):
         }
     }
 
+@app.get('/api/admin/logs')
+def admin_get_logs(
+    cu: dict = Depends(get_admin_user),
+    page: int = 0,
+    limit: int = 50,
+    event_type: str = None,
+):
+    """Get paginated application logs from analytics collection."""
+    query = {}
+    if event_type and event_type != 'all':
+        query['type'] = event_type
+
+    logs = list(analytics_c.find(
+        query, {'_id': 0}
+    ).sort('timestamp', -1).skip(page * limit).limit(limit))
+
+    for log in logs:
+        if hasattr(log.get('timestamp'), 'isoformat'):
+            log['timestamp'] = log['timestamp'].isoformat()
+
+    total = analytics_c.count_documents(query)
+
+    type_counts = {}
+    for t in ['ip_blocked', 'ip_unblocked', 'rate_limit_exceeded', 'page_view']:
+        type_counts[t] = analytics_c.count_documents({'type': t})
+
+    return {
+        'logs': logs,
+        'total': total,
+        'page': page,
+        'limit': limit,
+        'typeCounts': type_counts,
+    }
+
+
 class UnblockIPRequest(BaseModel):
     ip: str
 

@@ -395,6 +395,147 @@ class TestAdminUserActions:
         print(f"✓ Got detailed info for user {data['user']['username']}")
 
 
+class TestAdminLogsEndpoint:
+    """Test the new /api/admin/logs endpoint"""
+
+    def test_admin_logs_endpoint_exists(self, admin_session):
+        """Admin can access /api/admin/logs endpoint"""
+        response = requests.get(f"{BASE_URL}/api/admin/logs", headers=admin_session["headers"])
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        print("✓ Admin logs endpoint accessible")
+
+    def test_admin_logs_response_structure(self, admin_session):
+        """Logs response contains expected fields"""
+        response = requests.get(f"{BASE_URL}/api/admin/logs", headers=admin_session["headers"])
+        assert response.status_code == 200
+        data = response.json()
+
+        assert "logs" in data, "Response should contain 'logs' list"
+        assert "total" in data, "Response should contain 'total' count"
+        assert "page" in data, "Response should contain 'page'"
+        assert "limit" in data, "Response should contain 'limit'"
+        assert "typeCounts" in data, "Response should contain 'typeCounts'"
+
+        type_counts = data["typeCounts"]
+        for key in ["ip_blocked", "ip_unblocked", "rate_limit_exceeded", "page_view"]:
+            assert key in type_counts, f"typeCounts should include '{key}'"
+
+        assert isinstance(data["logs"], list), "logs should be a list"
+        print(f"✓ Logs structure valid: {data['total']} total, typeCounts={data['typeCounts']}")
+
+    def test_admin_logs_entry_structure(self, admin_session):
+        """Each log entry has expected fields"""
+        response = requests.get(f"{BASE_URL}/api/admin/logs?limit=5", headers=admin_session["headers"])
+        assert response.status_code == 200
+        data = response.json()
+
+        for entry in data["logs"]:
+            assert "type" in entry, "Log entry should have 'type'"
+            assert "timestamp" in entry, "Log entry should have 'timestamp'"
+            assert "data" in entry, "Log entry should have 'data'"
+            # Timestamp should be a valid ISO string
+            from datetime import datetime
+            try:
+                datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+            except ValueError:
+                pytest.fail(f"Timestamp not a valid ISO string: {entry['timestamp']}")
+
+        print(f"✓ Log entries have correct structure ({len(data['logs'])} entries checked)")
+
+    def test_admin_logs_filter_by_type(self, admin_session):
+        """Admin can filter logs by event type"""
+        for event_type in ["ip_blocked", "rate_limit_exceeded", "page_view"]:
+            response = requests.get(
+                f"{BASE_URL}/api/admin/logs?event_type={event_type}",
+                headers=admin_session["headers"]
+            )
+            assert response.status_code == 200, f"Filter by {event_type} failed: {response.text}"
+            data = response.json()
+            # All returned entries should match the filter
+            for entry in data["logs"]:
+                assert entry["type"] == event_type, f"Entry type '{entry['type']}' doesn't match filter '{event_type}'"
+            print(f"✓ Filter by '{event_type}': {data['total']} entries")
+
+    def test_admin_logs_pagination(self, admin_session):
+        """Logs endpoint supports pagination"""
+        # Page 0
+        r0 = requests.get(f"{BASE_URL}/api/admin/logs?page=0&limit=2", headers=admin_session["headers"])
+        assert r0.status_code == 200
+        d0 = r0.json()
+        assert d0["page"] == 0
+        assert d0["limit"] == 2
+        assert len(d0["logs"]) <= 2
+
+        # Page 1 (if enough logs)
+        if d0["total"] > 2:
+            r1 = requests.get(f"{BASE_URL}/api/admin/logs?page=1&limit=2", headers=admin_session["headers"])
+            assert r1.status_code == 200
+            d1 = r1.json()
+            assert d1["page"] == 1
+            # Entries should differ from page 0 (different timestamps)
+            if len(d0["logs"]) > 0 and len(d1["logs"]) > 0:
+                assert d0["logs"][0]["timestamp"] != d1["logs"][0]["timestamp"], "Pages should return different entries"
+
+        print(f"✓ Pagination works: {d0['total']} total logs, page size 2")
+
+    def test_non_admin_cannot_access_logs(self, regular_session):
+        """Non-admin users cannot access logs endpoint"""
+        if not regular_session:
+            pytest.skip("Regular user login failed")
+
+        response = requests.get(f"{BASE_URL}/api/admin/logs", headers=regular_session["headers"])
+        assert response.status_code == 403, f"Expected 403, got {response.status_code}: {response.text}"
+        print("✓ Non-admin correctly denied access to /api/admin/logs")
+
+    def test_unauthenticated_cannot_access_logs(self):
+        """Unauthenticated requests are denied from logs endpoint"""
+        response = requests.get(f"{BASE_URL}/api/admin/logs")
+        assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
+        print("✓ Unauthenticated request denied from /api/admin/logs")
+
+
+class TestAdminAnalyticsEndpoint:
+    """Test the /api/admin/analytics endpoint"""
+
+    def test_analytics_all_periods(self, admin_session):
+        """Analytics endpoint works for all period values"""
+        for period in ["24h", "7d", "30d", "90d"]:
+            response = requests.get(
+                f"{BASE_URL}/api/admin/analytics?period={period}",
+                headers=admin_session["headers"]
+            )
+            assert response.status_code == 200, f"Period '{period}' failed: {response.text}"
+            data = response.json()
+            assert data["period"] == period
+            assert "userGrowth" in data
+            assert "loginByHour" in data
+            assert "popularHabits" in data
+            assert "categoryDistribution" in data
+            assert "avgCompletionRate" in data
+            assert "engagement" in data
+            assert "realTimeMetrics" in data
+            print(f"✓ Analytics for period '{period}' ok")
+
+    def test_analytics_login_by_hour_has_24_entries(self, admin_session):
+        """loginByHour always has exactly 24 entries"""
+        response = requests.get(f"{BASE_URL}/api/admin/analytics?period=7d", headers=admin_session["headers"])
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["loginByHour"]) == 24, f"Expected 24 entries, got {len(data['loginByHour'])}"
+        print("✓ loginByHour has 24 entries")
+
+    def test_analytics_engagement_structure(self, admin_session):
+        """Engagement metrics have correct structure"""
+        response = requests.get(f"{BASE_URL}/api/admin/analytics?period=7d", headers=admin_session["headers"])
+        assert response.status_code == 200
+        eng = response.json()["engagement"]
+        for key in ["usersWithHabits", "usersWithEvents", "totalUsers", "habitAdoptionRate", "eventAdoptionRate"]:
+            assert key in eng, f"Engagement missing '{key}'"
+        assert 0 <= eng["habitAdoptionRate"] <= 100
+        assert 0 <= eng["eventAdoptionRate"] <= 100
+        print(f"✓ Engagement: {eng['habitAdoptionRate']}% habit adoption, {eng['eventAdoptionRate']}% event adoption")
+
+
 class TestGoogleAuthGoogleIdPriority:
     """Test that Google login prioritizes google_id (sub) for user lookup"""
     

@@ -1674,6 +1674,157 @@ def admin_toggle_announcement(ann_id: str, cu: dict = Depends(get_admin_user)):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ══ TARS / AI USAGE STATS ══════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/tars-stats')
+def admin_get_tars_stats(cu: dict = Depends(get_admin_user)):
+    """TARS (AI chat) usage statistics."""
+    from bson import ObjectId
+    now = datetime.now(timezone.utc)
+
+    # Daily queries — last 14 days
+    daily_queries = []
+    for i in range(14):
+        day_start = (now - timedelta(days=13 - i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        count = analytics_c.count_documents({'type': 'tars_query', 'timestamp': {'$gte': day_start, '$lt': day_end}})
+        daily_queries.append({'label': day_start.strftime('%d/%m'), 'value': count})
+
+    total_queries = analytics_c.count_documents({'type': 'tars_query'})
+    queries_7d = analytics_c.count_documents({'type': 'tars_query', 'timestamp': {'$gte': now - timedelta(days=7)}})
+
+    # Top users
+    pipeline = [
+        {'$match': {'type': 'tars_query'}},
+        {'$group': {'_id': '$data.user_id', 'count': {'$sum': 1}}},
+        {'$sort': {'count': -1}},
+        {'$limit': 10},
+    ]
+    top_users = []
+    for u in analytics_c.aggregate(pipeline):
+        uid = u['_id']
+        if not uid:
+            continue
+        try:
+            user = users_c.find_one({'_id': ObjectId(uid)}, {'username': 1, 'display_name': 1})
+            top_users.append({
+                'userId': uid,
+                'username': user.get('username', uid) if user else uid,
+                'displayName': user.get('display_name') if user else None,
+                'count': u['count'],
+            })
+        except Exception:
+            pass
+
+    return {
+        'total_queries': total_queries,
+        'queries_7d': queries_7d,
+        'daily_queries': daily_queries,
+        'top_users': top_users,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ COHORT RETENTION ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/cohort-retention')
+def admin_get_cohort_retention(cu: dict = Depends(get_admin_user)):
+    """Weekly cohort retention: of users who registered in week W, what % were still active in W+1..W+4."""
+    now = datetime.now(timezone.utc)
+    cohorts = []
+    for week_offset in range(8, 0, -1):
+        cohort_start = (now - timedelta(weeks=week_offset)).replace(hour=0, minute=0, second=0, microsecond=0)
+        cohort_end = cohort_start + timedelta(weeks=1)
+
+        cohort_users = list(users_c.find(
+            {'username': {'$ne': ADMIN_USERNAME}, 'created_at': {'$gte': cohort_start, '$lt': cohort_end}},
+            {'_id': 1}
+        ))
+        cohort_size = len(cohort_users)
+
+        if cohort_size == 0:
+            cohorts.append({'label': cohort_start.strftime('%d/%m'), 'size': 0, 'retention': [None, None, None, None]})
+            continue
+
+        cohort_oids = [u['_id'] for u in cohort_users]
+        retention = []
+        for w in range(1, 5):
+            cutoff = cohort_end + timedelta(weeks=w - 1)
+            active = users_c.count_documents({'_id': {'$in': cohort_oids}, 'last_login_at': {'$gte': cutoff}})
+            retention.append(round((active / cohort_size) * 100))
+
+        cohorts.append({'label': cohort_start.strftime('%d/%m'), 'size': cohort_size, 'retention': retention})
+
+    return {'cohorts': cohorts, 'weeks': ['W+1', 'W+2', 'W+3', 'W+4']}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══ HABIT ABANDONMENT ══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get('/api/admin/habit-abandonment')
+def admin_get_habit_abandonment(cu: dict = Depends(get_admin_user), threshold_days: int = 14):
+    """Habits that have never been completed (abandoned / never started)."""
+    from bson import ObjectId
+    from collections import defaultdict as _dd
+
+    pipeline = [
+        {'$unwind': '$data.habits'},
+        {'$project': {
+            'user_id': 1,
+            'name': '$data.habits.name',
+            'category': '$data.habits.category',
+            'emoji': '$data.habits.emoji',
+            'completions_count': {'$size': {'$ifNull': ['$data.habits.completions', []]}},
+        }},
+        {'$match': {'completions_count': 0}},
+    ]
+    abandoned_raw = list(data_c.aggregate(pipeline))
+    total_abandoned = len(abandoned_raw)
+
+    # Total habits
+    total_result = list(data_c.aggregate([
+        {'$project': {'c': {'$size': {'$ifNull': ['$data.habits', []]}}}},
+        {'$group': {'_id': None, 'total': {'$sum': '$c'}}},
+    ]))
+    total_habits = total_result[0]['total'] if total_result else 0
+
+    # Per-user counts
+    user_counts = _dd(int)
+    for h in abandoned_raw:
+        user_counts[h['user_id']] += 1
+
+    top_users = []
+    for uid, count in sorted(user_counts.items(), key=lambda x: -x[1])[:10]:
+        try:
+            user = users_c.find_one({'_id': ObjectId(uid)}, {'username': 1, 'display_name': 1})
+            top_users.append({
+                'userId': uid,
+                'username': user.get('username', uid) if user else uid,
+                'displayName': user.get('display_name') if user else None,
+                'abandonedCount': count,
+            })
+        except Exception:
+            pass
+
+    # Category breakdown
+    cat_counts = _dd(int)
+    for h in abandoned_raw:
+        cat_counts[h.get('category') or 'Sem categoria'] += 1
+    categories = [{'category': k, 'count': v} for k, v in sorted(cat_counts.items(), key=lambda x: -x[1])[:8]]
+
+    return {
+        'total_abandoned': total_abandoned,
+        'total_habits': total_habits,
+        'abandonment_rate': round((total_abandoned / total_habits * 100), 1) if total_habits > 0 else 0,
+        'top_users': top_users,
+        'categories': categories,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ══ ANALYTICS & METRICS ENDPOINTS ═════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -3182,21 +3333,25 @@ Responda SEMPRE em português brasileiro. Use emojis."""
 
     try:
         if OPENAI_API_KEY:
-            return await call_chat_with_functions(OPENAI_API_KEY)
+            result = await call_chat_with_functions(OPENAI_API_KEY)
         elif EMERGENT_LLM_KEY:
-            return await call_chat_with_functions(EMERGENT_LLM_KEY)
+            result = await call_chat_with_functions(EMERGENT_LLM_KEY)
         else:
             raise HTTPException(status_code=500, detail='No AI API key configured')
-            
+        log_analytics_event('tars_query', {'user_id': user_id, 'message_length': len(user_message)})
+        return result
+
     except Exception as e:
         error_msg = str(e).lower()
         if EMERGENT_LLM_KEY and ('quota' in error_msg or 'rate' in error_msg or 'limit' in error_msg or 'insufficient' in error_msg):
             print(f'[AI Chat] User API key quota exceeded, falling back to Emergent LLM Key')
             try:
-                return await call_chat_with_functions(EMERGENT_LLM_KEY)
+                result = await call_chat_with_functions(EMERGENT_LLM_KEY)
+                log_analytics_event('tars_query', {'user_id': user_id, 'message_length': len(user_message)})
+                return result
             except Exception as fallback_error:
                 raise HTTPException(status_code=500, detail=f'AI error: {str(fallback_error)}')
-        
+
         print(f'[AI Chat] Error: {e}')
         raise HTTPException(status_code=500, detail=f'AI error: {str(e)}')
 

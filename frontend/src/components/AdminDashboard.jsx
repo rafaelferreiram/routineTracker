@@ -71,6 +71,11 @@ export default function AdminDashboard() {
   const [newAnn, setNewAnn] = useState({ message: '', type: 'info', expires_hours: '' });
   const [annCreating, setAnnCreating] = useState(false);
 
+  // Analytics extras
+  const [tarsStats, setTarsStats] = useState(null);
+  const [cohortRetention, setCohortRetention] = useState(null);
+  const [habitAbandonment, setHabitAbandonment] = useState(null);
+
   // Overview data explorer
   const [overviewExpanded, setOverviewExpanded] = useState({ users: false, habits: false, events: false });
   const [overviewSearch, setOverviewSearch] = useState({ users: '', habits: '', events: '' });
@@ -196,17 +201,23 @@ export default function AdminDashboard() {
   useEffect(() => { loadAllHabits(); }, [loadAllHabits]);
   useEffect(() => { loadAllEvents(); }, [loadAllEvents]);
 
-  // Load platform config + announcements on mount
+  // Load platform config, announcements, and analytics extras on mount
   useEffect(() => {
     const load = async () => {
       setPlatformLoading(true);
       try {
-        const [cfg, anns] = await Promise.all([
+        const [cfg, anns, tars, cohort, abandon] = await Promise.all([
           apiCall('GET', '/admin/platform-config'),
           apiCall('GET', '/admin/announcements'),
+          apiCall('GET', '/admin/tars-stats'),
+          apiCall('GET', '/admin/cohort-retention'),
+          apiCall('GET', '/admin/habit-abandonment'),
         ]);
         setPlatformConfig(cfg);
         setAnnouncements(anns.announcements || []);
+        setTarsStats(tars);
+        setCohortRetention(cohort);
+        setHabitAbandonment(abandon);
       } catch (err) {
         console.error('Failed to load platform data:', err);
       } finally {
@@ -1144,6 +1155,143 @@ export default function AdminDashboard() {
                     </div>
                   )}
                 </div>
+
+                {/* TARS usage */}
+                {tarsStats && (
+                  <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                        <span className="text-white text-sm font-medium">TARS — Uso da IA</span>
+                      </div>
+                      <div className="flex gap-3 text-right">
+                        <div>
+                          <div className="text-white font-bold text-sm">{tarsStats.queries_7d}</div>
+                          <div className="text-[9px] text-[#4b5563]">últimos 7d</div>
+                        </div>
+                        <div>
+                          <div className="text-[#8b5cf6] font-bold text-sm">{tarsStats.total_queries}</div>
+                          <div className="text-[9px] text-[#4b5563]">total</div>
+                        </div>
+                      </div>
+                    </div>
+                    <MiniChart data={tarsStats.daily_queries} color="#8b5cf6" height={64} showLabels />
+                    {tarsStats.top_users?.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#141414]">
+                        <div className="text-[10px] text-[#4b5563] mb-2">Top usuários</div>
+                        <div className="space-y-1">
+                          {tarsStats.top_users.slice(0, 5).map((u, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-[9px] text-[#3a3a3a] w-3">{i + 1}</span>
+                              <span className="text-xs text-[#9ca3af] flex-1 truncate">{u.displayName || u.username}</span>
+                              <span className="text-xs text-[#8b5cf6] font-medium">{u.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Habit abandonment */}
+                {habitAbandonment && (
+                  <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#f59e0b]" />
+                        <span className="text-white text-sm font-medium">Hábitos Abandonados</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[#f59e0b] font-bold text-sm">{habitAbandonment.abandonment_rate}%</div>
+                        <div className="text-[9px] text-[#4b5563]">{habitAbandonment.total_abandoned} de {habitAbandonment.total_habits}</div>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden mb-3">
+                      <div className="h-full bg-[#f59e0b] rounded-full" style={{ width: `${Math.min(habitAbandonment.abandonment_rate, 100)}%` }} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {habitAbandonment.categories?.length > 0 && (
+                        <div>
+                          <div className="text-[10px] text-[#4b5563] mb-1.5">Por categoria</div>
+                          <div className="space-y-1">
+                            {habitAbandonment.categories.slice(0, 5).map((cat, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-[#9ca3af] flex-1 truncate">{cat.category}</span>
+                                <span className="text-[10px] text-[#f59e0b]">{cat.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {habitAbandonment.top_users?.length > 0 && (
+                        <div>
+                          <div className="text-[10px] text-[#4b5563] mb-1.5">Usuários afetados</div>
+                          <div className="space-y-1">
+                            {habitAbandonment.top_users.slice(0, 5).map((u, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-[#9ca3af] flex-1 truncate">{u.displayName || u.username}</span>
+                                <span className="text-[10px] text-[#f59e0b]">{u.abandonedCount}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cohort retention */}
+                {cohortRetention?.cohorts?.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-x-auto">
+                    <div className="flex items-center gap-2 mb-4">
+                      <TrendingUp className="w-3.5 h-3.5 text-[#22c55e]" />
+                      <span className="text-white text-sm font-medium">Retenção por Coorte (semanal)</span>
+                    </div>
+                    <table className="w-full text-xs min-w-[400px]">
+                      <thead>
+                        <tr>
+                          <th className="text-left text-[#4b5563] font-normal pb-2 pr-3">Semana</th>
+                          <th className="text-center text-[#4b5563] font-normal pb-2 px-1">Usuários</th>
+                          {cohortRetention.weeks.map(w => (
+                            <th key={w} className="text-center text-[#4b5563] font-normal pb-2 px-1">{w}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cohortRetention.cohorts.map((cohort, i) => (
+                          <tr key={i} className="border-t border-[#141414]">
+                            <td className="py-1.5 pr-3 text-[#9ca3af] font-mono">{cohort.label}</td>
+                            <td className="text-center py-1.5 px-1 text-[#6b7280]">{cohort.size}</td>
+                            {cohort.retention.map((pct, j) => {
+                              if (pct === null || cohort.size === 0) return (
+                                <td key={j} className="text-center py-1.5 px-1 text-[#2a2a2a]">—</td>
+                              );
+                              const bg = pct >= 60 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444';
+                              return (
+                                <td key={j} className="text-center py-1.5 px-1">
+                                  <span
+                                    className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                    style={{ background: `${bg}20`, color: bg }}
+                                  >
+                                    {pct}%
+                                  </span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="flex gap-3 mt-3 pt-2 border-t border-[#141414]">
+                      {[{ label: '≥60% bom', color: '#22c55e' }, { label: '30–59% médio', color: '#f59e0b' }, { label: '<30% baixo', color: '#ef4444' }].map((l, i) => (
+                        <div key={i} className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-sm" style={{ background: l.color }} />
+                          <span className="text-[9px] text-[#4b5563]">{l.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -4,6 +4,7 @@ import { useAuth } from '../store/useAuth.js';
 import { useCollaborativeEvents } from '../hooks/useCollaborativeEvents.js';
 import { getTodayString } from '../utils/dateUtils.js';
 import EventItinerary from './EventItinerary.jsx';
+import FriendsLeaderboard from './FriendsLeaderboard.jsx';
 
 const EVENT_EMOJIS = ['✈️','🥊','🎉','🎂','💼','🏋️','🥋','🎓','🏀','⚽','🎵','🎤','🏆','🌍','🍽️','❤️','🙏','📅','🎯','🚀','🏖️','🎭','🎬','🤝','💡'];
 const EVENT_COLORS = ['#22c55e','#3b82f6','#f87171','#fbbf24','#a78bfa','#f97316','#ec4899','#06b6d4','#84cc16','#e879f9'];
@@ -759,6 +760,9 @@ export default function EventsPanel() {
           </button>
         )}
       </div>
+
+      {/* Friends Leaderboard */}
+      <FriendsLeaderboard />
 
       {/* Review Prompt */}
       {eventToPrompt && !reviewingEvent && (

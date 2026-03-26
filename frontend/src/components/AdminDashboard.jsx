@@ -76,6 +76,10 @@ export default function AdminDashboard() {
   const [cohortRetention, setCohortRetention] = useState(null);
   const [habitAbandonment, setHabitAbandonment] = useState(null);
 
+  // Log viewer
+  const [logSearch, setLogSearch] = useState('');
+  const [expandedLog, setExpandedLog] = useState(null);
+
   // Overview data explorer
   const [overviewExpanded, setOverviewExpanded] = useState({ users: false, habits: false, events: false });
   const [overviewSearch, setOverviewSearch] = useState({ users: '', habits: '', events: '' });
@@ -1462,109 +1466,159 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* LOGS sub-tab */}
+            {/* LOGS sub-tab — Datadog-style */}
             {securitySubTab === 'logs' && (
-              <div className="space-y-3">
-                {/* Type counts + filter */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {[
-                    { id: 'all',                 label: 'Todos' },
-                    { id: 'ip_blocked',          label: 'Bloqueios' },
-                    { id: 'rate_limit_exceeded', label: 'Rate Limit' },
-                    { id: 'page_view',           label: 'Page Views' },
-                    { id: 'ip_unblocked',        label: 'Desbloqueios' },
-                  ].map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => { setLogsType(t.id); setLogsPage(0); }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
-                        logsType === t.id ? 'bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/20' : 'bg-[#0a0a0a] border border-[#1a1a1a] text-[#6b7280] hover:text-[#9ca3af]'
-                      }`}
-                    >
-                      {t.label}
-                      {logs?.typeCounts?.[t.id] != null && t.id !== 'all' && (
-                        <span className="text-[9px] opacity-60">{logs.typeCounts[t.id]}</span>
-                      )}
-                      {t.id === 'all' && logs?.total != null && (
-                        <span className="text-[9px] opacity-60">{logs.total}</span>
-                      )}
-                    </button>
-                  ))}
-                  <button
-                    onClick={loadLogs}
-                    className="ml-auto w-7 h-7 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center"
-                  >
-                    <RefreshCw className={`w-3 h-3 text-[#6b7280] ${logsLoading ? 'animate-spin' : ''}`} />
+              <div className="space-y-2">
+                {/* Toolbar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#4b5563]" />
+                    <input
+                      type="text"
+                      value={logSearch}
+                      onChange={e => setLogSearch(e.target.value)}
+                      placeholder="Filtrar logs… (IP, endpoint, tipo)"
+                      className="w-full pl-9 pr-3 py-2 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl text-xs text-white placeholder-[#3a3a3a] focus:outline-none focus:border-[#2a2a2a] font-mono"
+                    />
+                  </div>
+                  <button onClick={loadLogs} className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+                    <RefreshCw className={`w-3.5 h-3.5 text-[#6b7280] ${logsLoading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
 
-                {/* Log entries */}
-                <div className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
+                {/* Type facets */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {[
+                    { id: 'all',                 label: 'All',         color: '#6b7280' },
+                    { id: 'ip_blocked',          label: 'blocked',     color: '#ef4444' },
+                    { id: 'rate_limit_exceeded', label: 'rate_limit',  color: '#f59e0b' },
+                    { id: 'page_view',           label: 'page_view',   color: '#3b82f6' },
+                    { id: 'ip_unblocked',        label: 'unblocked',   color: '#22c55e' },
+                    { id: 'tars_query',          label: 'tars_query',  color: '#8b5cf6' },
+                  ].map(t => {
+                    const count = t.id === 'all' ? logs?.total : logs?.typeCounts?.[t.id];
+                    const active = logsType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => { setLogsType(t.id); setLogsPage(0); }}
+                        className={`px-2 py-1 rounded text-[10px] font-mono font-medium transition-all flex items-center gap-1 border ${
+                          active
+                            ? 'border-transparent text-black'
+                            : 'bg-[#0a0a0a] border-[#1a1a1a] text-[#6b7280] hover:border-[#2a2a2a]'
+                        }`}
+                        style={active ? { background: t.color, borderColor: t.color } : {}}
+                      >
+                        {t.label}
+                        {count != null && (
+                          <span className={`text-[9px] px-1 rounded-sm ${active ? 'bg-black/20' : 'bg-[#141414]'}`}>{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Stats bar */}
+                {logs && (
+                  <div className="flex items-center gap-4 px-3 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg font-mono text-[10px] text-[#4b5563]">
+                    <span><span className="text-white">{logs.total}</span> events</span>
+                    {Object.entries(logs.typeCounts || {}).map(([k, v]) => {
+                      const meta = getLogMeta(k);
+                      return v > 0 ? (
+                        <span key={k}><span style={{ color: meta.color }}>{v}</span> {k.replace(/_/g, ' ')}</span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+
+                {/* Log stream */}
+                <div className="rounded-xl bg-[#050505] border border-[#181818] overflow-hidden font-mono text-xs">
+                  {/* Header row */}
+                  <div className="px-3 py-1.5 flex items-center gap-3 border-b border-[#181818] bg-[#0a0a0a] text-[9px] text-[#3a3a3a] uppercase tracking-widest select-none">
+                    <span className="w-1 flex-shrink-0" />
+                    <span className="w-32 flex-shrink-0">Timestamp</span>
+                    <span className="w-20 flex-shrink-0">Level</span>
+                    <span className="flex-1">Message</span>
+                  </div>
+
                   {logsLoading ? (
-                    <div className="text-center py-12 text-[#4b5563] text-sm">Carregando logs...</div>
+                    <div className="flex items-center justify-center gap-2 py-10 text-[#4b5563]">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span className="text-xs">Loading…</span>
+                    </div>
                   ) : logs?.logs?.length > 0 ? (
-                    <div className="divide-y divide-[#111]">
-                      {logs.logs.map((log, i) => {
-                        const meta = getLogMeta(log.type);
-                        const { date, time } = formatTimestamp(log.timestamp);
-                        const Icon = meta.icon;
-                        return (
-                          <div key={i} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[#0d0d0d] transition-colors">
-                            <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${meta.color}15` }}>
-                              <Icon className="w-3 h-3" style={{ color: meta.color }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-medium" style={{ color: meta.color }}>{meta.label}</span>
-                                {log.data?.ip && (
-                                  <span className="font-mono text-[10px] text-[#9ca3af] bg-[#141414] px-1.5 py-0.5 rounded">{log.data.ip}</span>
-                                )}
-                                {log.data?.endpoint && (
-                                  <span className="text-[10px] text-[#6b7280] truncate max-w-[200px]">{log.data.endpoint}</span>
-                                )}
-                                {log.data?.admin && (
-                                  <span className="text-[10px] text-[#22c55e]">por {log.data.admin}</span>
+                    <div>
+                      {logs.logs
+                        .filter(log => {
+                          if (!logSearch) return true;
+                          const q = logSearch.toLowerCase();
+                          const haystack = [
+                            log.type,
+                            log.data?.ip,
+                            log.data?.endpoint,
+                            log.data?.admin,
+                            log.timestamp,
+                          ].filter(Boolean).join(' ').toLowerCase();
+                          return haystack.includes(q);
+                        })
+                        .map((log, i) => {
+                          const meta = getLogMeta(log.type);
+                          const { date, time } = formatTimestamp(log.timestamp);
+                          const isExpanded = expandedLog === i;
+                          const hasExtra = log.data && Object.keys(log.data).length > 0;
+                          return (
+                            <div
+                              key={i}
+                              className={`border-b border-[#111] transition-colors ${isExpanded ? 'bg-[#0d0d0d]' : 'hover:bg-[#080808]'} ${hasExtra ? 'cursor-pointer' : ''}`}
+                              onClick={() => hasExtra && setExpandedLog(isExpanded ? null : i)}
+                            >
+                              <div className="flex items-center gap-3 px-3 py-1.5">
+                                <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: meta.color, opacity: 0.8 }} />
+                                <span className="w-32 flex-shrink-0 text-[#4b5563]">{date} <span className="text-[#6b7280]">{time}</span></span>
+                                <span className="w-20 flex-shrink-0 text-[10px] font-medium truncate" style={{ color: meta.color }}>{log.type}</span>
+                                <span className="flex-1 text-[#c9d1d9] truncate">
+                                  {log.data?.ip && <span className="text-[#8b949e]">{log.data.ip} </span>}
+                                  {log.data?.endpoint && <span className="text-[#6b7280]">{log.data.endpoint} </span>}
+                                  {log.data?.admin && <span className="text-[#22c55e]">by:{log.data.admin} </span>}
+                                  {log.data?.message_length != null && <span className="text-[#6b7280]">len:{log.data.message_length} </span>}
+                                  {!log.data?.ip && !log.data?.endpoint && !log.data?.admin && meta.label}
+                                </span>
+                                {hasExtra && (
+                                  <ChevronDown className={`w-3 h-3 text-[#3a3a3a] flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                 )}
                               </div>
-                              {log.data?.duration && (
-                                <div className="text-[10px] text-[#4b5563] mt-0.5">duração: {log.data.duration}s</div>
+                              {isExpanded && (
+                                <div className="px-8 pb-2">
+                                  <pre className="text-[10px] text-[#8b949e] bg-[#0d1117] border border-[#21262d] rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+                                    {JSON.stringify(log.data, null, 2)}
+                                  </pre>
+                                </div>
                               )}
                             </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="text-[10px] text-[#6b7280]">{time}</div>
-                              <div className="text-[9px] text-[#3a3a3a]">{date}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <FileText className="w-8 h-8 text-[#2a2a2a] mx-auto mb-2" />
-                      <p className="text-[#4b5563] text-sm">Nenhum log encontrado</p>
+                    <div className="flex flex-col items-center justify-center py-14 gap-2">
+                      <Database className="w-8 h-8 text-[#1a1a1a]" />
+                      <span className="text-[#3a3a3a] text-xs">No logs found</span>
                     </div>
                   )}
                 </div>
 
                 {/* Pagination */}
                 {logs && logs.total > 50 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#4b5563]">
-                      {logsPage * 50 + 1}–{Math.min((logsPage + 1) * 50, logs.total)} de {logs.total}
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] text-[#4b5563] font-mono">
+                      {logsPage * 50 + 1}–{Math.min((logsPage + 1) * 50, logs.total)} of {logs.total}
                     </span>
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => setLogsPage(p => Math.max(0, p - 1))}
-                        disabled={logsPage === 0}
-                        className="w-7 h-7 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center disabled:opacity-30"
-                      >
+                    <div className="flex gap-1">
+                      <button onClick={() => setLogsPage(p => Math.max(0, p - 1))} disabled={logsPage === 0}
+                        className="w-7 h-7 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center disabled:opacity-30">
                         <ChevronLeft className="w-3.5 h-3.5 text-[#6b7280]" />
                       </button>
-                      <button
-                        onClick={() => setLogsPage(p => p + 1)}
-                        disabled={(logsPage + 1) * 50 >= logs.total}
-                        className="w-7 h-7 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center disabled:opacity-30"
-                      >
+                      <button onClick={() => setLogsPage(p => p + 1)} disabled={(logsPage + 1) * 50 >= logs.total}
+                        className="w-7 h-7 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center disabled:opacity-30">
                         <ChevronRight className="w-3.5 h-3.5 text-[#6b7280]" />
                       </button>
                     </div>
